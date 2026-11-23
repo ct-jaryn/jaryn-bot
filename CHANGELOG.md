@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.2.0 — RSS / 1Password / 进程外插件 / 快速看屏
+
+### Added
+
+- 调度：`rss` 触发器（feed 轮询、按新条目派发、去重）
+- `@jaryn/secrets-1password`：`op read` 读取 + 页面填充代理；RFC 6238 TOTP
+- `@jaryn/plugin-host`：进程外插件宿主（JSON-RPC 工具代理）+ `examples/plugin-host` 示例
+- 云电脑：CDP `Page.startScreencast` 看屏（更高帧率），Web UI 默认使用 screencast 模式
+- 示例：Gmail / Google Calendar 连接器配置 + OAuth 自建应用指南
+- 117 个测试
+
+
 ## v1.1.0 — 补齐审计缺口
 
 ### Added

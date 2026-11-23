@@ -67,6 +67,9 @@ export class LocalChromeBackend implements ComputerBackend {
       '--no-default-browser-check',
       '--disable-gpu',
       '--disable-dev-shm-usage',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
       '--window-size=1280,900',
       'about:blank',
     ]
@@ -193,6 +196,16 @@ export class ComputerService {
   async frame(botId: string): Promise<{ image: string; ts: number }> {
     const client = await this.client(botId)
     return { image: await client.screenshot(), ts: Date.now() }
+  }
+
+  /**
+   * Stream frames via CDP screencast (higher fps than screenshot polling).
+   * Returns an unsubscribe function.
+   */
+  async streamFrames(botId: string, onFrame: (frame: { image: string; ts: number }) => void, opts: { quality?: number; everyNthFrame?: number } = {}): Promise<() => void> {
+    const client = await this.client(botId)
+    await client.startScreencast((image) => onFrame({ image, ts: Date.now() }), { quality: opts.quality })
+    return () => { void client.stopScreencast() }
   }
 
   async input(botId: string, event: { type: 'click' | 'type' | 'key'; x?: number; y?: number; text?: string; key?: string }): Promise<void> {

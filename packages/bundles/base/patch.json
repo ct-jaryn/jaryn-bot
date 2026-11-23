@@ -195,6 +195,13 @@
         "config": {
           "references": {}
         }
+      },
+      {
+        "id": "plugin-host",
+        "name": "@jaryn/plugin-host",
+        "config": {
+          "hosts": []
+        }
       }
     ]
   }

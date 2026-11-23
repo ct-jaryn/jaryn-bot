@@ -435,7 +435,19 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const fps = Math.max(0.5, Math.min(Number(url.searchParams.get('fps') ?? 2), 10))
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
       let closed = false
-      req.on('close', () => { closed = true })
+      let stopStream: (() => void) | undefined
+      req.on('close', () => { closed = true; stopStream?.() })
+      if (url.searchParams.get('mode') === 'screencast') {
+        try {
+          stopStream = await computer.streamFrames(botId, (frame: { image: string; ts: number }) => {
+            if (closed) return
+            res.write(`data: ${JSON.stringify({ type: 'frame', ...frame })}\n\n`)
+          }, { quality: Number(url.searchParams.get('quality') ?? 55) })
+        } catch (err) {
+          res.write(`data: ${JSON.stringify({ type: 'error', message: (err as Error).message })}\n\n`)
+        }
+        return
+      }
       const tick = async () => {
         if (closed) return
         try {

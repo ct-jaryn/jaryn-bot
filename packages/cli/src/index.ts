@@ -32,8 +32,9 @@ import { webPlugin } from '@jaryn/tools-web'
 import { officePlugin } from '@jaryn/office'
 import { goalToolsPlugin, goalsPlugin } from '@jaryn/goals'
 import { onePasswordPlugin } from '@jaryn/secrets-1password'
+import { pluginHostPlugin } from '@jaryn/plugin-host'
 
-const VERSION = '1.1.0'
+const VERSION = '1.2.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -110,6 +111,7 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/goals', goalsPlugin()],
     ['@jaryn/goals/tools', goalToolsPlugin()],
     ['@jaryn/secrets-1password', onePasswordPlugin()],
+    ['@jaryn/plugin-host', pluginHostPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/memory', memoryPlugin()],
     ['@jaryn/memory/tools', memoryToolsPlugin()],

@@ -93,6 +93,39 @@ export class CdpClient {
     await this.send('Input.dispatchKeyEvent', { type: 'keyUp', key })
   }
 
+  /** Start CDP screencast; onFrame receives base64 JPEG frames. */
+  async startScreencast(onFrame: (data: string) => void, opts: { quality?: number; maxWidth?: number; maxHeight?: number } = {}): Promise<void> {
+    if (!this.ws) throw new Error('CDP not connected')
+    const listener = (event: MessageEvent) => {
+      let msg: any
+      try { msg = JSON.parse(String(event.data)) } catch { return }
+      if (msg.method === 'Page.screencastFrame') {
+        onFrame(msg.params.data)
+        void this.send('Page.screencastFrameAck', { sessionId: msg.params.sessionId }).catch(() => {})
+      }
+    }
+    this.ws.addEventListener('message', listener)
+    this.screencastListener = listener
+    await this.send('Page.bringToFront').catch(() => undefined)
+    await this.send('Page.startScreencast', {
+      format: 'jpeg',
+      quality: opts.quality ?? 60,
+      maxWidth: opts.maxWidth ?? 1280,
+      maxHeight: opts.maxHeight ?? 900,
+      everyNthFrame: 2,
+    })
+  }
+
+  async stopScreencast(): Promise<void> {
+    if (this.screencastListener) {
+      this.ws?.removeEventListener('message', this.screencastListener)
+      this.screencastListener = undefined
+    }
+    await this.send('Page.stopScreencast').catch(() => undefined)
+  }
+
+  private screencastListener?: (event: MessageEvent) => void
+
   async screenshot(): Promise<string> {
     const result = await this.send<any>('Page.captureScreenshot', { format: 'png' })
     return result.data as string

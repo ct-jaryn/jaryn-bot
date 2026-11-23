@@ -14,6 +14,7 @@ import { webPlugin } from '@jaryn/tools-web'
 import { officePlugin } from '@jaryn/office'
 import { goalToolsPlugin, goalsPlugin } from '@jaryn/goals'
 import { onePasswordPlugin } from '@jaryn/secrets-1password'
+import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
 import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
 import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
@@ -59,6 +60,7 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/goals', goalsPlugin()],
     ['@jaryn/goals/tools', goalToolsPlugin()],
     ['@jaryn/secrets-1password', onePasswordPlugin()],
+    ['@jaryn/plugin-host', pluginHostPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/tools-fs', fsPlugin()],
     ['@jaryn/memory', memoryPlugin()],

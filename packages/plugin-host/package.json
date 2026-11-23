@@ -1,0 +1,8 @@
+{
+  "name": "@jaryn/plugin-host",
+  "version": "1.2.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "jaryn": { "permissions": { "fs": "none", "process": true, "network": [] } },
+  "dependencies": { "@jaryn/kernel": "workspace:*", "@jaryn/agent-core": "workspace:*" }
+}

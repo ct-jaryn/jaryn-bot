@@ -291,7 +291,7 @@ $('screen-toggle').onclick = () => {
   screenPanel.hidden = !screenPanel.hidden
   if (screenPanel.hidden) { screenSource?.close(); screenSource = null; return }
   if (!screenSource) {
-    screenSource = new EventSource('/api/computer/screen?botId=' + encodeURIComponent(state.sessionId) + '&fps=2')
+    screenSource = new EventSource('/api/computer/screen?mode=screencast&botId=' + encodeURIComponent(state.sessionId))
     screenSource.onmessage = (ev) => {
       const msg = JSON.parse(ev.data)
       if (msg.type === 'frame') screenImg.src = `data:image/png;base64,${msg.image}`
