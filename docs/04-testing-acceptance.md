@@ -64,8 +64,9 @@
 
 ### P3 Gate
 - [ ] 记忆写入后新会话可见；`/forget` 后不可见
-- [ ] digest ≤2K token 且包含 pinned 项
-- [ ] 整理任务幂等（重复跑不重复写入）
+- [ ] digest ≤600 token 且包含 pinned 项；无命中时为空
+- [ ] 整理任务幂等（重复跑不重复写入）；≤1 次 LLM/天
+- [ ] 1 万条记忆下 FTS p95 <20ms；密钥写入被拒
 - [ ] 两个 Bot 通过任务板完成一次协作
 - [ ] 环路护栏触发：hop>2 / 同 thread>20 / pair 超速 均被拒
 - [ ] Bot 间消息不能触发 external 动作

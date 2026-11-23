@@ -488,6 +488,8 @@ type Rule = {
 
 ## 10. 记忆子系统
 
+> 完整设计见 [13-memory-module.md](13-memory-module.md)（四层、bigram 分词、0 LLM 写入、≤600 token digest、淘汰策略）。本节只保留运行时视角。
+
 ### 四层
 
 | 层 | 存储 | 写入 | 读取 |
@@ -499,11 +501,11 @@ type Rule = {
 
 ### 关键机制
 
-1. **Digest 每轮注入**：从 `memories` 取 pinned + 最近高置信 + 与当前对话 FTS 相关的 5–10 条，压成 ≤2K token。**这解决"文件写了不生效"问题**（不依赖 agent 重读文件）。
-2. **整理任务**（每晚）：读当天 turn 事件 → 抽取候选记忆（偏好/规则/事实）→ 去重/合并（FTS 相似度）→ 写 `memories` 并更新 `MEMORY.md`（人可读）→ 低置信标记，7 天未复现则降权。
-3. **召回**：`memory.search(query, scope)` 走 FTS5（中文用 `unicode61` + 单字二元切分或 jieba 预处理），结果带来源与时间；语义检索 v0.2 加 embedding（sqlite-vec）。
+1. **Digest 每轮注入**：pinned（≤200 token）+ 检索 top-k（≤5 条，≤300 token）+ 待办，合计 **≤600 token**；无命中不注入。**这解决"文件写了不生效"问题**（不依赖 agent 重读文件）。
+2. **整理任务**（每晚，≤1 次 LLM、≤2K token）：处理候选池 → 去重/合并/同键覆盖 → 写 `memories` + 更新 `MEMORY.md`；也可关 LLM 只做规则去重。
+3. **召回**：`memory.search(query, scope)` 走 FTS5（中文 **bigram 分词 + unicode61**，见 13），结果带来源与时间；语义检索可选（默认关闭）。
 4. **遗忘**：`/forget <关键词>` → 删/软删记忆 + 记审计；TTL 支持；用户可看"它记得你什么"。
-5. **作用域**：`global`（关于主人）/ `bot:<id>`（bot 私有）/ `team`（共享）；跨 bot 消息里能引用 team，不能读别人 bot 的私有。
+5. **作用域**：`global`（关于主人）/ `bot:<id>`（bot 私有）；单 owner，无 team 共享。
 
 ---
 

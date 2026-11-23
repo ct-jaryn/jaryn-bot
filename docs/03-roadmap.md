@@ -25,7 +25,7 @@
 | **P0 骨架** | 组合能跑、能回放 | kernel、store、agent-core、Fake、CLI、tools-shell | 3–4 周 | — |
 | **P1 真模型** | 能干真活 | DeepSeek 适配、上下文装配、压缩、工具治理 | 2–3 周 | P0 |
 | **P2 Web UI** | 浏览器里每天用 | Web UI（会话/流式/审批/产物）；通知通道暂不做 | 3–4 周 | P1 |
-| **P3 记忆+多 Bot** | 记得住、能分工 | memory、consolidation、名册、任务板、子 Bot | 2–3 周 | P2 |
+| **P3 记忆+多 Bot** | 记得住、能分工 | 记忆模块（≤600 token digest、0 LLM 写入、FTS5）、名册、任务板、子 Bot | 2–3 周 | P2 |
 | **P4 主动** | 不用开口 | scheduler、job、goal、预算、投递、熔断 | 2 周 | P3 |
 | **P5 硬化** | 能给别人用 | 容器沙箱、MCP、插件管理、指标、备份、文档 | 3–4 周 | P4 |
 
@@ -72,7 +72,7 @@
 **任务清单**
 - [ ] DeepSeek 适配器 + 流式解析
 - [ ] tool-call 兼容（native / emulated 降级）
-- [ ] 上下文预算分配（system ≤ 15%、memory ≤ 2K、history 动态）
+- [ ] 上下文预算分配（system ≤ 15%、memory digest ≤600 token、history 动态）
 - [ ] 压缩：摘要写 `memory.consolidated`，保留最近 6 轮
 - [ ] 工具输出 >32KB 截断 + spill 文件路径
 - [ ] `/stop` 在 2s 内生效（provider/工具/子进程）
@@ -120,9 +120,9 @@
 - 任务板 + `spawn_worker` + `send_message` + 防环路（hop/线程/速率/去重）
 
 **任务清单**
-- [ ] 记忆表 + FTS 索引 + digest 生成（≤2K token）
-- [ ] `/memory` `/forget` `/remember`
-- [ ] 整理任务（cron 03:00）与审计
+- [ ] 记忆模块：[13](13-memory-module.md) 的表/FTS/bigram 分词 + digest（≤600 token）
+- [ ] `/memory` `/forget` `/remember`；规则抽取（0 LLM/轮）
+- [ ] 整理任务（cron 03:00，≤1 次 LLM/天、≤2K token）与审计
 - [ ] 每 Bot 子 Context + isolate 服务
 - [ ] 任务板 CAS + 子 Bot 生命周期
 - [ ] 消息环路护栏 + `/stop-all`

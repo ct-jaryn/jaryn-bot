@@ -110,7 +110,7 @@
 | `shell.run` | 执行命令（argv 数组、cwd、超时、输出截断） | execute | **ask** |
 | `web.search` | 搜索，返回答案 + 来源 | network | 允许 |
 | `web.fetch` | 抓取页面为文本（SSRF 防护） | network | 允许 |
-| `memory.remember/search/forget/list` | 记忆读写 | write | 允许 |
+| `memory.remember/search/forget/list` | 记忆读写（设计见 [13](13-memory-module.md)） | write | 允许 |
 | `skill.list/load` | 技能目录/加载 | read | 允许 |
 | `task.create/claim/complete/list` | 任务板 | write | 允许 |
 | `bot.send_message/list_agents/spawn_worker` | Bot 协作 | external | **ask** |
@@ -148,23 +148,22 @@
 
 ## FR-7 记忆
 
-**目的**：跨会话记住人、偏好、规则、历史，且用户可查、可改、可删。
+**目的**：跨会话记住人、偏好、规则、历史，且用户可查、可改、可删；**轻量、低消耗**（详见 [13-memory-module.md](13-memory-module.md)）。
 
 | 层 | 规格 |
 |---|---|
-| 长期事实 | `memories` 表：kind=fact/preference/rule/event；scope=global/bot/team；带来源与置信度 |
-| Digest | 每轮注入 ≤2K token：pinned + 最近高置信 + 与当前对话 FTS 相关 |
-| 写入 | 模型调用 `memory.remember`；或每晚整理任务从当天事件提炼 |
-| 整理 | 每天 03:00（可配）跑 consolidation：去重/合并/降权/更新 `MEMORY.md` |
-| 查看 | `/memory` 列出当前 Bot 记得什么；`/memory global` 查看全局事实 |
-| 遗忘 | `/forget <关键词>` 删除匹配记忆并记审计；`/forget all` 需二次确认 |
-| 作用域 | 跨 Bot 不默认共享；`team` 域需显式写入 |
+| L1 核心 | pinned 事实/规则，≤200 token，每轮固定注入（稳定前缀） |
+| L2 检索 | FTS5 + bigram 分词，按当前输入取 top-k（≤5 条、每条 ≤120 字），≤300 token |
+| L3 情节 | 会话压缩摘要，TTL 30 天，参与检索 |
+| Digest | 每轮 ≤600 token；无命中则不注入 |
+| 写入 | 显式 `/remember`、`memory.remember`，或规则抽取进候选池（**0 LLM/轮**） |
+| 整理 | 每天 1 次，≤50 条候选、≤2K token（可关，纯规则去重） |
+| 查看/遗忘 | `/memory`、`/memory global`、`/forget <词>`、`/remember <文本>` |
+| 作用域 | `global` 与 `bot:<id>`，跨 Bot 不共享（单 owner，无 team） |
 
-**边界与错误**
-- 单条记忆 ≤ 1000 字符；超长拆分。
-- 密钥/密码类内容拒绝写入（正则 + 用户确认）。
+**边界与错误**：单条 ≤500 字；拒绝密钥/卡号；整理失败不阻塞对话；超过 5000 条按得分淘汰。
 
-**验收**：告诉它"周报用中文、结论先行"，`/new` 后仍生效；`/forget 周报` 后不再生效。
+**验收**：偏好跨会话生效；digest ≤600 token；`/forget` 生效；密钥写入被拒。
 
 ---
 

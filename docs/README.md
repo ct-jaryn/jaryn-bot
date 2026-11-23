@@ -1,6 +1,6 @@
 # jaryn-bot 文档地图
 
-> 2026-11-23。共 **19 份正文 + 本索引**，分五类：**规划**、**功能与接口**、**子系统设计**、**核心设计**、**研究/历史**。
+> 2026-11-23。共 **20 份正文 + 本索引**，分五类：**规划**、**功能与接口**、**子系统设计**、**核心设计**、**研究/历史**。
 > 需要你拍板的事集中在 [12 决策清单](12-decision-register.md)。
 > 目标：**个人版完全对标 Grok Bot 并 6 点超越；团队协作 / 会议 / 企业管控 / 语音明确不做。**
 > 状态标记：`现行` = 以此为准；`设计` = 架构决策，已冻结到 v0.1；`历史` = 旧分析，保留作证据。
@@ -14,6 +14,7 @@
 | **运维/部署** | [05 部署运维](05-deployment-ops.md) → [02 接口](02-interfaces.md)（配置/HTTP 段） |
 | **多端客户端** | [06 服务端+多客户端](06-clients-and-topology.md) → [02 接口](02-interfaces.md)（客户端 API） |
 | **云电脑/Vault/连接器/主动** | [07 云电脑](07-cloud-computer.md) · [08 Vault](08-vault-and-credentials.md) · [09 连接器](09-connectors-and-artifacts.md) · [10 主动](10-proactive-and-initiative.md) |
+| **记忆模块** | [13 记忆模块（轻量/低消耗）](13-memory-module.md) → [12 运行时 §10](runtime-design.md) |
 | **想了解为什么、对标什么** | [11 对标矩阵](11-parity-and-beyond.md) → [14 差距历史](gap-vs-grokbot.md) → [15 选型](build-on-dsh-vs-standalone.md) |
 | **要拍板** | [12 决策清单](12-decision-register.md)（D-01…D-30，按影响阶段排序） |
 
@@ -33,13 +34,14 @@
 | 09 | [09-connectors-and-artifacts.md](09-connectors-and-artifacts.md) | 连接器、个人邮箱、Pages、产物管线 | 现行（v0.3） |
 | 10 | [10-proactive-and-initiative.md](10-proactive-and-initiative.md) | Routine、Initiative 信号与提议、Teach-a-task、通知与预算 | 现行（v1.0） |
 | 11 | [11-parity-and-beyond.md](11-parity-and-beyond.md) | 对标矩阵、6 个超越点、明确不做清单、版本阶梯、风险 | 现行 |
-| 12 | [runtime-design.md](runtime-design.md) | 运行时主设计：进程/事件/SQLite/循环/工具/审批/记忆/多 Bot/调度/ADR | 设计（v0.1 冻结） |
-| 13 | [plugin-architecture.md](plugin-architecture.md) | 插件化：Context/Effect/Event/Loader、seam、bundle/profile/preset、安全 | 设计（v0.1 冻结） |
-| 14 | [gap-vs-grokbot.md](gap-vs-grokbot.md) | 早期差距估算（个人/产品/企业三档） | 历史（被 11 取代） |
-| 15 | [build-on-dsh-vs-standalone.md](build-on-dsh-vs-standalone.md) | 选型：DSH 插件 / 独立 + DSH / 完全自研 | 历史（结论：自研） |
-| 16 | [scope-multibot-memory-proactive.md](scope-multibot-memory-proactive.md) | DSH 方案下的能力设计 | 历史（机制思路参考） |
-| 17 | [feasibility-and-architecture.md](feasibility-and-architecture.md) | Grok Bot 拆解 + DSH 服务端能力核查 | 历史（背景） |
-| 18 | [12-decision-register.md](12-decision-register.md) | **决策清单**：需要 owner 拍板的 30 项（选项/建议/后果）+ 已定事项 | 现行 |
+| 12 | [runtime-design.md](runtime-design.md) | 运行时主设计：进程/事件/SQLite/循环/工具/审批/多 Bot/调度/ADR | 设计（v0.1 冻结） |
+| 13 | [13-memory-module.md](13-memory-module.md) | **记忆模块**：四层存储、bigram 分词、FTS5、0 LLM 写入、≤600 token digest | 现行（P3） |
+| 14 | [plugin-architecture.md](plugin-architecture.md) | 插件化：Context/Effect/Event/Loader、seam、bundle/profile/preset、安全 | 设计（v0.1 冻结） |
+| 15 | [gap-vs-grokbot.md](gap-vs-grokbot.md) | 早期差距估算（个人/产品/企业三档） | 历史（被 11 取代） |
+| 16 | [build-on-dsh-vs-standalone.md](build-on-dsh-vs-standalone.md) | 选型：DSH 插件 / 独立 + DSH / 完全自研 | 历史（结论：自研） |
+| 17 | [scope-multibot-memory-proactive.md](scope-multibot-memory-proactive.md) | DSH 方案下的能力设计 | 历史（机制思路参考） |
+| 18 | [feasibility-and-architecture.md](feasibility-and-architecture.md) | Grok Bot 拆解 + DSH 服务端能力核查 | 历史（背景） |
+| 19 | [12-decision-register.md](12-decision-register.md) | **决策清单**：需要 owner 拍板的 30 项（选项/建议/后果）+ 已定事项 | 现行 |
 
 ## 三、关键数字（所有文档必须一致）
 
@@ -55,6 +57,7 @@
 | 明确不做 | 团队协作 / 会议 / 企业管控（SSO·SCIM·网络策略·组织 API·审计导出）/ 语音 / SaaS 计费 |
 | 私有化 | 单租户自托管；数据与密钥本地；出网仅模型（IM/连接器暂不做） |
 | 许可 | AGPL-3.0 + 商业双许可（网络使用须公开源码；闭源商业需授权） |
+| 记忆 | 每轮 digest ≤600 token；整理 ≤1 次 LLM/天（≤2K token）；默认无向量库/embedding；DB <1MB/年 |
 
 ## 四、维护约定
 
