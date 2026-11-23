@@ -167,6 +167,28 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const id = path.split('/')[3]
       return sendJson(res, 200, { runs: scheduler.runs(id) })
     }
+    if (req.method === 'GET' && path === '/api/computer') {
+      const computer = ctx.get<any>('computer')
+      if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
+      return sendJson(res, 200, { status: computer.status(url.searchParams.get('botId') ?? 'default') })
+    }
+    if (req.method === 'POST' && /^\/api\/computer\/(start|stop|snapshot)$/.test(path)) {
+      const computer = ctx.get<any>('computer')
+      if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
+      const action = path.split('/').at(-1)
+      const botId = url.searchParams.get('botId') ?? 'default'
+      if (action === 'start') return sendJson(res, 200, { instance: await computer.start(botId) })
+      if (action === 'stop') { await computer.stop(botId); return sendJson(res, 200, { ok: true }) }
+      return sendJson(res, 200, { path: await computer.snapshot(botId, url.searchParams.get('label') ?? undefined) })
+    }
+    if (req.method === 'GET' && path === '/api/computer/screenshot') {
+      const computer = ctx.get<any>('computer')
+      if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
+      const client = await computer.client(url.searchParams.get('botId') ?? 'default')
+      const png = Buffer.from(await client.screenshot(), 'base64')
+      res.writeHead(200, { 'content-type': 'image/png' })
+      return void res.end(png)
+    }
     if (req.method === 'GET' && path === '/api/memory') {
       const memory = ctx.get<any>('memory')
       if (!memory) return sendJson(res, 404, { error: 'memory not mounted' })

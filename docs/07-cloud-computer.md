@@ -1,6 +1,6 @@
 # 07 · 云电脑（Computer Use）
 
-> 状态：**现行（下一阶段，v0.1 后启动）**。对标 Grok Bot 的"每个 Bot 有自己的电脑"，但隔离粒度更细（每 Bot 一台，而不是每用户一台）；仅做容器 + 浏览器/终端，桌面 GUI 暂不做。
+> 状态：**现行（v0.2 已实现：容器/本地后端、浏览器工具、截图、快照；桌面/接管/串流未实现）**。对标 Grok Bot 的"每个 Bot 有自己的电脑"，但隔离粒度更细（每 Bot 一台，而不是每用户一台）；仅做容器 + 浏览器/终端，桌面 GUI 暂不做。
 > 关联：[01 FR-15](01-functional-spec.md) · [06 客户端](06-clients-and-topology.md) · [08 Vault](08-vault-and-credentials.md) · [05 部署](05-deployment-ops.md)
 
 ---

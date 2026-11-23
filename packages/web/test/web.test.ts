@@ -8,6 +8,7 @@ import { Store, storePlugin } from '@jaryn/store-sqlite'
 import { startWebServer } from '../src/index.ts'
 import { memoryPlugin } from '@jaryn/memory'
 import { schedulerPlugin } from '@jaryn/scheduler'
+import { computerPlugin } from '@jaryn/computer'
 
 async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {}) {
   const ctx = new Context({ scope: 'root' })
@@ -32,6 +33,7 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
   })
   await ctx.mount(agentPlugin())
   await ctx.mount(schedulerPlugin())
+  await ctx.mount(computerPlugin())
   store.createSession('web', 'default', '/tmp')
   const server = await startWebServer(ctx, { port: 0, ...opts })
   return { ctx, store, server }
@@ -87,6 +89,17 @@ test('approval allow path executes tool', async () => {
     await waitFor(async () => store.events('web').some((e: any) => e.type === 'tool.result'))
     const toolResult = store.events('web').find((e: any) => e.type === 'tool.result')
     assert.equal(toolResult.data.ok, true)
+  } finally {
+    await server.close()
+    await ctx.dispose()
+  }
+})
+
+test('computer status API reports stopped', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const data = await (await fetch(`${server.url}/api/computer?botId=bot-a`)).json()
+    assert.equal(data.status.state, 'stopped')
   } finally {
     await server.close()
     await ctx.dispose()

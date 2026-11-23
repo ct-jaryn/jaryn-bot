@@ -18,9 +18,10 @@ import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
 import { schedulerPlugin } from '@jaryn/scheduler'
 import { dockerSandboxPlugin } from '@jaryn/sandbox-docker'
 import { mcpPlugin } from '@jaryn/mcp'
+import { computerPlugin, computerToolsPlugin } from '@jaryn/computer'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.1.0'
+const VERSION = '0.2.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -99,6 +100,8 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/scheduler', schedulerPlugin()],
     ['@jaryn/sandbox-docker', dockerSandboxPlugin()],
     ['@jaryn/mcp', mcpPlugin()],
+    ['@jaryn/computer', computerPlugin()],
+    ['@jaryn/computer/tools', computerToolsPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
 }
@@ -269,6 +272,20 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
     } finally {
       await ctx.dispose()
     }
+  }
+
+  if (cmd === 'computer') {
+    const { ctx } = await createRuntime(flags)
+    const computer = ctx.get<any>('computer')
+    const bot = String(flags.bot ?? 'default')
+    try {
+      if (sub === 'status') { console.log(JSON.stringify(computer.status(bot), null, 2)); return 0 }
+      if (sub === 'start') { console.log(JSON.stringify(await computer.start(bot), null, 2)); return 0 }
+      if (sub === 'stop') { await computer.stop(bot); console.log('stopped'); return 0 }
+      if (sub === 'snapshot') { console.log(JSON.stringify({ path: await computer.snapshot(bot, flags.label as string | undefined) }, null, 2)); return 0 }
+      console.error('usage: jary computer status|start|stop|snapshot [--bot id]')
+      return 2
+    } finally { await computer.shutdown?.(); await ctx.dispose() }
   }
 
   if (cmd === 'plugin') {
@@ -465,6 +482,7 @@ commands:
   backup [--out <dir>]       backup sqlite + workspaces
   restore --from <dir> --yes restore from backup
   plugin list|doctor|enable|disable|index
+  computer status|start|stop|snapshot [--bot id]
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)

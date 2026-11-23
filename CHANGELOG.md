@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.0 — 云电脑
+
+### Added
+
+- `@jaryn/computer`：每 Bot 一台电脑（Local Chrome headless / Docker 容器后端）
+- CDP 客户端：导航、取文本、点击、输入、截图
+- 浏览器工具：`browser.goto/extract/click/type/screenshot`、`computer.start/stop/status/snapshot/restore`
+- 任务级快照/恢复（workspace + 浏览器 profile）
+- CLI `jary computer status|start|stop|snapshot`；Web `/api/computer` + `/api/computer/screenshot`
+- Docker 镜像 `deploy/computer/Dockerfile` + `packages/bundles/docker-computer` patch
+- 真实 Chrome 端到端测试；51 个测试
+
+
 ## v0.1.0 — 首个可用版本
 
 包含 P0–P5：

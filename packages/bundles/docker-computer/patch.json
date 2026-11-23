@@ -1,0 +1,3 @@
+[
+  { "id": "computer", "name": "@jaryn/computer", "config": { "backend": "docker", "image": "jaryn-computer:0.2" } }
+]

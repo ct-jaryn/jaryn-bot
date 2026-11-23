@@ -67,6 +67,18 @@
         "id": "scheduler",
         "name": "@jaryn/scheduler",
         "config": {}
+      },
+      {
+        "id": "computer",
+        "name": "@jaryn/computer",
+        "config": {
+          "backend": "local"
+        }
+      },
+      {
+        "id": "computer-tools",
+        "name": "@jaryn/computer/tools",
+        "config": {}
       }
     ]
   }
