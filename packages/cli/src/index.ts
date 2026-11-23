@@ -29,6 +29,7 @@ import { TunnelClient } from '@jaryn/tunnel'
 import { devicesPlugin } from '@jaryn/devices'
 import { fsPlugin } from '@jaryn/tools-fs'
 import { webPlugin } from '@jaryn/tools-web'
+import { officePlugin } from '@jaryn/office'
 
 const VERSION = '1.0.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -103,6 +104,7 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/agent-core/pricing', pricingPlugin()],
     ['@jaryn/agent-core/questions', questionsPlugin()],
     ['@jaryn/tools-web', webPlugin()],
+    ['@jaryn/office', officePlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/memory', memoryPlugin()],
     ['@jaryn/memory/tools', memoryToolsPlugin()],

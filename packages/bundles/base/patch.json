@@ -173,6 +173,11 @@
         "id": "pricing",
         "name": "@jaryn/agent-core/pricing",
         "config": {}
+      },
+      {
+        "id": "office",
+        "name": "@jaryn/office",
+        "config": {}
       }
     ]
   }

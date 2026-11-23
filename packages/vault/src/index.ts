@@ -74,6 +74,33 @@ export function vaultToolsPlugin(): Plugin {
           },
         },
         {
+          name: 'vault.rotate',
+          description: 'Replace the stored secret for an item (value never returned to the model).',
+          risk: 'write',
+          schema: { type: 'object', properties: { id: { type: 'string' }, secret: { type: 'object' } }, required: ['id', 'secret'] },
+          async execute(args) {
+            vault.rotate(String(args.id), (args.secret ?? {}) as Record<string, unknown>)
+            return { rotated: true }
+          },
+        },
+        {
+          name: 'vault.grant',
+          description: 'Grant or revoke a bot access to a credential item.',
+          risk: 'write',
+          schema: {
+            type: 'object',
+            properties: { id: { type: 'string' }, botId: { type: 'string' }, revoke: { type: 'boolean' } },
+            required: ['id', 'botId'],
+          },
+          async execute(args) {
+            const id = String(args.id)
+            const botId = String(args.botId)
+            if (args.revoke) { vault.revoke(id, botId); return { granted: false } }
+            vault.grant(id, botId)
+            return { granted: true }
+          },
+        },
+        {
           name: 'vault.remove',
           description: 'Delete a saved credential.',
           risk: 'write',

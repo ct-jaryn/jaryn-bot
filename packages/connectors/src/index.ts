@@ -88,6 +88,36 @@ export class ConnectorService {
   }
 }
 
+export interface OAuthExchangeConfig {
+  tokenUrl: string
+  clientId: string
+  clientSecret?: string
+  redirectUri: string
+  code: string
+  codeVerifier?: string
+}
+
+/** Exchange an authorization code for tokens (client_secret_post). */
+export async function exchangeOAuthCode(cfg: OAuthExchangeConfig): Promise<Record<string, unknown>> {
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code: cfg.code,
+    client_id: cfg.clientId,
+    redirect_uri: cfg.redirectUri,
+  })
+  if (cfg.clientSecret) body.set('client_secret', cfg.clientSecret)
+  if (cfg.codeVerifier) { body.set('code_verifier', cfg.codeVerifier); body.set('grant_type', 'authorization_code') }
+  const res = await fetch(cfg.tokenUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+    body: body.toString(),
+    signal: AbortSignal.timeout(20_000),
+  })
+  const text = await res.text()
+  if (!res.ok) throw new Error(`oauth token exchange failed: HTTP ${res.status} ${text.slice(0, 200)}`)
+  try { return JSON.parse(text) } catch { return { raw: text } }
+}
+
 export function buildAuthorizeUrl(server: ConnectorServerConfig & { auth: { type: 'oauth2'; authorizeUrl: string; clientId: string; redirectUri: string; scopes: string[] } }, state: string): string {
   const url = new URL(server.auth.authorizeUrl)
   url.searchParams.set('client_id', server.auth.clientId)
