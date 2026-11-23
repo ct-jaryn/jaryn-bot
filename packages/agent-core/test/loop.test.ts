@@ -82,6 +82,36 @@ test('external tool output is wrapped as untrusted', async () => {
   assert.match(toolMessage?.content, /<untrusted>/)
 })
 
+test('skills catalog is injected into the system prompt', async () => {
+  const { ctx } = build([[{ type: 'text', text: 'ok' }, { type: 'finish', reason: 'stop' }]])
+  ctx.provide('skills', { catalog: () => 'Available skills:\n- 生成周报 (3 steps)' })
+  await runTurn(ctx, { sessionId: 's-skills', text: 'hi' })
+  const req = (ctx.get<any>('llm') as any).requests[0]
+  assert.match(req.messages[0].content, /生成周报/)
+})
+
+test('ask_user tool returns the answer from the questions seam', async () => {
+  const { ctx, tools } = build([
+    [{ type: 'tool_call', call: { id: 'c1', name: 'ask_user', args: { question: 'which?' } } }, { type: 'finish', reason: 'tool' }],
+    [{ type: 'text', text: 'ok' }, { type: 'finish', reason: 'stop' }],
+  ])
+  let asked = ''
+  ctx.provide('questions', { ask: async (input: any) => { asked = input.question; return 'answer-42' } })
+  tools.set('ask_user', {
+    name: 'ask_user', description: 'ask', schema: { type: 'object' }, risk: 'external',
+    async execute(args: any, runCtx: any) {
+      const service = ctx.get<any>('questions')
+      return { answer: await service.ask({ sessionId: runCtx.sessionId, question: args.question }) }
+    },
+  })
+  ctx.provide('approvals', { request: async () => 'allowed' })
+  await runTurn(ctx, { sessionId: 's-ask', text: 'use ask' })
+  assert.equal(asked, 'which?')
+  const req = (ctx.get<any>('llm') as any).requests.at(-1)
+  const toolMsg = req.messages.find((m: any) => m.role === 'tool')
+  assert.match(toolMsg.content, /answer-42/)
+})
+
 test('memory digest is injected into the system prompt', async () => {
   const { ctx } = build([[{ type: 'text', text: 'ok' }, { type: 'finish', reason: 'stop' }]])
   ctx.provide('memory', { digest: () => 'MEMORY DIGEST: prefers Chinese', observe: () => 1 })

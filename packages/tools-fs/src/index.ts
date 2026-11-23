@@ -1,4 +1,5 @@
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { isAbsolute, relative, resolve, sep } from 'node:path'
 import { definePlugin } from '@jaryn/kernel'
 import type { Plugin } from '@jaryn/kernel'
@@ -60,6 +61,53 @@ export function fsTools(): Tool[] {
         const text = await readFile(file, 'utf8')
         if (text.length > MAX_READ) return text.slice(0, MAX_READ) + `\n...[truncated ${text.length - MAX_READ} chars]`
         return text
+      },
+    },
+    {
+      name: 'fs.write',
+      description: 'Create or overwrite a UTF-8 text file inside the workspace (parent dirs created).',
+      risk: 'write',
+      schema: {
+        type: 'object',
+        properties: { path: { type: 'string' }, content: { type: 'string' } },
+        required: ['path', 'content'],
+      },
+      async execute(args, ctx: ToolRunContext) {
+        const root = safeRoot(ctx.cwd)
+        const file = resolveInside(root, String(args.path ?? ''))
+        const content = String(args.content ?? '')
+        if (content.length > MAX_READ) throw new Error(`content too large (${content.length} > ${MAX_READ})`)
+        await mkdir(dirname(file), { recursive: true })
+        await writeFile(file, content, 'utf8')
+        return { path: relative(root, file), bytes: Buffer.byteLength(content) }
+      },
+    },
+    {
+      name: 'fs.edit',
+      description: 'Replace a literal string in a file (must be unique unless all=true).',
+      risk: 'write',
+      schema: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          old: { type: 'string' },
+          new: { type: 'string' },
+          all: { type: 'boolean' },
+        },
+        required: ['path', 'old', 'new'],
+      },
+      async execute(args, ctx: ToolRunContext) {
+        const root = safeRoot(ctx.cwd)
+        const file = resolveInside(root, String(args.path ?? ''))
+        const oldText = String(args.old ?? '')
+        if (!oldText) throw new Error('old string is required')
+        const text = await readFile(file, 'utf8')
+        const count = text.split(oldText).length - 1
+        if (count === 0) throw new Error('old string not found')
+        if (count > 1 && !args.all) throw new Error(`old string appears ${count} times; pass all=true or make it unique`)
+        const next = args.all ? text.split(oldText).join(String(args.new ?? '')) : text.replace(oldText, String(args.new ?? ''))
+        await writeFile(file, next, 'utf8')
+        return { path: relative(root, file), replaced: args.all ? count : 1 }
       },
     },
     {

@@ -42,6 +42,7 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
   }
 
   const clients = new Set<{ res: ServerResponse; sessionId: string }>()
+  const pendingQuestions = new Map<string, { resolve: (answer: string) => void; timer: NodeJS.Timeout }>()
   const pending = new Map<string, { req: ApprovalRequest; resolve: (d: ApprovalDecision) => void; timer: NodeJS.Timeout }>()
 
   const broadcast = (sessionId: string, event: unknown) => {
@@ -74,7 +75,30 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     },
   }
 
+  const questionChannel = {
+    async ask(input: { sessionId: string; question: string; options?: string[] }, signal?: AbortSignal) {
+      const id = `q_${Math.random().toString(36).slice(2, 10)}`
+      return await new Promise<string>((resolve) => {
+        const finish = (answer: string) => {
+          const entry = pendingQuestions.get(id)
+          if (!entry) return
+          clearTimeout(entry.timer)
+          pendingQuestions.delete(id)
+          broadcast(input.sessionId, { type: 'question.resolved', id })
+          resolve(answer)
+        }
+        const timer = setTimeout(() => finish('no answer (timed out); proceed with your best judgement'), 10 * 60_000)
+        pendingQuestions.set(id, { resolve: finish, timer })
+        broadcast(input.sessionId, { type: 'question', id, question: input.question, options: input.options ?? [] })
+        signal?.addEventListener('abort', () => finish('cancelled'), { once: true })
+      })
+    },
+  }
+  if (!ctx.has('questionChannel')) ctx.provide('questionChannel', questionChannel)
+  if (!ctx.has('questions')) ctx.provide('questions', questionChannel)
+
   // Register only when the composition does not provide one (tests/local).
+  if (!ctx.has('approvalChannel')) ctx.provide('approvalChannel', approvals)
   if (!ctx.has('approvals')) {
     ctx.provide('approvals', {
       request: async (req: ApprovalRequest, signal?: AbortSignal) => {
@@ -539,6 +563,23 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       entry.resolve(decision)
       return sendJson(res, 200, { ok: true, decision, sessionId })
     }
+    if (req.method === 'POST' && path.startsWith('/api/sessions/') && path.endsWith('/cancel')) {
+      const sessionId = path.split('/')[3]!
+      const agent = ctx.get<any>('agent')
+      const cancelled = agent?.cancel?.(sessionId) ?? false
+      return sendJson(res, 200, { cancelled })
+    }
+    if (req.method === 'GET' && path === '/api/questions') {
+      return sendJson(res, 200, { pending: [...pendingQuestions.keys()] })
+    }
+    if (req.method === 'POST' && path.startsWith('/api/questions/')) {
+      const id = path.slice('/api/questions/'.length)
+      const entry = pendingQuestions.get(id)
+      if (!entry) return sendJson(res, 404, { error: 'question not found' })
+      const body = await readBody(req)
+      entry.resolve(String(body.answer ?? ''))
+      return sendJson(res, 200, { ok: true })
+    }
     if (req.method === 'POST' && path === '/api/message') {
       const body = await readBody(req)
       const text = String(body.text ?? '').trim()
@@ -593,6 +634,11 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
         p.resolve('denied')
       }
       pending.clear()
+      for (const q of pendingQuestions.values()) {
+        clearTimeout(q.timer)
+        q.resolve('cancelled')
+      }
+      pendingQuestions.clear()
       await new Promise<void>((resolve) => server.close(() => resolve()))
     },
   }

@@ -1,0 +1,3 @@
+[
+  { "id": "web", "name": "@jaryn/tools-web", "config": { "search": { "provider": "searxng", "baseUrl": "http://127.0.0.1:8888" } } }
+]

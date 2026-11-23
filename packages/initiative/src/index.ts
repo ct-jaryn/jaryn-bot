@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { definePlugin } from '@jaryn/kernel'
 import type { Plugin } from '@jaryn/kernel'
@@ -213,6 +213,23 @@ export class TeachService {
   list(): { name: string }[] {
     return readdirSync(this.dir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => ({ name: d.name }))
   }
+
+  /** Short catalog for the system prompt (names + first heading only). */
+  catalog(limit = 12): string {
+    const skills = this.list().slice(0, limit)
+    if (skills.length === 0) return ''
+    const lines = skills.map((s) => {
+      try {
+        const text = readFileSync(join(this.dir, s.name, 'SKILL.md'), 'utf8')
+        const title = text.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? s.name
+        const steps = (text.match(/^\d+\.\s+(.+)$/gm) ?? []).length
+        return `- ${title} (${steps} steps, path skills/${s.name}/SKILL.md)`
+      } catch {
+        return `- ${s.name}`
+      }
+    })
+    return `Available skills (load with fs.read on the path when relevant):\n${lines.join('\n')}`
+  }
 }
 
 export function initiativePlugin(cfg: InitiativeConfig = {}): Plugin<InitiativeConfig> {
@@ -226,7 +243,9 @@ export function initiativePlugin(cfg: InitiativeConfig = {}): Plugin<InitiativeC
       service.storeDb = store.db
       ctx.provide('initiative', service)
       const home = process.env.JARY_HOME ?? join(process.cwd(), 'data')
-      ctx.provide('teach', new TeachService(home))
+      const teachService = new TeachService(home)
+      ctx.provide('teach', teachService)
+      ctx.provide('skills', { catalog: (limit?: number) => teachService.catalog(limit), list: () => teachService.list() })
     },
   })
 }

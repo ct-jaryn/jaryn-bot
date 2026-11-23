@@ -2,7 +2,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { join } from 'node:path'
 import { definePlugin } from '@jaryn/kernel'
 import type { Context, Plugin } from '@jaryn/kernel'
-import type { BudgetLimits, TurnResult } from '@jaryn/agent-core'
+import type { BudgetLimits, Tool, TurnResult } from '@jaryn/agent-core'
 import { nextCron } from './cron.ts'
 
 export type Trigger =
@@ -268,6 +268,69 @@ export function schedulerPlugin(cfg: { tickMs?: number; autostart?: boolean } = 
       ctx.provide('scheduler', scheduler)
       if (config.autostart ?? cfg.autostart) scheduler.start(config.tickMs ?? cfg.tickMs ?? 5000)
       ctx.effect(() => () => scheduler.stopAll())
+    },
+  })
+}
+
+export function schedulerToolsPlugin(): Plugin {
+  return definePlugin({
+    name: '@jaryn/scheduler/tools',
+    inject: ['scheduler', 'tools'],
+    apply(ctx) {
+      const scheduler = ctx.get<JobScheduler>('scheduler')!
+      const tools = ctx.get<{ register(t: Tool): () => void }>('tools')!
+      const list: Tool[] = [
+        {
+          name: 'schedule.create',
+          description: 'Create a recurring job: mission runs on a cron/every/webhook trigger with a budget.',
+          risk: 'write',
+          schema: {
+            type: 'object',
+            properties: {
+              mission: { type: 'string' },
+              cron: { type: 'string', description: '5-field cron (requires tz)' },
+              tz: { type: 'string' },
+              everySeconds: { type: 'number' },
+              botId: { type: 'string' },
+              maxRounds: { type: 'number' },
+            },
+            required: ['mission'],
+          },
+          async execute(args) {
+            const mission = String(args.mission ?? '')
+            if (!mission) throw new Error('mission is required')
+            const trigger = args.cron
+              ? { kind: 'cron' as const, expr: String(args.cron), tz: String(args.tz ?? 'UTC') }
+              : args.everySeconds
+                ? { kind: 'every' as const, seconds: Number(args.everySeconds) }
+                : null
+            if (!trigger) throw new Error('provide cron (with tz) or everySeconds')
+            return scheduler.add({
+              botId: args.botId ? String(args.botId) : undefined,
+              trigger,
+              mission,
+              budget: { maxRounds: args.maxRounds ? Number(args.maxRounds) : undefined },
+            })
+          },
+        },
+        {
+          name: 'schedule.list',
+          description: 'List scheduled jobs and their next run time.',
+          risk: 'read',
+          schema: { type: 'object', properties: {} },
+          async execute() { return scheduler.list() },
+        },
+        {
+          name: 'schedule.cancel',
+          description: 'Disable or remove a scheduled job.',
+          risk: 'write',
+          schema: { type: 'object', properties: { id: { type: 'string' }, remove: { type: 'boolean' } }, required: ['id'] },
+          async execute(args) {
+            return args.remove ? { removed: scheduler.remove(String(args.id)) } : scheduler.enable(String(args.id), false)
+          },
+        },
+      ]
+      for (const tool of list) ctx.effect(() => tools.register(tool))
     },
   })
 }

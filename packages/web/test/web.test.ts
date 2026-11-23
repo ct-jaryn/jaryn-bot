@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { Context } from '@jaryn/kernel'
-import { agentPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
+import { agentPlugin, questionsPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
 import type { Tool } from '@jaryn/agent-core'
 import { FakeProvider } from '@jaryn/testing'
 import { Store, storePlugin } from '@jaryn/store-sqlite'
@@ -37,6 +37,7 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
     async execute() { return 'ran' },
   })
   await ctx.mount(agentPlugin())
+  await ctx.mount(questionsPlugin())
   await ctx.mount(schedulerPlugin())
   await ctx.mount(computerPlugin())
   await ctx.mount(vaultPlugin())
@@ -69,6 +70,7 @@ test('API token auth and inbound email webhook', async () => {
   ctx.provide('tools', { register: () => () => {}, list: () => [], get: () => undefined, execute: async () => undefined })
   ctx.provide('llm', new FakeProvider([]))
   await ctx.mount(agentPlugin())
+  await ctx.mount(questionsPlugin())
   const server = await startWebServer(ctx, { port: 0, apiToken: 'tok-1' })
   try {
     const denied = await fetch(`${server.url}/api/sessions`)
@@ -141,6 +143,33 @@ test('approval allow path executes tool', async () => {
     await server.close()
     await ctx.dispose()
   }
+})
+
+test('cancel endpoint reports no active turn', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const res = await (await fetch(`${server.url}/api/sessions/web/cancel`, { method: 'POST' })).json()
+    assert.equal(res.cancelled, false)
+  } finally { await server.close(); await ctx.dispose() }
+})
+
+test('ask_user question round-trip over the web', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const questions = ctx.get<any>('questions')
+    const pending = questions.ask({ sessionId: 'web', question: 'Which repo?', options: ['a', 'b'] })
+    let id = ''
+    for (let i = 0; i < 40; i++) {
+      const list = await (await fetch(`${server.url}/api/questions`)).json()
+      if (list.pending.length > 0) { id = list.pending[0]; break }
+      await new Promise((r) => setTimeout(r, 25))
+    }
+    assert.ok(id, 'question should be pending')
+    await fetch(`${server.url}/api/questions/${id}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ answer: 'a' }),
+    })
+    assert.equal(await pending, 'a')
+  } finally { await server.close(); await ctx.dispose() }
 })
 
 test('device pairing flow', async () => {

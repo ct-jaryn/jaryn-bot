@@ -5,7 +5,7 @@ import { Context } from '@jaryn/kernel'
 import { agentPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
 import { FakeProvider } from '@jaryn/testing'
 import { Store } from '@jaryn/store-sqlite'
-import { JobScheduler, nextCron, schedulerPlugin } from '../src/index.ts'
+import { JobScheduler, nextCron, schedulerPlugin, schedulerToolsPlugin } from '../src/index.ts'
 import type { Tool } from '@jaryn/agent-core'
 
 function ctxFor(script: any[][]) {
@@ -33,6 +33,20 @@ async function mounted(script: any[][]) {
   await base.ctx.mount(schedulerPlugin())
   return { ...base, scheduler: base.ctx.get<JobScheduler>('scheduler')! }
 }
+
+test('scheduler tools create, list and cancel jobs', async () => {
+  const { ctx } = await mounted([])
+  try {
+    await ctx.mount(schedulerToolsPlugin())
+    const tools = ctx.get<any>('tools')
+    const job = await tools.execute('schedule.create', { mission: 'daily brief', cron: '0 8 * * *', tz: 'Asia/Shanghai' }, { signal: new AbortController().signal, sessionId: 's', cwd: '/tmp' })
+    assert.match(job.id, /^job_/)
+    const list = await tools.execute('schedule.list', {}, { signal: new AbortController().signal, sessionId: 's', cwd: '/tmp' })
+    assert.equal(list.length, 1)
+    await tools.execute('schedule.cancel', { id: job.id }, { signal: new AbortController().signal, sessionId: 's', cwd: '/tmp' })
+    assert.equal(ctx.get<any>('scheduler').get(job.id).enabled, false)
+  } finally { await ctx.dispose() }
+})
 
 test('cron next occurrence', () => {
   const next = nextCron('*/5 * * * *', 'UTC', new Date('2026-01-01T00:02:30Z'))

@@ -146,6 +146,21 @@
         "id": "email-imap",
         "name": "@jaryn/email/imap",
         "config": {}
+      },
+      {
+        "id": "web",
+        "name": "@jaryn/tools-web",
+        "config": {}
+      },
+      {
+        "id": "questions",
+        "name": "@jaryn/agent-core/questions",
+        "config": {}
+      },
+      {
+        "id": "scheduler-tools",
+        "name": "@jaryn/scheduler/tools",
+        "config": {}
       }
     ]
   }

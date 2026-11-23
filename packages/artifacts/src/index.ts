@@ -112,6 +112,15 @@ export function artifactToolsPlugin(): Plugin {
           },
         },
         {
+          name: 'artifact.present', description: 'Mark an artifact as a deliverable for the user (returns its id and path).', risk: 'write',
+          schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+          async execute(args) {
+            const meta = artifacts.get(String(args.id))
+            if (!meta) throw new Error(`artifact not found: ${args.id}`)
+            return { presented: true, id: meta.id, name: meta.name, path: meta.path, mime: meta.mime, bytes: meta.bytes }
+          },
+        },
+        {
           name: 'artifact.list', description: 'List artifacts.', risk: 'read',
           schema: { type: 'object', properties: {} },
           async execute() { return artifacts.list() },

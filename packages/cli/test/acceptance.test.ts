@@ -5,15 +5,16 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { Context, applyPatch, composeProfile, loadComposition } from '@jaryn/kernel'
-import { agentPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
+import { agentPlugin, questionsPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
 import { storePlugin } from '@jaryn/store-sqlite'
 import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
 import { fsPlugin } from '@jaryn/tools-fs'
+import { webPlugin } from '@jaryn/tools-web'
 import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
 import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
 import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
-import { schedulerPlugin } from '@jaryn/scheduler'
+import { schedulerPlugin, schedulerToolsPlugin } from '@jaryn/scheduler'
 import { computerPlugin, computerToolsPlugin } from '@jaryn/computer'
 import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
 import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
@@ -47,6 +48,8 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/store-sqlite', storePlugin()],
     ['@jaryn/testing/echo', echoProviderPlugin()],
     ['@jaryn/agent-core/tools', toolRegistryPlugin()],
+    ['@jaryn/agent-core/questions', questionsPlugin()],
+    ['@jaryn/tools-web', webPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/tools-fs', fsPlugin()],
     ['@jaryn/memory', memoryPlugin()],
@@ -56,6 +59,7 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/tasks', tasksPlugin()],
     ['@jaryn/tasks/tools', taskToolsPlugin()],
     ['@jaryn/scheduler', schedulerPlugin()],
+    ['@jaryn/scheduler/tools', schedulerToolsPlugin()],
     ['@jaryn/computer', computerPlugin()],
     ['@jaryn/computer/tools', computerToolsPlugin()],
     ['@jaryn/vault', vaultPlugin()],

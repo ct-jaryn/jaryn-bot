@@ -6,7 +6,7 @@ import { Store as SqliteStore } from '@jaryn/store-sqlite'
 import { fileURLToPath } from 'node:url'
 import { Context, applyPatch, composeProfile, formatRows, loadComposition } from '@jaryn/kernel'
 import type { PatchOp, Plugin, Profile, Row } from '@jaryn/kernel'
-import { agentPlugin, runTurn, toolRegistryPlugin } from '@jaryn/agent-core'
+import { agentPlugin, questionsPlugin, runTurn, toolRegistryPlugin } from '@jaryn/agent-core'
 import { Store, storePlugin } from '@jaryn/store-sqlite'
 import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
@@ -15,7 +15,7 @@ import { startWebServer } from '@jaryn/web'
 import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
 import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
 import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
-import { schedulerPlugin } from '@jaryn/scheduler'
+import { schedulerPlugin, schedulerToolsPlugin } from '@jaryn/scheduler'
 import { dockerSandboxPlugin } from '@jaryn/sandbox-docker'
 import { mcpPlugin } from '@jaryn/mcp'
 import { computerPlugin, computerToolsPlugin } from '@jaryn/computer'
@@ -28,6 +28,7 @@ import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
 import { TunnelClient } from '@jaryn/tunnel'
 import { devicesPlugin } from '@jaryn/devices'
 import { fsPlugin } from '@jaryn/tools-fs'
+import { webPlugin } from '@jaryn/tools-web'
 
 const VERSION = '1.0.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -98,6 +99,8 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/llm-deepseek', deepseekPlugin()],
     ['@jaryn/tools-fs', fsPlugin()],
     ['@jaryn/agent-core/tools', toolRegistryPlugin()],
+    ['@jaryn/agent-core/questions', questionsPlugin()],
+    ['@jaryn/tools-web', webPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/memory', memoryPlugin()],
     ['@jaryn/memory/tools', memoryToolsPlugin()],
@@ -106,6 +109,7 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/tasks', tasksPlugin()],
     ['@jaryn/tasks/tools', taskToolsPlugin()],
     ['@jaryn/scheduler', schedulerPlugin()],
+    ['@jaryn/scheduler/tools', schedulerToolsPlugin()],
     ['@jaryn/sandbox-docker', dockerSandboxPlugin()],
     ['@jaryn/mcp', mcpPlugin()],
     ['@jaryn/computer', computerPlugin()],

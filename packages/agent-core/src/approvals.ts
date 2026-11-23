@@ -53,7 +53,15 @@ export function approvalPlugin(cfg: ApprovalPluginConfig = {}): Plugin<ApprovalP
     name: '@jaryn/agent-core/approvals',
     provides: ['approvals'],
     apply(ctx, config) {
-      ctx.provide('approvals', createApprovalService({ ...cfg, ...config }))
+      const local = createApprovalService({ ...cfg, ...config })
+      const ask = new Set((config.askRisks ?? cfg.askRisks ?? DEFAULT_ASK_RISKS) as Risk[])
+      ctx.provide('approvals', {
+        async request(req: ApprovalRequest, signal?: AbortSignal): Promise<ApprovalDecision> {
+          const channel = ctx.get<ApprovalService>('approvalChannel')
+          if (channel && ask.has(req.risk)) return channel.request(req, signal)
+          return local.request(req, signal)
+        },
+      })
     },
   })
 }
