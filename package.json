@@ -5,11 +5,16 @@
   "type": "module",
   "description": "Self-hosted personal AI teammate runtime",
   "license": "AGPL-3.0-only",
-  "engines": { "node": ">=24.0.0" },
-  "workspaces": ["packages/*"],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "node --test packages/*/test/*.test.ts",
     "jary": "node packages/cli/src/index.ts",
-    "config": "node packages/cli/src/index.ts config print"
+    "config": "node packages/cli/src/index.ts config print",
+    "eval": "node evals/run.ts"
   }
 }

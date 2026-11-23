@@ -9,6 +9,8 @@ import { agentPlugin, runTurn, toolRegistryPlugin } from '@jaryn/agent-core'
 import { Store, storePlugin } from '@jaryn/store-sqlite'
 import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
+import { deepseekPlugin } from '@jaryn/llm-deepseek'
+import { fsPlugin } from '@jaryn/tools-fs'
 
 const VERSION = '0.0.1'
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -76,6 +78,8 @@ function allPlugins(): Map<string, Plugin<any>> {
   return new Map([
     ['@jaryn/store-sqlite', storePlugin()],
     ['@jaryn/testing/echo', echoProviderPlugin()],
+    ['@jaryn/llm-deepseek', deepseekPlugin()],
+    ['@jaryn/tools-fs', fsPlugin()],
     ['@jaryn/agent-core/tools', toolRegistryPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/agent-core', agentPlugin()],

@@ -19,9 +19,17 @@ export type ModelDelta =
   | { type: 'usage'; usage: Usage }
   | { type: 'finish'; reason: 'stop' | 'tool' | 'length' | 'error' }
 
+export interface ModelMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content: string
+  toolCallId?: string
+  toolCalls?: ToolCall[]
+}
+
 export interface ModelRequest {
-  messages: { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; toolCallId?: string }[]
+  messages: ModelMessage[]
   tools: { name: string; description: string; schema: object }[]
+  maxTokens?: number
 }
 
 export interface Provider {

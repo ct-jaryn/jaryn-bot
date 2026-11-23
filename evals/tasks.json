@@ -1,0 +1,12 @@
+[
+  { "id": "list-files", "prompt": "List the files in the current directory using the tools already available. Reply with only the file names.", "expect": ["package.json"] },
+  { "id": "read-readme", "prompt": "Read README.md and tell me in one sentence what this project is.", "expect": ["jaryn"] },
+  { "id": "grep-tool", "prompt": "Search the repository for the string 'shell.run' and report which file contains it.", "expect": ["shell"] },
+  { "id": "count-ts", "prompt": "How many .ts files are under packages/? Use shell or glob tools, then answer with the number.", "expect": ["1"] },
+  { "id": "run-echo", "prompt": "Run the shell command `printf jaryn-ok` and tell me its output.", "expect": ["jaryn-ok"] },
+  { "id": "read-package", "prompt": "Read packages/kernel/package.json and tell me the package name.", "expect": ["@jaryn/kernel"] },
+  { "id": "find-fs", "prompt": "Find where the fs.grep tool is implemented and name the file.", "expect": ["tools-fs"] },
+  { "id": "glob-tests", "prompt": "Use glob to list all test files under packages/ and answer with how many there are.", "expect": ["test"] },
+  { "id": "read-doc", "prompt": "Read docs/03-roadmap.md and tell me the name of the first stage.", "expect": ["P0"] },
+  { "id": "shell-pwd", "prompt": "Run `pwd` and report the directory path.", "expect": ["jaryn-bot"] }
+]

@@ -9,6 +9,7 @@ import { agentPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
 import { storePlugin } from '@jaryn/store-sqlite'
 import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
+import { fsPlugin } from '@jaryn/tools-fs'
 
 const ROOT = resolve(import.meta.dirname, '../../..')
 const CLI = join(ROOT, 'packages/cli/src/index.ts')
@@ -35,6 +36,7 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/testing/echo', echoProviderPlugin()],
     ['@jaryn/agent-core/tools', toolRegistryPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
+    ['@jaryn/tools-fs', fsPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
   const result = await loadComposition(ctx, rows, registry)

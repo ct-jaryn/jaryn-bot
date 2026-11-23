@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { Context } from '@jaryn/kernel'
-import { agentPlugin, runTurn, toolRegistryPlugin } from '../src/index.ts'
+import { agentPlugin, cancelTurn, runTurn, toolRegistryPlugin } from '../src/index.ts'
 import type { Tool } from '../src/index.ts'
 
-function build(script: any[][]) {
+function build(script: any[][], providerOverride?: any) {
   const ctx = new Context({ scope: 'root' })
   const events: any[] = []
   const store = {
@@ -25,12 +25,14 @@ function build(script: any[][]) {
   })
   const fake: any = {
     name: 'fake',
-    async *stream() {
+    requests: [] as any[],
+    async *stream(req: any) {
+      fake.requests.push(req)
       const turn = script.shift() ?? [{ type: 'text', text: 'done' }, { type: 'finish', reason: 'stop' }]
       for (const d of turn) yield d
     },
   }
-  ctx.provide('llm', fake)
+  ctx.provide('llm', providerOverride ?? fake)
   tools.set('echo', {
     name: 'echo', description: 'echo', schema: { type: 'object' }, risk: 'read',
     async execute(args) { return `echo:${args.text}` },
@@ -59,6 +61,42 @@ test('runTurn executes a tool then continues', async () => {
   const resultEvent = events.find((e) => e.type === 'tool.result')
   assert.equal(resultEvent.data.ok, true)
   assert.equal(resultEvent.data.output, 'echo:x')
+  const requests = (ctx.get<any>('llm') as any).requests as any[]
+  const toolMessage = requests.at(-1)?.messages.find((m: any) => m.role === 'tool')
+  assert.equal(toolMessage?.toolCallId, 'c1')
+  assert.match(toolMessage?.content, /echo:x/)
+})
+
+test('compacts long history before the first step', async () => {
+  const { ctx, events } = build([
+    [{ type: 'text', text: 'SUMMARY OF OLD TURNS' }, { type: 'finish', reason: 'stop' }],
+    [{ type: 'text', text: 'after compaction' }, { type: 'finish', reason: 'stop' }],
+  ])
+  for (let i = 0; i < 12; i++) {
+    events.push({ type: 'input.owner', data: { text: `old question ${i} `.repeat(20) } })
+    events.push({ type: 'assistant.message', data: { text: `old answer ${i} `.repeat(20) } })
+  }
+  ctx.provide('context', { windowTokens: 100, compactAt: 0.1 })
+  const result = await runTurn(ctx, { sessionId: 's3', text: 'new question' })
+  assert.equal(result.finishReason, 'completed')
+  assert.ok(events.some((e) => e.type === 'memory.consolidated'))
+})
+
+test('cancelTurn aborts an in-flight turn', async () => {
+  const slow = {
+    name: 'slow',
+    async *stream(_req: any, signal: AbortSignal) {
+      yield { type: 'text', text: 'partial' }
+      await new Promise((_, reject) => {
+        signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true })
+      })
+    },
+  }
+  const { ctx, events } = build([], slow)
+  setTimeout(() => cancelTurn('s4'), 20)
+  const result = await runTurn(ctx, { sessionId: 's4', text: 'slow' })
+  assert.equal(result.finishReason, 'aborted')
+  assert.ok(events.some((e) => e.type === 'turn.ended' && e.data.reason === 'aborted'))
 })
 
 test('agent plugin mounts when dependencies present', async () => {

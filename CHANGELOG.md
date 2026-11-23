@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — P1 真模型（已完成）
+
+### Added
+
+- `@jaryn/llm-deepseek`：OpenAI 兼容流式、原生 tool-calling、reasoning、usage、429/5xx 重试、AbortSignal
+- `@jaryn/tools-fs`：`fs.read/list/glob/grep`，工作区内路径校验、忽略目录、结果上限
+- agent-core：正确的 tool_calls/tool 消息回填、上下文压缩（阈值可配，摘要落 `memory.consolidated`）、`cancelTurn`
+- `evals/`：10 个任务与评测脚本（无 key 时跳过）
+- CLI：接入 DeepSeek patch、fs 插件；`config print` 显示新增行
+- 测试：provider SSE/重试、fs 工具与路径逃逸、压缩、取消，共 22 个
+
 ## Unreleased — P0 骨架（已完成）
 
 ### Added
