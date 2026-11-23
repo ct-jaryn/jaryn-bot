@@ -19,7 +19,7 @@ import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
 import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
 import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
 import { connectorsPlugin } from '@jaryn/connectors'
-import { smtpPlugin, emailToolsPlugin } from '@jaryn/email'
+import { imapInboxPlugin, smtpPlugin, emailToolsPlugin } from '@jaryn/email'
 import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
 import { devicesPlugin } from '@jaryn/devices'
 
@@ -67,6 +67,7 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/connectors', connectorsPlugin()],
     ['@jaryn/email', smtpPlugin()],
     ['@jaryn/email/tools', emailToolsPlugin()],
+    ['@jaryn/email/imap', imapInboxPlugin()],
     ['@jaryn/initiative', initiativePlugin()],
     ['@jaryn/initiative/tools', initiativeToolsPlugin()],
     ['@jaryn/devices', devicesPlugin()],

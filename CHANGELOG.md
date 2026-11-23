@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.9.0 — IMAP 收信
+
+### Added
+
+- `@jaryn/email` 的 IMAP 客户端：LOGIN → SELECT → SEARCH UNSEEN → FETCH RFC822 → STORE \Seen
+- `imapInboxPlugin`：轮询收信 → 写 `input.email` 事件到 `email` 会话，`email/received` 事件
+- 测试用假 IMAP 服务器覆盖协议链路与事件落库
+- 74 个测试
+
+
 ## v0.8.0 — API 鉴权 + 入站邮件
 
 ### Added

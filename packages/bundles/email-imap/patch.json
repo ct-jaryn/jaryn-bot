@@ -1,0 +1,3 @@
+[
+  { "id": "email-imap", "name": "@jaryn/email/imap", "config": { "pollMs": 60000 } }
+]

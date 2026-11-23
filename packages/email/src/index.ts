@@ -3,6 +3,8 @@ import type { Socket } from 'node:net'
 import { definePlugin } from '@jaryn/kernel'
 import type { Plugin } from '@jaryn/kernel'
 import type { Tool } from '@jaryn/agent-core'
+import { ImapClient } from './imap.ts'
+import type { ImapConfig } from './imap.ts'
 
 export interface SmtpConfig {
   host: string
@@ -92,6 +94,42 @@ export class SmtpClient {
     socket.write(text + '\r\n')
     return await this.expect(socket, code)
   }
+}
+
+export function imapInboxPlugin(cfg: { imap?: ImapConfig; pollMs?: number } = {}): Plugin<{ imap?: ImapConfig; pollMs?: number }> {
+  return definePlugin({
+    name: '@jaryn/email/imap',
+    inject: ['store'],
+    apply(ctx, config = {}) {
+      const imap = config.imap ?? cfg.imap
+      if (!imap) return
+      const store = ctx.get<any>('store')
+      let timer: NodeJS.Timeout | undefined
+      let stopped = false
+      const poll = async () => {
+        if (stopped) return
+        const client = new ImapClient(imap)
+        try {
+          await client.connect()
+          const messages = await client.fetchUnseen()
+          for (const mail of messages) {
+            const sessionId = 'email'
+            if (!store.getSession(sessionId)) store.createSession(sessionId, 'default', process.cwd())
+            store.append({ sessionId, type: 'input.email', actorKind: 'system', provenance: 'web', data: mail })
+            ctx.emit('email/received', mail)
+          }
+        } catch (err) {
+          ctx.emit('email/error', { message: (err as Error).message })
+        } finally {
+          await client.close()
+        }
+      }
+      timer = setInterval(() => { void poll() }, config.pollMs ?? cfg.pollMs ?? 60_000)
+      timer.unref?.()
+      void poll()
+      ctx.effect(() => () => { stopped = true; if (timer) clearInterval(timer) })
+    },
+  })
 }
 
 export function smtpPlugin(cfg: { smtp?: SmtpConfig } = {}): Plugin<{ smtp?: SmtpConfig }> {

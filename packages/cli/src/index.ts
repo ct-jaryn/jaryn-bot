@@ -23,13 +23,13 @@ import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
 import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
 import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
 import { connectorsPlugin } from '@jaryn/connectors'
-import { smtpPlugin, emailToolsPlugin } from '@jaryn/email'
+import { imapInboxPlugin, smtpPlugin, emailToolsPlugin } from '@jaryn/email'
 import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
 import { TunnelClient } from '@jaryn/tunnel'
 import { devicesPlugin } from '@jaryn/devices'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.8.0'
+const VERSION = '0.9.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -119,6 +119,7 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/connectors', connectorsPlugin()],
     ['@jaryn/email', smtpPlugin()],
     ['@jaryn/email/tools', emailToolsPlugin()],
+    ['@jaryn/email/imap', imapInboxPlugin()],
     ['@jaryn/initiative', initiativePlugin()],
     ['@jaryn/initiative/tools', initiativeToolsPlugin()],
     ['@jaryn/devices', devicesPlugin()],

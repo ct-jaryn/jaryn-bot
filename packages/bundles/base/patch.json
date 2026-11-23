@@ -141,6 +141,11 @@
         "id": "devices",
         "name": "@jaryn/devices",
         "config": {}
+      },
+      {
+        "id": "email-imap",
+        "name": "@jaryn/email/imap",
+        "config": {}
       }
     ]
   }
