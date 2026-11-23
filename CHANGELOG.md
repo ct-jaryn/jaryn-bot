@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.4.0 — 收尾剩余 🟡 项
+
+### Added
+
+- `skill.load` 工具（按名加载 SKILL.md）
+- 审批：`always` 持久授权（GrantStore persistence）
+- Web：`POST /api/sessions/:id/command`（`/status`、`/compact`）
+- Initiative：可配置定时自动扫描（`scanEveryMs`）
+- 产物：保留期自动清理（`artifactToolsPlugin({ retentionDays })`）
+- Bot：`bot remove --purge` 清理 workspace
+- 125 个测试
+
+
 ## v1.3.0 — 通知中心 / Bitwarden / 卡填充
 
 ### Added

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { definePlugin } from '@jaryn/kernel'
 import type { Plugin } from '@jaryn/kernel'
@@ -65,6 +65,17 @@ export class ArtifactService {
     return row ? toMeta(row) : undefined
   }
 
+  /** Delete artifacts older than retentionDays; returns the number removed. */
+  cleanup(retentionDays = 30): number {
+    const cutoff = Date.now() - retentionDays * 86_400_000
+    const rows = this.db.prepare('SELECT id, path FROM artifacts WHERE created_at < ?').all(cutoff) as any[]
+    for (const row of rows) {
+      try { rmSync(row.path, { force: true }) } catch { /* file may be gone */ }
+      this.db.prepare('DELETE FROM artifacts WHERE id = ?').run(row.id)
+    }
+    return rows.length
+  }
+
   read(id: string): Buffer {
     const meta = this.get(id)
     if (!meta) throw new Error(`artifact not found: ${id}`)
@@ -92,7 +103,7 @@ export function artifactsPlugin(cfg: { home?: string } = {}): Plugin<{ home?: st
   })
 }
 
-export function artifactToolsPlugin(): Plugin {
+export function artifactToolsPlugin(cfg: { retentionDays?: number } = {}): Plugin {
   return definePlugin({
     name: '@jaryn/artifacts/tools',
     inject: ['artifacts', 'tools'],
@@ -126,6 +137,11 @@ export function artifactToolsPlugin(): Plugin {
           async execute() { return artifacts.list() },
         },
       ]
+      if (cfg.retentionDays) {
+        const timer = setInterval(() => { try { artifacts.cleanup(cfg.retentionDays) } catch { /* best effort */ } }, 6 * 3600_000)
+        timer.unref?.()
+        ctx.effect(() => () => clearInterval(timer))
+      }
       for (const tool of list) ctx.effect(() => tools.register(tool))
     },
   })

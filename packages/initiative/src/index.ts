@@ -217,6 +217,13 @@ export class TeachService {
     return readdirSync(this.dir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => ({ name: d.name }))
   }
 
+  /** Read a skill's SKILL.md by name. */
+  load(name: string): string {
+    const safe = name.replace(/[^\w\u4e00-\u9fa5-]/g, '')
+    const path = join(this.dir, safe, 'SKILL.md')
+    return readFileSync(path, 'utf8')
+  }
+
   /** Short catalog for the system prompt (names + first heading only). */
   catalog(limit = 12): string {
     const skills = this.list().slice(0, limit)
@@ -235,7 +242,11 @@ export class TeachService {
   }
 }
 
-export function initiativePlugin(cfg: InitiativeConfig = {}): Plugin<InitiativeConfig> {
+export interface InitiativePluginConfig extends InitiativeConfig {
+  scanEveryMs?: number
+}
+
+export function initiativePlugin(cfg: InitiativePluginConfig = {}): Plugin<InitiativePluginConfig> {
   return definePlugin({
     name: '@jaryn/initiative',
     provides: ['initiative', 'teach'],
@@ -246,6 +257,12 @@ export function initiativePlugin(cfg: InitiativeConfig = {}): Plugin<InitiativeC
       service.storeDb = store.db
       service.emit = (event, payload) => ctx.emit(event, payload)
       ctx.provide('initiative', service)
+      const scanEvery = config.scanEveryMs ?? cfg.scanEveryMs
+      if (scanEvery && scanEvery > 0) {
+        const timer = setInterval(() => { try { service.scan() } catch { /* best effort */ } }, Math.max(60_000, scanEvery))
+        timer.unref?.()
+        ctx.effect(() => () => clearInterval(timer))
+      }
       const home = process.env.JARY_HOME ?? join(process.cwd(), 'data')
       const teachService = new TeachService(home)
       ctx.provide('teach', teachService)
@@ -298,6 +315,11 @@ export function initiativeToolsPlugin(): Plugin {
           name: 'teach.save', description: 'Save a taught skill to the workspace skills directory.', risk: 'write',
           schema: { type: 'object', properties: { title: { type: 'string' }, markdown: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } } }, required: ['title'] },
           async execute(args) { return teach.save({ title: String(args.title), markdown: args.markdown ? String(args.markdown) : undefined, steps: (args.steps as string[]) ?? [] }) },
+        },
+        {
+          name: 'skill.load', description: 'Load the full SKILL.md for a taught skill by name.', risk: 'read',
+          schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] },
+          async execute(args) { return { markdown: teach.load(String(args.name ?? '')) } },
         },
         {
           name: 'teach.list', description: 'List taught skills.', risk: 'read',

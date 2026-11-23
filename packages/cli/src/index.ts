@@ -35,7 +35,7 @@ import { bitwardenPlugin, onePasswordPlugin } from '@jaryn/secrets'
 import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { notificationsPlugin } from '@jaryn/notifications'
 
-const VERSION = '1.3.0'
+const VERSION = '1.4.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -315,7 +315,7 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
         }), null, 2))
         return 0
       }
-      if (sub === 'remove') { console.log(JSON.stringify({ removed: bots.remove(String(positional[0])) })); return 0 }
+      if (sub === 'remove') { console.log(JSON.stringify({ removed: bots.remove(String(positional[0]), !!flags.purge) })); return 0 }
       console.error('usage: jary bot add|list|remove')
       return 2
     } finally {

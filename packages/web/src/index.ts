@@ -605,6 +605,25 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       entry.resolve(decision)
       return sendJson(res, 200, { ok: true, decision, sessionId })
     }
+    if (req.method === 'POST' && /^\/api\/sessions\/[^/]+\/command$/.test(path)) {
+      const store = ctx.get<any>('store')
+      const sessionId = path.split('/')[3]!
+      const session = store.getSession(sessionId)
+      if (!session) return sendJson(res, 404, { error: 'session not found' })
+      const body = await readBody(req)
+      const command = String(body.command ?? '').trim()
+      if (command === '/status') {
+        const usage = store.usageTotal?.(sessionId) ?? {}
+        return sendJson(res, 200, { session, usage, tools: ctx.get<any>('tools')?.list?.().length ?? 0 })
+      }
+      if (command === '/compact') {
+        const agent = ctx.get<any>('agent')
+        if (!agent?.runTurn) return sendJson(res, 503, { error: 'agent unavailable' })
+        void agent.runTurn({ sessionId, text: '/compact', provenance: 'owner' }).catch(() => undefined)
+        return sendJson(res, 202, { accepted: true })
+      }
+      return sendJson(res, 400, { error: `unknown command: ${command}` })
+    }
     if (req.method === 'POST' && path.startsWith('/api/sessions/') && path.endsWith('/cancel')) {
       const sessionId = path.split('/')[3]!
       const agent = ctx.get<any>('agent')

@@ -16,17 +16,17 @@
 
 | FR | 模块 | 状态 | 已实现 | 仍缺 |
 |---|---|---|---|---|
-| FR-1 | Bot 管理 | ✅ | add/list/edit/remove、workspace、记忆命名空间、会话按 bot 路由 | 删 bot 时的 workspace 清理策略 |
+| FR-1 | Bot 管理 | ✅ | add/list/edit/remove（`--purge` 清理 workspace）、记忆命名空间、会话按 bot 路由 | — |
 | FR-2 | 会话 | ✅ | 建/列/标题/归档/删除/fork/回放、选会话续聊 | 自动标题（LLM） |
 | FR-3 | IM 通知 | ⛔ | 按决策不做（Web 单入口） | — |
 | FR-4 | Agent 运行 | ✅ | 流式、工具循环、重试、压缩、步数/工具数/墙钟/**费用**预算、`/stop`（API+UI）、usage 记账 | 无 |
-| FR-5 | 工具集 | 🟡 | 51 个工具：fs.read/write/edit/list/glob/grep、shell、web.search/fetch(SSRF)、memory.*、task.*、bot.*（含 spawn_worker/inbox）、browser.*、computer.*（含 exec）、vault.*（含 rotate/grant）、pages.*、artifact.*、email.send、office.docx/xlsx/pptx、initiative.*、teach.*、schedule.*、ask_user、goal.* | `skill.load` 作为独立工具（当前用 fs.read 读 SKILL.md） |
-| FR-6 | 审批 | 🟡 | 风险分级、规则引擎（deny>ask>allow、glob/risk/path）、once/session 授权、超时默认拒绝、approvals+audit 表 | thread/always 范围、后台 0 容忍策略可配 |
+| FR-5 | 工具集 | ✅ | 51 个工具：fs.read/write/edit/list/glob/grep、shell、web.search/fetch(SSRF)、memory.*、task.*、bot.*（含 spawn_worker/inbox）、browser.*、computer.*（含 exec）、vault.*（含 rotate/grant）、pages.*、artifact.*、email.send、office.docx/xlsx/pptx、initiative.*、teach.*、schedule.*、ask_user、goal.* | 无（已补 `skill.load`） |
+| FR-6 | 审批 | ✅ | 风险分级、规则引擎（deny>ask>allow、glob/risk/path）、once/session/**always 持久授权**、超时默认拒绝、approvals+audit 表 | 后台 0 容忍可通过规则配置 |
 | FR-7 | 记忆 | ✅ | FTS5+bigram、pinned、≤600 token digest、catalog/list/read、整理、遗忘、tags | 语义检索（可选，未做） |
 | FR-8 | 多 Bot | ✅ | 名册、workspace 隔离、spawn_worker 子会话、任务板 CAS、消息总线 hop≤2、inbox | 对等群聊（设计不做） |
 | FR-9 | 主动任务 | ✅ | cron/every/webhook(HMAC)/RSS、预算、目标多轮、运行历史、stop-all、**通知中心 + 安静时段** | 投递到 IM（无 IM） |
-| FR-10 | 产物 | ✅ | artifact 库、office docx/xlsx/pptx（纯 TS OOXML）、present、Pages | 保留期自动清理任务 |
-| FR-11 | 命令 | 🟡 | Web：新会话/停止/看屏/面板；CLI 20+ 子命令 | Web 内 `/status` `/compact` 文本命令 |
+| FR-10 | 产物 | ✅ | artifact 库、office docx/xlsx/pptx（纯 TS OOXML）、present、Pages、**保留期自动清理** | — |
+| FR-11 | 命令 | ✅ | Web：新会话/停止/看屏/面板/`/status`/`/compact`（command API）；CLI 24+ 子命令 | — |
 | FR-12 | 运维 | ✅ | doctor、config print、replay、plugin（list/doctor/permissions/enable/disable/index）、backup/restore、stop-all、usage/audit | — |
 | FR-13 | 插件 | ✅ | 组合/patch、拓扑排序、fail-loud、诊断、索引源、权限声明扫描、**进程外插件宿主**（JSON-RPC 工具代理 + 示例插件） | 索引签名校验 |
 | FR-14 | 客户端 | 🟡 | Web UI、PWA、SSE、设备配对/令牌/吊销、多面板 | 桌面壳/原生 App；WS 按设备令牌鉴权 |
@@ -34,7 +34,7 @@
 | FR-16 | Vault | 🟡 | AES-GCM write-only、盲填、Secure Form、审计、轮换、grant/revoke、1Password、Bitwarden、TOTP、**卡填充（默认关 + destructive 审批）** | 真实支付集成（不做，仅填表） |
 | FR-17 | 连接器/邮箱 | ✅ | 通用 HTTP、Bearer/APIKey、OAuth 授权 URL + 回调换 token（存 Vault）、SMTP、IMAP 轮询、HTML→文本、附件→artifact、发件人 allowlist | 官方 Gmail/Calendar 应用（需自注册+审核，配置已支持） |
 | FR-18 | Pages/产物 | ✅ | create/update/list/share、CSP 渲染、`/pages/:id`、`/p/:token`、office 产物 | 交互脚本（设计为禁用） |
-| FR-19 | Initiative/teach | 🟡 | 信号(2 类)/打分/阈值/去重/日限额/接受建任务/静音、teach 草稿-保存-列表、技能目录注入 prompt | 定时自动扫描（目前手动/工具触发）；录屏教学 |
+| FR-19 | Initiative/teach | 🟡 | 信号(2 类)/打分/阈值/去重/日限额/接受建任务/静音、**定时自动扫描**、teach 草稿-保存-列表-加载、技能目录注入 prompt | 录屏教学 |
 
 ## 新增（不在原 FR 列表）
 
@@ -48,7 +48,7 @@
 ## 总量
 
 - 31 个包、约 **10.6k 行 TS**（`packages/*/src`）、前端约 350 行
-- **123 个测试**（40 个测试文件，含真实 Chrome/screencast、假 IMAP/SMTP/MCP/HTTP 服务、office 包结构校验）
+- **125 个测试**（40 个测试文件，含真实 Chrome/screencast、假 IMAP/SMTP/MCP/HTTP 服务、office 包结构校验）
 - **65 个工具注册点**（含 MCP/插件宿主动态注册）、55 条 HTTP 路由、20+ CLI 子命令
 - 文档：27 份 markdown（约 5.4k 行）+ 11 份发布说明
 - 自动化校验：`check-docs`（结构/链接）、`check-deploy`（镜像/注册表）、`evals --dry`（10 任务结构）

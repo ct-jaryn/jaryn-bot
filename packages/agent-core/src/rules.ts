@@ -64,10 +64,34 @@ export function globMatch(pattern: string, value: string): boolean {
   return re.test(value)
 }
 
-/** Session-scoped grants: "allow this tool for this session/thread". */
+export interface GrantPersistence {
+  load(): { sessionId: string; tool: string }[]
+  save(grant: { sessionId: string; tool: string }): void
+  remove(sessionId: string, tool: string): void
+}
+
+/** Session-scoped grants: "allow this tool for this session", plus optional persisted "always" grants. */
 export class GrantStore {
   private once = new Set<string>()
   private session = new Map<string, Set<string>>()
+  private always = new Set<string>()
+  private persistence?: GrantPersistence
+
+  attachPersistence(persistence: GrantPersistence): void {
+    this.persistence = persistence
+    for (const grant of persistence.load()) this.session.get(grant.sessionId)?.add(grant.tool) ?? this.always.add(grant.tool)
+  }
+
+  grantAlways(tool: string, sessionId = '*'): void {
+    this.always.add(tool)
+    this.persistence?.save({ sessionId, tool })
+  }
+
+  /** Persist a session grant as always (survives restarts). */
+  promoteToAlways(sessionId: string, tool: string): void {
+    this.always.add(tool)
+    this.persistence?.save({ sessionId, tool })
+  }
 
   key(sessionId: string, tool: string): string {
     return `${sessionId}::${tool}`
@@ -87,11 +111,12 @@ export class GrantStore {
   consume(sessionId: string, tool: string): boolean {
     const key = this.key(sessionId, tool)
     if (this.once.delete(key)) return true
+    if (this.always.has(tool)) return true
     return this.session.get(sessionId)?.has(tool) ?? false
   }
 
   clear(sessionId?: string): void {
-    if (!sessionId) { this.once.clear(); this.session.clear(); return }
+    if (!sessionId) { this.once.clear(); this.session.clear(); this.always.clear(); return }
     for (const key of [...this.once]) if (key.startsWith(`${sessionId}::`)) this.once.delete(key)
     this.session.delete(sessionId)
   }

@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { definePlugin } from '@jaryn/kernel'
@@ -83,8 +83,13 @@ export class BotsService {
     return this.get(id)?.workspace ?? fallback
   }
 
-  remove(id: string): boolean {
-    return this.db.prepare('DELETE FROM bots WHERE id = ?').run(id).changes > 0
+  remove(id: string, purge = false): boolean {
+    const bot = this.get(id)
+    const changed = this.db.prepare('DELETE FROM bots WHERE id = ?').run(id).changes > 0
+    if (changed && purge && bot?.workspace) {
+      try { rmSync(bot.workspace, { recursive: true, force: true }) } catch { /* best effort */ }
+    }
+    return changed
   }
 
   send(from: string, to: string, content: string, threadId?: string, hop = 0): { id: string; hop: number } {
