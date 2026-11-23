@@ -62,6 +62,28 @@ async function waitFor(fn: () => Promise<boolean>, ms = 3000): Promise<void> {
   throw new Error('timeout waiting')
 }
 
+test('API token auth and inbound email webhook', async () => {
+  const ctx = new Context({ scope: 'root' })
+  const store = new Store(':memory:')
+  ctx.provide('store', store)
+  ctx.provide('tools', { register: () => () => {}, list: () => [], get: () => undefined, execute: async () => undefined })
+  ctx.provide('llm', new FakeProvider([]))
+  await ctx.mount(agentPlugin())
+  const server = await startWebServer(ctx, { port: 0, apiToken: 'tok-1' })
+  try {
+    const denied = await fetch(`${server.url}/api/sessions`)
+    assert.equal(denied.status, 401)
+    const allowed = await fetch(`${server.url}/api/sessions`, { headers: { authorization: 'Bearer tok-1' } })
+    assert.equal(allowed.status, 200)
+    const email = await fetch(`${server.url}/api/email/inbound`, {
+      method: 'POST', headers: { authorization: 'Bearer tok-1', 'content-type': 'application/json' },
+      body: JSON.stringify({ from: 'a@b.c', subject: 'hi', text: 'hello' }),
+    })
+    assert.equal(email.status, 202)
+    assert.ok(store.events('email').some((e: any) => e.type === 'input.email'))
+  } finally { await server.close(); await ctx.dispose() }
+})
+
 test('serves PWA manifest and service worker', async () => {
   const { ctx, server } = await setup([])
   try {

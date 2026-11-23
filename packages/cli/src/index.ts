@@ -29,7 +29,7 @@ import { TunnelClient } from '@jaryn/tunnel'
 import { devicesPlugin } from '@jaryn/devices'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.7.0'
+const VERSION = '0.8.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 

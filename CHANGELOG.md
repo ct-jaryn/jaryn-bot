@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8.0 — API 鉴权 + 入站邮件
+
+### Added
+
+- 可选 API 鉴权：`JARY_API_TOKEN` 设置后 `/api/*` 需要 `Authorization: Bearer`（也接受设备令牌/`?token=`）
+- 入站邮件 webhook：`POST /api/email/inbound`（可选 `x-jary-email-secret`）→ 写 `input.email` 事件到 `email` 会话
+- `.env.example` 增加 token/secret；部署文档补充
+- 71 个测试
+
+
 ## v0.7.0 — 多设备配对 + 连接器示例
 
 ### Added

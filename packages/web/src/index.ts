@@ -12,6 +12,7 @@ export interface WebOptions {
   host?: string
   port?: number
   approvalTimeoutMs?: number
+  apiToken?: string
 }
 
 export interface WebServer {
@@ -27,6 +28,18 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
   const host = opts.host ?? '127.0.0.1'
   const port = opts.port ?? 8787
   const approvalTimeout = opts.approvalTimeoutMs ?? 30 * 60_000
+  const apiToken = opts.apiToken ?? process.env.JARY_API_TOKEN
+
+  const authorized = (req: IncomingMessage, url: URL): boolean => {
+    if (!apiToken) return true
+    const header = String(req.headers.authorization ?? '')
+    const bearer = header.startsWith('Bearer ') ? header.slice(7) : ''
+    const queryToken = url.searchParams.get('token') ?? ''
+    const provided = bearer || queryToken
+    if (provided === apiToken) return true
+    const devices = ctx.get<any>('devices')
+    return !!(provided && devices?.verify?.(provided))
+  }
 
   const clients = new Set<{ res: ServerResponse; sessionId: string }>()
   const pending = new Map<string, { req: ApprovalRequest; resolve: (d: ApprovalDecision) => void; timer: NodeJS.Timeout }>()
@@ -89,6 +102,12 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
   async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? `${host}:${port}`}`)
     const path = url.pathname
+
+    const publicPaths = new Set(['/healthz', '/', '/index.html', '/app.js', '/style.css', '/manifest.json', '/sw.js', '/icon.svg'])
+    const publicApi = path === '/api/devices/pair-code' || path === '/api/devices/pair'
+    const needsAuth = (path.startsWith('/api/') && !publicApi) || path === '/metrics'
+    if (needsAuth && !authorized(req, url)) return sendJson(res, 401, { error: 'unauthorized' })
+    void publicPaths
 
     if (req.method === 'GET' && (path === '/' || path === '/index.html')) return sendFile(res, 'index.html', 'text/html')
     if (req.method === 'GET' && path === '/app.js') return sendFile(res, 'app.js', 'text/javascript')
@@ -457,6 +476,20 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const tasks = ctx.get<any>('tasks')
       if (!tasks) return sendJson(res, 404, { error: 'tasks not mounted' })
       return sendJson(res, 200, { tasks: tasks.list() })
+    }
+    if (req.method === 'POST' && path === '/api/email/inbound') {
+      const store = ctx.get<any>('store')
+      if (!store) return sendJson(res, 404, { error: 'store not mounted' })
+      const secret = process.env.JARY_EMAIL_SECRET
+      if (secret && String(req.headers['x-jary-email-secret'] ?? '') !== secret) return sendJson(res, 401, { error: 'invalid email secret' })
+      const body = await readBody(req)
+      const sessionId = String(body.sessionId ?? 'email')
+      if (!store.getSession(sessionId)) store.createSession(sessionId, 'default', process.cwd())
+      const event = store.append({
+        sessionId, type: 'input.email', actorKind: 'system', provenance: 'web',
+        data: { from: body.from ?? '', subject: body.subject ?? '', text: String(body.text ?? '').slice(0, 20_000) },
+      })
+      return sendJson(res, 202, { accepted: true, event: event.seq })
     }
     if (req.method === 'GET' && path === '/api/events') {
       const store = ctx.get<any>('store')
