@@ -41,8 +41,18 @@ function authHeader(server: ConnectorServerConfig): Record<string, string> {
 
 export class ConnectorService {
   private servers: ConnectorServerConfig[]
+  private tokens = new Map<string, string>()
   constructor(config: ConnectorsConfig = {}) {
     this.servers = config.servers ?? []
+  }
+
+  /** Store a token obtained through OAuth for a connector id. */
+  setToken(connectorId: string, token: string): void {
+    if (token) this.tokens.set(connectorId, token)
+  }
+
+  getToken(connectorId: string): string | undefined {
+    return this.tokens.get(connectorId)
   }
 
   list(): { id: string; name: string; tools: string[] }[] {
@@ -78,6 +88,7 @@ export class ConnectorService {
         'content-type': 'application/json',
         ...(server.headers ?? {}),
         ...authHeader(server),
+        ...(this.tokens.get(server.id) ? { authorization: `Bearer ${this.tokens.get(server.id)}` } : {}),
       },
       body,
       signal: AbortSignal.timeout(20_000),

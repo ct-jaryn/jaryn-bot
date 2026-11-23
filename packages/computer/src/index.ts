@@ -30,6 +30,8 @@ export interface ComputerConfig {
   chromePath?: string
   image?: string
   headless?: boolean
+  idleMs?: number
+  network?: 'none' | 'bridge'
 }
 
 const DEFAULT_CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -120,6 +122,7 @@ export class DockerComputerBackend implements ComputerBackend {
       '--memory', '1g', '--cpus', '1', '--pids-limit', '256',
       '--security-opt', 'no-new-privileges',
       '-v', `${workspace}:/workspace`, '-v', `${profile}:/profile`,
+      '--network', this.cfg.network ?? 'none',
       '-p', '127.0.0.1:0:9222', image,
     ], { encoding: 'utf8' })
     if (run.status !== 0) throw new Error(`docker run failed: ${run.stderr}`)
@@ -141,11 +144,13 @@ export class ComputerService {
   private instances = new Map<string, ComputerInstance>()
   private clients = new Map<string, CdpClient>()
   private takeovers = new Set<string>()
+  private idleTimers = new Map<string, NodeJS.Timeout>()
   private backend: ComputerBackend
   readonly dataDir: string
 
   constructor(cfg: ComputerConfig = {}, backend?: ComputerBackend) {
     this.dataDir = resolve(cfg.dataDir ?? join(process.env.JARY_HOME ?? join(process.cwd(), 'data'), 'computers'))
+    this._idleMs = cfg.idleMs
     this.backend = backend ?? (cfg.backend === 'docker' ? new DockerComputerBackend(cfg) : new LocalChromeBackend(cfg))
   }
 
@@ -192,10 +197,39 @@ export class ComputerService {
     if (this.instances.has(botId)) return this.instances.get(botId)!
     const inst = await this.backend.start(botId)
     this.instances.set(botId, inst)
+    this.scheduleIdleStop(botId)
     return inst
   }
 
+  /** Touch activity so the idle timer restarts. */
+  touch(botId: string): void {
+    if (this.instances.has(botId)) this.scheduleIdleStop(botId)
+  }
+
+  private scheduleIdleStop(botId: string): void {
+    const idleMs = (this.backend as any)?.cfg?.idleMs ?? this.idleMs
+    if (!idleMs) return
+    const existing = this.idleTimers.get(botId)
+    if (existing) clearTimeout(existing)
+    const timer = setTimeout(() => { void this.stop(botId) }, idleMs)
+    timer.unref?.()
+    this.idleTimers.set(botId, timer)
+  }
+
+  set idleMs(value: number | undefined) {
+    this._idleMs = value
+  }
+
+  get idleMs(): number | undefined {
+    return this._idleMs
+  }
+
+  private _idleMs?: number
+
   async stop(botId: string): Promise<void> {
+    const timer = this.idleTimers.get(botId)
+    if (timer) clearTimeout(timer)
+    this.idleTimers.delete(botId)
     this.takeovers.delete(botId)
     const inst = this.instances.get(botId)
     this.clients.get(botId)?.close()
@@ -293,7 +327,7 @@ export function computerToolsPlugin(): Plugin {
         {
           name: 'browser.goto', description: 'Open a URL in the bot computer browser.', risk: 'network',
           schema: { type: 'object', properties: { botId: { type: 'string' }, url: { type: 'string' } }, required: ['url'] },
-          async execute(args) { computer.assertAgentControl(botOf(args)); const client = await computer.client(botOf(args)); await client.navigate(String(args.url)); return { url: String(args.url), title: await client.evaluate<string>('document.title') } },
+          async execute(args) { computer.assertAgentControl(botOf(args)); const client = await computer.client(botOf(args)); computer.touch(botOf(args)); await client.navigate(String(args.url)); return { url: String(args.url), title: await client.evaluate<string>('document.title') } },
         },
         {
           name: 'browser.extract', description: 'Extract visible text from the current page.', risk: 'read',

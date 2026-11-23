@@ -96,10 +96,11 @@ export class SmtpClient {
   }
 }
 
-export function imapInboxPlugin(cfg: { imap?: ImapConfig; pollMs?: number } = {}): Plugin<{ imap?: ImapConfig; pollMs?: number }> {
+export function imapInboxPlugin(cfg: { imap?: ImapConfig; pollMs?: number; allowFrom?: string[] } = {}): Plugin<{ imap?: ImapConfig; pollMs?: number; allowFrom?: string[] }> {
   return definePlugin({
     name: '@jaryn/email/imap',
     inject: ['store'],
+    optional: ['artifacts'],
     apply(ctx, config = {}) {
       const imap = config.imap ?? cfg.imap
       if (!imap) return
@@ -111,8 +112,21 @@ export function imapInboxPlugin(cfg: { imap?: ImapConfig; pollMs?: number } = {}
         const client = new ImapClient(imap)
         try {
           await client.connect()
+          const allow = config.allowFrom ?? cfg.allowFrom ?? []
           const messages = await client.fetchUnseen()
           for (const mail of messages) {
+            if (allow.length > 0 && !allow.some((pattern) => mail.from.toLowerCase().includes(pattern.toLowerCase()))) {
+              ctx.emit('email/rejected', { from: mail.from })
+              continue
+            }
+            const artifacts = ctx.get<any>('artifacts')
+            for (const attachment of mail.attachments ?? []) {
+              try {
+                artifacts?.save?.({ name: attachment.filename, content: attachment.bytes, mime: attachment.contentType })
+              } catch (err) {
+                ctx.emit('email/attachment-error', { name: attachment.filename, message: (err as Error).message })
+              }
+            }
             const sessionId = 'email'
             if (!store.getSession(sessionId)) store.createSession(sessionId, 'default', process.cwd())
             store.append({ sessionId, type: 'input.email', actorKind: 'system', provenance: 'web', data: mail })

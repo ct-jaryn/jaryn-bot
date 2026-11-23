@@ -6,6 +6,7 @@ import type { Context } from '@jaryn/kernel'
 import { newApprovalId } from '@jaryn/agent-core'
 import { renderPageDocument } from '@jaryn/pages'
 import { TunnelServer } from '@jaryn/tunnel'
+import { exchangeOAuthCode } from '@jaryn/connectors'
 import type { ApprovalDecision, ApprovalRequest, ApprovalService } from '@jaryn/agent-core'
 
 export interface WebOptions {
@@ -597,6 +598,34 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const agent = ctx.get<any>('agent')
       const cancelled = agent?.cancel?.(sessionId) ?? false
       return sendJson(res, 200, { cancelled })
+    }
+    if (req.method === 'GET' && path.startsWith('/api/oauth/callback/')) {
+      const connectorId = path.slice('/api/oauth/callback/'.length)
+      const code = url.searchParams.get('code') ?? ''
+      const state = url.searchParams.get('state') ?? ''
+      if (!code) return sendJson(res, 400, { error: 'missing code' })
+      const expectedState = process.env[`JARY_OAUTH_STATE_${connectorId.toUpperCase()}`]
+      if (expectedState && expectedState !== state) return sendJson(res, 400, { error: 'state mismatch' })
+      const tokenUrl = process.env[`JARY_OAUTH_TOKEN_URL_${connectorId.toUpperCase()}`]
+      const clientId = process.env[`JARY_OAUTH_CLIENT_ID_${connectorId.toUpperCase()}`]
+      const clientSecret = process.env[`JARY_OAUTH_CLIENT_SECRET_${connectorId.toUpperCase()}`]
+      const redirectUri = `${url.origin}/api/oauth/callback/${connectorId}`
+      if (!tokenUrl || !clientId) return sendJson(res, 500, { error: `oauth not configured for ${connectorId}` })
+      try {
+        const tokens = await exchangeOAuthCode({ tokenUrl, clientId, clientSecret, redirectUri, code })
+        const vault = ctx.get<any>('vault')
+        const connectors = ctx.get<any>('connectors')
+        const stored = vault?.add?.({
+          kind: 'oauth', name: `${connectorId} oauth`, origin: url.origin,
+          secret: { access_token: (tokens as any).access_token, refresh_token: (tokens as any).refresh_token, expires_in: (tokens as any).expires_in },
+        })
+        connectors?.setToken?.(connectorId, String((tokens as any).access_token ?? ''))
+        ctx.get<any>('store')?.audit?.('oauth.connected', connectorId, { vaultItem: stored?.id })
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        return void res.end('<!doctype html><html><body style="font-family:system-ui;max-width:420px;margin:60px auto"><h2>已连接</h2><p>可以关闭此页面，回到 jaryn。</p></body></html>')
+      } catch (err) {
+        return sendJson(res, 502, { error: (err as Error).message })
+      }
     }
     if (req.method === 'GET' && path === '/api/usage') {
       const store = ctx.get<any>('store')

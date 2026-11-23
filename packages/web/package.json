@@ -10,6 +10,7 @@
     "@jaryn/agent-core": "workspace:*",
     "@jaryn/store-sqlite": "workspace:*",
     "@jaryn/pages": "workspace:*",
-    "@jaryn/tunnel": "workspace:*"
+    "@jaryn/tunnel": "workspace:*",
+    "@jaryn/connectors": "workspace:*"
   }
 }

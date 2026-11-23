@@ -10,11 +10,18 @@ export interface ImapConfig {
   mailbox?: string
 }
 
+export interface EmailAttachment {
+  filename: string
+  contentType: string
+  bytes: Buffer
+}
+
 export interface InboundEmail {
   uid: string
   from: string
   subject: string
   text: string
+  attachments?: EmailAttachment[]
 }
 
 /** Minimal IMAP client: LOGIN → SELECT → SEARCH UNSEEN → FETCH RFC822 → mark seen. */
@@ -131,7 +138,52 @@ export function parseMessage(uid: string, raw: Buffer): InboundEmail {
   const text = raw.toString('utf8')
   const split = text.split(/\r?\n\r?\n/)
   const headers = split.shift() ?? ''
-  const body = split.join('\n\n')
+  let body = split.join('\n\n')
   const header = (name: string) => headers.match(new RegExp(`^${name}:\\s*(.*)$`, 'im'))?.[1]?.trim() ?? ''
-  return { uid, from: header('From'), subject: header('Subject'), text: body.slice(0, 20_000) }
+  const contentType = header('Content-Type')
+  if (/text\/html/i.test(contentType)) body = htmlToText(body)
+  const { clean, attachments } = extractAttachments(body, contentType)
+  return {
+    uid,
+    from: header('From'),
+    subject: header('Subject'),
+    text: clean.slice(0, 20_000),
+    ...(attachments.length > 0 ? { attachments } : {}),
+  }
+}
+
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** Pull base64 MIME parts out of the raw body (best effort, no external deps). */
+export function extractAttachments(body: string, contentType: string): { clean: string; attachments: EmailAttachment[] } {
+  const boundary = contentType.match(/boundary="?([^";]+)"?/i)?.[1]
+  const attachments: EmailAttachment[] = []
+  if (!boundary) return { clean: body, attachments }
+  const parts = body.split(`--${boundary}`)
+  let clean = ''
+  for (const part of parts) {
+    const [headerBlock, ...rest] = part.split(/\r?\n\r?\n/)
+    if (!rest.length) continue
+    const partHeaders = headerBlock ?? ''
+    const payload = rest.join('\n\n').trim()
+    const name = partHeaders.match(/filename="?([^";\r\n]+)"?/i)?.[1]
+    const type = partHeaders.match(/Content-Type:\s*([^;\r\n]+)/i)?.[1] ?? 'application/octet-stream'
+    const encoding = /Content-Transfer-Encoding:\s*base64/i.test(partHeaders)
+    if (name && encoding) {
+      attachments.push({ filename: name, contentType: type, bytes: Buffer.from(payload.replace(/\s+/g, ''), 'base64') })
+      continue
+    }
+    if (/text\/plain/i.test(type)) clean += payload + '\n'
+  }
+  return { clean: clean.trim() || body, attachments }
 }
