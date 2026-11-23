@@ -208,31 +208,31 @@ interface RuntimeEvent<T = unknown> {
 | 配置格式 | v1 | 新增字段可选；删除字段走迁移 |
 | 数据库 schema | v1 起按 migration | 只前进，自动迁移 |
 | 事件流 | v1 | 只增类型，不改既有语义 |
-| 客户端协议 | `/ws/client` v1（v0.2） | 见 [06-clients-and-topology.md](06-clients-and-topology.md) |
+| 客户端协议 | `/ws/client` v1（v0.1 Web；客户端待定包） | 见 [06-clients-and-topology.md](06-clients-and-topology.md) |
 
 **升级流程**：停服务 → 备份 → 换二进制/镜像 → 启动（自动迁移）→ `jary doctor` → 失败则回滚镜像与 DB 备份。
 
 ---
 
-## 10. 客户端 API（v0.1 Web；v0.2 桌面/手机）
+## 10. 客户端 API（v0.1 Web；桌面/手机=待定包）
 
 控制端通过 `WSS /ws/client`（JSON-RPC）接入，执行端通过 `WSS /ws/node` 接入；文件走 REST。方法表、同步语义、配对与安全模型见 [06-clients-and-topology.md](06-clients-and-topology.md) §3–§4。
 
 - **v0.1**：服务端提供 Web UI 静态资源（`GET /`、`/assets/*`）+ `/ws/client`；Web 端同源 cookie/令牌鉴权（单 owner）。
-- **v0.2（暂缓）**：设备配对、桌面/手机客户端、多端同步。
+- **待定包（暂缓）**：设备配对、桌面/手机客户端、多端同步。
 - **IM 通知**：暂不做，不配置任何通道凭据。
 
 ---
 
-## 11. 后续子系统接口（v0.3–v1.0）
+## 11. 后续子系统接口（待定包）
 
 | 子系统 | 接口 | 版本 | 详见 |
 |---|---|---|---|
-| 云电脑 | `computer.start/stop/status/snapshot/restore`；WS `screen.subscribe` / `input.send` / `takeover.request / release`；工具 `browser.*` `desktop.*` | v0.4 | [07](07-cloud-computer.md) |
-| Vault | `vault.add/list/fill/grant/revoke/rotate`；`POST /api/vault/secure-form`；工具 `vault.fill` `vault.secure_form` | v0.5 | [08](08-vault-and-credentials.md) |
-| 连接器 | `GET/POST /api/connectors`；`GET /api/oauth/callback/:id`；工具 `gmail.*` `calendar.*` `github.*` | v0.3 | [09](09-connectors-and-artifacts.md) |
-| 邮箱 | `POST /api/email/inbound`（或 IMAP 轮询）；SMTP 出站 | v0.3 | [09](09-connectors-and-artifacts.md) |
-| Pages | `POST /api/pages` `GET /api/pages/:id` `POST /api/pages/:id/share` | v0.3 | [09](09-connectors-and-artifacts.md) |
-| Initiative | `GET /api/initiative/proposals`；`POST /api/initiative/:id/accept / dismiss / mute` | v1.0 | [10](10-proactive-and-initiative.md) |
+| 云电脑 | `computer.start/stop/status/snapshot/restore`；WS `screen.subscribe` / `input.send` / `takeover.request / release`；工具 `browser.*` `desktop.*` | v0.2 | [07](07-cloud-computer.md) |
+| Vault | `vault.add/list/fill/grant/revoke/rotate`；`POST /api/vault/secure-form`；工具 `vault.fill` `vault.secure_form` | 待定包 | [08](08-vault-and-credentials.md) |
+| 连接器 | `GET/POST /api/connectors`；`GET /api/oauth/callback/:id`；工具 `gmail.*` `calendar.*` `github.*` | 待定包 | [09](09-connectors-and-artifacts.md) |
+| 邮箱 | `POST /api/email/inbound`（或 IMAP 轮询）；SMTP 出站 | 待定包 | [09](09-connectors-and-artifacts.md) |
+| Pages | `POST /api/pages` `GET /api/pages/:id` `POST /api/pages/:id/share` | 待定包 | [09](09-connectors-and-artifacts.md) |
+| Initiative | `GET /api/initiative/proposals`；`POST /api/initiative/:id/accept / dismiss / mute` | 待定包 | [10](10-proactive-and-initiative.md) |
 
-> 以上除**云电脑**（下一阶段）外，v0.3–v1.0 子系统均**暂缓、未排期**；接口保留作设计。
+> 以上除**云电脑**（v0.2，下一阶段）外，其余子系统均**待定包，暂缓未排期**；接口保留作设计。

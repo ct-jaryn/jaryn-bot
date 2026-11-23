@@ -1,6 +1,6 @@
 # 09 · 连接器 · 邮箱 · Pages · 产物
 
-> 状态：**现行（v0.3 目标）**。目标：让 Bot 直接"在你常用的工具里干活"，而不是只能开网页点。
+> 状态：**现行（待定包）**。目标：让 Bot 直接"在你常用的工具里干活"，而不是只能开网页点。
 > 关联：[01 FR-17/FR-18](01-functional-spec.md) · [08 Vault](08-vault-and-credentials.md) · [06 客户端](06-clients-and-topology.md)
 
 ---
@@ -129,7 +129,7 @@ interface ConnectorRegistry {
 
 ---
 
-## 6. 验收（v0.3 Gate）
+## 6. 验收（连接器 Gate）
 
 - [ ] Gmail 连接成功；`search` 返回结果；`send` 触发审批后发出
 - [ ] token 过期 → 通知"重新授权" → 重新连后工具恢复

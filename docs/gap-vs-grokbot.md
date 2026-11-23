@@ -1,6 +1,7 @@
 # 对标 Grok Bot：还差多少？
 
 > **已被 [11-parity-and-beyond.md](11-parity-and-beyond.md) 取代（2026-11-23）：对标口径改为「个人版完全对标 + 6 点超越；团队协作 / 会议 / 企业管控 / 语音明确不做」。本文保留为早期差距估算的历史记录。**
+> **历史文档：文中一切时间/工期估算均已失效，不代表当前计划；版本节奏见 [03-roadmap.md](03-roadmap.md)。**
 >
 > 2026-11-23。基线：本仓库设计（[runtime-design.md](runtime-design.md) + [plugin-architecture.md](plugin-architecture.md)）**代码 0 行**；Grok Bot 事实来自官方文档（[grok-bot](https://docs.x.ai/grok-bot/overview)），已标【官方】。
 > 结论按三种"对标"口径分别给：**个人可用** / **同品类产品** / **企业级替代**。

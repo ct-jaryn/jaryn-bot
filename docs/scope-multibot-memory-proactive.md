@@ -2,6 +2,7 @@
 
 > 需求收敛（2026-11-23）：**不要语音**；要 **① 多 bot 自己交流 ② 记忆 ③ 主动搜索并完成任务**。
 > **状态：本文是「基于 DSH」方案下的能力设计；最终决定完全自研。机制思路（Team 协作 / 记忆分层 / 守夜人）仍然适用，对应自研版的 bus / memory / scheduler 插件，见 [runtime-design.md](runtime-design.md) 与 [plugin-architecture.md](plugin-architecture.md)。**
+> **历史文档：文中一切时间/工期估算均已失效，不代表当前计划；版本节奏见 [03-roadmap.md](03-roadmap.md)。**
 > 版本基线：`@deepseek-ai/dsh` 0.2.2-rc.5（`sdk` profile = `dsh-base` + `dsh-sdk-app` 两层）。
 > 结论先说：**这三项里两项半是 DSH 原生能力，缺的那半是"记忆的自动提炼与语义召回"和"守夜人调度"**——都能补，但补法不同。
 

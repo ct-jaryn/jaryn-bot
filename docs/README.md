@@ -28,11 +28,11 @@
 | 03 | [03-roadmap.md](03-roadmap.md) | 规划：P0–P5 任务/验收/依赖、发布节奏、后续版本阶梯 | 现行 |
 | 04 | [04-testing-acceptance.md](04-testing-acceptance.md) | 测试与验收：测试金字塔、阶段 Gate、DoD、评测、混沌、安全、CI | 现行 |
 | 05 | [05-deployment-ops.md](05-deployment-ops.md) | 部署运维：拓扑、compose、私有化边界、备份、升级、监控、runbook | 现行 |
-| 06 | [06-clients-and-topology.md](06-clients-and-topology.md) | 服务端 + 多客户端：控制端/执行端、配对鉴权、WS 协议、多端同步 | 现行（v0.2） |
-| 07 | [07-cloud-computer.md](07-cloud-computer.md) | 云电脑：容器/VM、浏览器/桌面/终端、看屏接管、任务级快照、网络与成本 | 现行（v0.4） |
-| 08 | [08-vault-and-credentials.md](08-vault-and-credentials.md) | Vault：write-only、填充代理、Secure Form、1Password、支付与审计 | 现行（v0.5） |
-| 09 | [09-connectors-and-artifacts.md](09-connectors-and-artifacts.md) | 连接器、个人邮箱、Pages、产物管线 | 现行（v0.3） |
-| 10 | [10-proactive-and-initiative.md](10-proactive-and-initiative.md) | Routine、Initiative 信号与提议、Teach-a-task、通知与预算 | 现行（v1.0） |
+| 06 | [06-clients-and-topology.md](06-clients-and-topology.md) | 服务端 + 多客户端：控制端/执行端、配对鉴权、WS 协议、多端同步 | 现行（待定包） |
+| 07 | [07-cloud-computer.md](07-cloud-computer.md) | 云电脑：容器/VM、浏览器/终端、看屏接管、任务级快照、网络与成本 | 现行（v0.2） |
+| 08 | [08-vault-and-credentials.md](08-vault-and-credentials.md) | Vault：write-only、填充代理、Secure Form、1Password、支付与审计 | 现行（待定包） |
+| 09 | [09-connectors-and-artifacts.md](09-connectors-and-artifacts.md) | 连接器、个人邮箱、Pages、产物管线 | 现行（待定包） |
+| 10 | [10-proactive-and-initiative.md](10-proactive-and-initiative.md) | Routine、Initiative 信号与提议、Teach-a-task、通知与预算 | 现行（待定包） |
 | 11 | [11-parity-and-beyond.md](11-parity-and-beyond.md) | 对标矩阵、6 个超越点、明确不做清单、版本阶梯、风险 | 现行 |
 | 12 | [runtime-design.md](runtime-design.md) | 运行时主设计：进程/事件/SQLite/循环/工具/审批/多 Bot/调度/ADR | 设计（v0.1 冻结） |
 | 13 | [13-memory-module.md](13-memory-module.md) | **记忆模块**：四层存储、bigram 分词、FTS5、0 LLM 写入、≤600 token digest | 现行（P3） |
@@ -51,9 +51,9 @@
 | 进程模型 | gateway（`jary`）+ worker（每 Bot 一个）+ 客户端（控制端/执行端） |
 | 内核 | Context / Effect / Event / Loader，约 1200 行 |
 | 第一等接缝 | 8 个：`llm` `tools` `store` `fs+shell` `approvals` `memory` `channels` `scheduler`（P0 先落 5 个） |
-| **v0.1（P0–P5）** | 15–21 周 ≈ 4–5 个月全职（含 Web UI；缓冲 4.5–5.5 个月） |
-| 下一阶段 | **云电脑（容器）+ 本机出网**；v0.1 后启动（约 +8–10 周） |
-| 暂缓（未排期） | 桌面/手机客户端、Vault、连接器/邮箱/Pages、Initiative、卡支付、IM 通知 |
+| **v0.1（P0–P5）** | 运行时 + Web UI + 记忆 + 例程 + 多 Bot + 插件；**按 Gate 发版，不设日期** |
+| 下一阶段 | **云电脑（容器）+ 本机出网**；v0.1 Gate 全过后启动 |
+| 待定包（不排期） | 桌面/手机客户端、Vault、连接器/邮箱/Pages、Initiative、卡支付、IM 通知 |
 | 明确不做 | 团队协作 / 会议 / 企业管控（SSO·SCIM·网络策略·组织 API·审计导出）/ 语音 / SaaS 计费 |
 | 私有化 | 单租户自托管；数据与密钥本地；出网仅模型（IM/连接器暂不做） |
 | 许可 | AGPL-3.0 + 商业双许可（网络使用须公开源码；闭源商业需授权） |

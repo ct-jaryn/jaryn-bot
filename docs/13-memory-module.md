@@ -292,16 +292,16 @@ interface EmbeddingProvider { embed(texts: string[]): Promise<Float32Array[]> }
 
 ---
 
-## 14. 实现计划（P3，约 1–1.5 周）
+## 14. 实现步骤（P3，不含日期）
 
-| 天 | 工作 |
+| 步骤 | 工作 |
 |---|---|
-| D1 | 分词器 + 表/FTS + 读写仓库（单测） |
-| D2 | 写入：显式/规则抽取/候选池；`/remember` `/forget` `/memory` |
-| D3 | 读取：digest 组装 + 排序 + 去重 + 预算截断；目录检索 catalog/list/read |
-| D4 | 整理任务：去重/合并/同键覆盖/衰减；memory_runs |
-| D5 | 压测（1 万条）、指标、边界（无命中/中文/长文本） |
-| D6 | 与上下文装配/压缩集成；Gate 验收 |
+| S1 | 分词器 + 表/FTS + 读写仓库（单测） |
+| S2 | 写入：显式/规则抽取/候选池；`/remember` `/forget` `/memory` |
+| S3 | 读取：digest 组装 + 排序 + 去重 + 预算截断；目录检索 catalog/list/read |
+| S4 | 整理任务：去重/合并/同键覆盖/衰减；memory_runs |
+| S5 | 压测（1 万条）、指标、边界（无命中/中文/长文本） |
+| S6 | 与上下文装配/压缩集成；Gate 验收 |
 
 **依赖**：无新增第三方库（SQLite FTS5 内置）；分词器 ~40 行；整理用已有 LLM 适配器。
 

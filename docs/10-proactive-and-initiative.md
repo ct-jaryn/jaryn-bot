@@ -1,6 +1,6 @@
 # 10 · 主动任务 · Initiative · Teach-a-task
 
-> 状态：**现行（v1.0 目标）**。目标：Bot 不只是"你问它答"，而是**自己发现该干的活、按计划干、干完汇报**——对标并超越 Grok Bot 的 Routine + initiative。
+> 状态：**现行（待定包）**。目标：Bot 不只是"你问它答"，而是**自己发现该干的活、按计划干、干完汇报**——对标并超越 Grok Bot 的 Routine + initiative。
 > 关联：[01 FR-19](01-functional-spec.md) · [09 连接器](09-connectors-and-artifacts.md) · [06 客户端](06-clients-and-topology.md)
 
 ---
@@ -150,7 +150,7 @@ interface Initiative {
 
 ---
 
-## 8. 验收（v1.0 Gate）
+## 8. 验收（Initiative Gate）
 
 - [ ] 每日 8 点简报连续 5 天成功；无重要内容时只发一行
 - [ ] 日历临近提议出现，接受后完成并回到原线程

@@ -2,6 +2,7 @@
 
 > 调研时间：2026-11-23　|　被评估的 DSH 版本：`@deepseek-ai/dsh` **0.2.2-rc.5**（本机 Desktop 安装，MIT）
 > **状态：选型前文档。2026-11-23 最终决定「完全自研运行时」，见 [runtime-design.md](runtime-design.md) 与 [plugin-architecture.md](plugin-architecture.md)；本文保留为 Grok Bot 竞品与 DSH 能力的背景资料。**
+> **历史文档：文中一切时间/工期估算均已失效，不代表当前计划；版本节奏见 [03-roadmap.md](03-roadmap.md)。**
 > **注意**：本文的 A/B/C 指**架构形态**（web 插件 / 网关+SDK / 云 Bot）；**项目形态**的 A/B/C（DSH 插件 / 独立仓库 + DSH 运行时 / 完全自研）见 [build-on-dsh-vs-standalone.md](build-on-dsh-vs-standalone.md)。
 > 证据分级：**【官方】**= xAI/DSH 官方文档或随包源码；**【二手】**= 第三方研究/媒体；**【估算】**= 我的工作量与成本推断。
 > 路径约定：`P = /Volumes/jarynHD/DSH/Applications/DeepSeek Harness.app/Contents/Resources/app.asar/dsh/node_modules/@deepseek-ai/`，`CLI = P/dsh`。

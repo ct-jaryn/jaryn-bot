@@ -1,6 +1,6 @@
 # 08 · Vault 与凭据（Credentials）
 
-> 状态：**现行（v0.5 目标）**。目标：**模型永远看不到密码**，但能"用"密码。
+> 状态：**现行（待定包）**。目标：**模型永远看不到密码**，但能"用"密码。
 > 关联：[07 云电脑](07-cloud-computer.md) · [01 FR-16](01-functional-spec.md) · [06 客户端](06-clients-and-topology.md)
 
 ---
@@ -109,7 +109,7 @@ Bot 在云电脑里打开 https://example.com/login
 |---|---|
 | API Key | 工具参数用 `${secret:name}` 引用；工具层替换，日志与 prompt 显示为 `***` |
 | OAuth token | 连接器（Gmail 等）的 token 存 Vault（kind=oauth），按连接器撤销 |
-| SSH key | 云电脑内 `~/.ssh` 由 Vault 注入（v1.0 评估） |
+| SSH key | 云电脑内 `~/.ssh` 由 Vault 注入（以后评估） |
 | TOTP | 可选：Vault 存 TOTP secret 并生成验证码填入（风险高，默认关，需显式开启） |
 | 银行卡 | **默认关闭**；开启后仅"填卡"，每次支付单独审批；默认不存 CVV；后续可接虚拟卡 |
 
@@ -147,7 +147,7 @@ interface Vault {
 
 ---
 
-## 10. 验收（v0.5 Gate）
+## 10. 验收（Vault Gate）
 
 - [ ] GitHub 登录：Vault 填密码 → 登录成功；模型上下文与日志中无密码明文（自动断言）
 - [ ] 页面结构与 item 不匹配 → 拒绝填充，提示接管

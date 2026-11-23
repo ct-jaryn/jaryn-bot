@@ -29,7 +29,7 @@
 | **microVM（可选）** | Firecracker / Cloud Hypervisor | 内核级 | 百毫秒–秒 | 多租户或不可信任务 |
 | **远程（可选）** | 外部云沙箱（E2B/Daytona 风格） | 厂商级 | 秒级 | 不想在本机跑 Chromium |
 
-v0.4 只做容器；microVM 作为 `computer` seam 的另一个 provider（见 [plugin-architecture.md](plugin-architecture.md)）。
+当前阶段只做容器；microVM 作为 `computer` seam 的另一个 provider（见 [plugin-architecture.md](plugin-architecture.md)）。
 
 **镜像**（`jary-computer:latest`）：Debian slim + Chromium + Xvfb + x11vnc/websockify + LibreOffice + Python/Node + 常用 CLI（git/curl/jq）；**不含**任何用户密钥。每 Bot 可用 setup 脚本追加依赖（有网时）。
 
@@ -160,7 +160,7 @@ interface Computer {
 
 ---
 
-## 10. 验收（v0.4 Gate）
+## 10. 验收（云电脑 Gate）
 
 - [ ] 在无头容器里打开一个真实网站、登录（Vault 填充）、完成一次表单提交并截图
 - [ ] 客户端能实时看屏（≥2 fps），并成功接管 30 秒后交还
@@ -212,7 +212,7 @@ Bot 需要跑测试/构建时，可申请**一次性兄弟容器**（sibling con
 
 ## 12. 明确不做
 
-- Windows/macOS 云电脑（v1.0 前只做 Linux）
+- Windows/macOS 云电脑（当前只做 Linux）
 - 专属公网 IP / 住宅代理池
 - 游戏/视频处理（算力与合规不匹配）
 - 桌面级 CAD/专业软件（除非你明确需要并愿意加镜像）

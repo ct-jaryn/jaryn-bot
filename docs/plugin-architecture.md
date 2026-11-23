@@ -9,7 +9,7 @@
 
 1. **值得做，但别把它做成"所有东西都插件"的宗教。** 只把**能力边界**（模型、工具、存储、通道、调度、记忆、审批、fs+shell）做成 seam；内核（Context / Effect / Event / Loader）必须小而稳。
 2. **DSH 的五个理念要全抄**：无特权核心、贡献即效果、capability seam 三元组、启动即组合（profile/bundle/patch）、事件分三类且"model-visible 必须落日志"。
-3. **代价**：P0 从 1–2 周增至 3–4 周（多约 2 周：内核 + loader + 5 个 seam）；**收益**：每条 IM 通道、每个工具、每种记忆实现都能独立演进、独立测试、独立发布——这正是你要开源的形态。
+3. **代价**：P0 增加内核与 loader 的实现量（约 1200 行 + 配置校验）；**收益**：每个工具/通道/记忆实现都能独立演进、独立测试、独立发布——这正是你要开源的形态。
 4. 三个需求的落点直接变清晰：**多 Bot = preset 组合 + 隔离 realm；记忆 = memory seam（sqlite/vector 两种 provider）+ 整理任务插件；主动 = scheduler seam + trigger 插件。**
 
 ---
@@ -242,7 +242,7 @@ jary config print --profile server   # 最终组合，可 diff
 ```
 
 - 装进 `$JARY_HOME/plugins`，写回 profile 的 `package.json`；`engines.jary` 不满足直接拒绝。
-- v0 **改插件要重启**（DSH 的 config-only HMR 我们不抄，省 1 周）；`--dev` 下支持配置热重载。
+- v0 **改插件要重启**（DSH 的 config-only HMR 不抄，省掉 HMR 的实现量）；`--dev` 下支持配置热重载。
 
 ### 6.2 插件索引（分发）
 
@@ -287,19 +287,17 @@ DSH 的插件跑在 Host 进程里，等于完全信任。我们开源后会有�
 
 ---
 
-## 8. 对路线图与工期的影响
+## 8. 对版本节奏的影响（不含工期）
 
-| 阶段 | 原计划 | 加插件内核后 |
-|---|---|---|
-| P0 骨架 | 1–2 周 | **3–4 周**（多约 2 周：Context/Effect/Event/Loader + config 校验 + 5 个 seam 空实现 + fake 插件） |
-| P1 真模型 | 2–3 周 | 不变（llm/tools 是 seam，先接默认实现） |
-| P2 通道 | 2–3 周 | 不变（通道本来就是插件） |
-| P3 记忆+多 Bot | 2–3 周 | 略增（memory/bus seam） |
-| P4 主动 | 2 周 | 不变（scheduler 是 seam） |
-| P5 硬化 | 3–4 周 | 略增（插件管理器/索引/文档） |
-| 总计 | 12–17 周 ≈ 3–4 个月 | **14–19 周 ≈ 3.5–4.5 个月；含缓冲按 4–5 个月排** |
+插件内核**不改变版本序列与 Gate**，只改变 P0 的实现量与后续扩展方式：
 
-**但这是"少走回头路"的钱**：没有 seam，第三个通道、第二种记忆实现、第二个模型时你会重写；有了 seam，每个都是新包。
+| 阶段 | 影响 |
+|---|---|
+| P0 | 增加 kernel + loader + 配置校验 + 5 个 seam 空实现 + fake 插件 |
+| P1–P5 | 能力实现改为插件：llm/tools/store/approvals/fs-shell 都是 seam，默认实现先接上 |
+| 后续版本 | 新通道/新工具/新存储 = 新插件包，不改核心 |
+
+**这是"少走回头路"的钱**：没有 seam，第三个通道、第二种记忆实现、第二个模型时你会重写；有了 seam，每个都是新包。版本顺序与发版条件见 [03-roadmap.md](03-roadmap.md)。
 
 ---
 
@@ -313,21 +311,22 @@ DSH 的插件跑在 Host 进程里，等于完全信任。我们开源后会有�
 
 ---
 
-## 10. 开工顺序（P0 第 1–2 周里程碑）
+## 10. 开工顺序（P0 的前三个里程碑，不设日期）
 
 ```
-week 1:
+里程碑 A（内核跑起来）:
   packages/kernel/         context + effect + events + loader + config (zod) + disposer 测试
   packages/testing/        FakeProvider / FakeChannel / FakeStore（用于所有测试）
   packages/agent-core/     最小循环（作为插件，提供 ctx.agentLoop）
   packages/bundles/base/   base bundle 的 patch：llm/tools（含 fs-shell）/store/approvals
-week 2:
+
+里程碑 B（可对话）:
   packages/cli/            jary chat / config print / plugin list
   packages/llm-deepseek/   真模型（可先 stub）
   packages/tools-shell/    第一个工具（风险=execute，默认 ask）
   验收：配置文件里禁用 tools-shell 后，模型确实看不到 shell 工具
 
-week 3–4:
+里程碑 C（可恢复）:
   loader 诊断与 fail-loud、config print、事件回放、混沌测试（kill -9 恢复）
 ```
 
