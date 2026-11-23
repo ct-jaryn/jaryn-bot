@@ -2,7 +2,7 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-**状态：v1.5.1 已发布。** 运行时、Web UI、记忆、多 Bot（含 spawn_worker）、主动任务、云电脑（看屏/接管/出网/容器内终端）、Vault、连接器（OAuth 回调）/邮箱（SMTP+IMAP+附件）、Pages、office（docx/xlsx/pptx）、Initiative/teach、goals、usage/审计、审批规则、多设备配对、鉴权、RSS 触发、1Password/Bitwarden/TOTP、卡填充（默认关）、进程外插件宿主、CDP screencast/MJPEG 看屏、通知中心（含安静时段）；**128 个测试 + 文档/部署自动校验**。逐 FR 完成度见 [docs/14-completion-audit.md](docs/14-completion-audit.md)。
+**状态：v1.6.0 已发布。** 运行时、Web UI、记忆、多 Bot（含 spawn_worker）、主动任务、云电脑（看屏/接管/出网/容器内终端）、Vault、连接器（OAuth 回调）/邮箱（SMTP+IMAP+附件）、Pages、office（docx/xlsx/pptx）、Initiative/teach、goals、usage/审计、审批规则、多设备配对、鉴权、RSS 触发、1Password/Bitwarden/TOTP、卡填充（默认关）、进程外插件宿主、CDP screencast/MJPEG 看屏、通知中心（含安静时段）、**Electron 桌面客户端（GitHub Actions 打包）**；**132 个测试 + 文档/部署/桌面校验**。逐 FR 完成度见 [docs/14-completion-audit.md](docs/14-completion-audit.md)。
 
 > 目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。见 [RELEASE-v1.0.0.md](RELEASE-v1.0.0.md)。
 

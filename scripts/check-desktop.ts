@@ -18,9 +18,10 @@ if (!existsSync(join(ROOT, '.github/workflows/desktop.yml'))) problems.push('des
 if (!existsSync(join(ROOT, '.github/workflows/ci.yml'))) problems.push('ci workflow missing')
 
 const workflow = readFileSync(join(ROOT, '.github/workflows/desktop.yml'), 'utf8')
-for (const need of ['macos-14', 'macos-13', 'ubuntu-latest', 'windows-latest', 'electron-builder', 'upload-artifact']) {
+for (const need of ['ubuntu-latest', 'windows-latest', 'electron-builder', 'upload-artifact']) {
   if (!workflow.includes(need)) problems.push(`desktop workflow missing: ${need}`)
 }
+if (!existsSync(join(ROOT, '.github/workflows/desktop-macos.yml'))) problems.push('desktop-macos workflow missing')
 
 if (problems.length > 0) {
   console.error('desktop check failed:')

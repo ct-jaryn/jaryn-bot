@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.6.0 — 桌面客户端（GitHub Actions 打包）
+
+### Added
+
+- `desktop/`：Electron 瘦客户端（窗口/菜单/服务器地址+API token 配置/导航守卫）
+- electron-builder 目标：macOS dmg（x64/arm64）、Windows NSIS、Linux AppImage/deb
+- `.github/workflows/desktop.yml`：tag/手动触发，构建 win/linux 并附到 Release
+- `.github/workflows/desktop-macos.yml`：macOS 单独、非阻塞（runner 不在所有 plan 可用）
+- `.github/workflows/ci.yml`：workspace 链接 + 测试 + docs/deploy/desktop 校验
+- `scripts/link-workspaces.mjs`、`scripts/check-desktop.ts`
+- GitHub Actions 实际产出：Windows 78MB exe、Linux 103MB AppImage / 71MB deb（已校验）
+- 132 个测试
+
+
 ## v1.5.1 — MJPEG 看屏
 
 ### Added

@@ -1,6 +1,6 @@
 # 14 · 完成度审计（设计 vs 代码）
 
-> 状态：**现行**（v1.3.0 后）。方法：逐条对照 `01-functional-spec.md` 的 FR-1…FR-19 与 `00-prd.md` 需求池，检查代码里**实际注册的工具、HTTP 路由、CLI 命令、DB 表**，而不是看提交信息。
+> 状态：**现行**（v1.6.0 后）。方法：逐条对照 `01-functional-spec.md` 的 FR-1…FR-19 与 `00-prd.md` 需求池，检查代码里**实际注册的工具、HTTP 路由、CLI 命令、DB 表**，而不是看提交信息。
 > 复算命令：`npm test`（串行执行）、`npm run check`、`node scripts/check-docs.ts`、`node scripts/check-deploy.ts`、`node packages/cli/src/index.ts doctor`。
 
 ## 口径
@@ -29,7 +29,7 @@
 | FR-11 | 命令 | ✅ | Web：新会话/停止/看屏/面板/`/status`/`/compact`（command API）；CLI 24+ 子命令 | — |
 | FR-12 | 运维 | ✅ | doctor、config print、replay、plugin（list/doctor/permissions/enable/disable/index）、backup/restore、stop-all、usage/audit | — |
 | FR-13 | 插件 | ✅ | 组合/patch、拓扑排序、fail-loud、诊断、索引源、权限声明扫描、**进程外插件宿主**（JSON-RPC 工具代理 + 示例插件） | 索引签名校验 |
-| FR-14 | 客户端 | 🟡 | Web UI、PWA、SSE（支持设备令牌鉴权）、设备配对/令牌/吊销、多面板 | 桌面壳/原生 App（设计暂缓） |
+| FR-14 | 客户端 | ✅ | Web UI、PWA、SSE（设备令牌鉴权）、设备配对/令牌/吊销、多面板、**Electron 桌面客户端（GitHub Actions 打包 win/linux；macOS 工作流就绪）** | 原生 iOS/Android（需单独工程与商店签名，明确不做） |
 | FR-15 | 云电脑 | 🟡 | 本地 Chrome/Docker、browser.*、截图、快照/恢复、看屏（截图轮询 / CDP screencast / **MJPEG 原生流**）、接管、输入、`computer.exec`、空闲自动停机、容器网络策略、镜像含 Xvfb/x11vnc/noVNC | 真 WebRTC；桌面镜像未在真机验证（需 docker） |
 | FR-16 | Vault | ✅ | AES-GCM write-only、盲填、Secure Form、审计、轮换、grant/revoke、1Password、Bitwarden、TOTP、**卡填充（默认关 + destructive 审批）** | —（真实支付网关明确不做） |
 | FR-17 | 连接器/邮箱 | ✅ | 通用 HTTP、Bearer/APIKey、OAuth 授权 URL + 回调换 token（存 Vault）、SMTP、IMAP 轮询、HTML→文本、附件→artifact、发件人 allowlist | 官方 Gmail/Calendar 应用（需自注册+审核，配置已支持） |
@@ -48,7 +48,7 @@
 ## 总量
 
 - 31 个包、约 **10.6k 行 TS**（`packages/*/src`）、前端约 350 行
-- **128 个测试**（40 个测试文件，含真实 Chrome/screencast、假 IMAP/SMTP/MCP/HTTP 服务、office 包结构校验）
+- **132 个测试**（40 个测试文件，含真实 Chrome/screencast、假 IMAP/SMTP/MCP/HTTP 服务、office 包结构校验）
 - **65 个工具注册点**（含 MCP/插件宿主动态注册）、55 条 HTTP 路由、20+ CLI 子命令
 - 文档：27 份 markdown（约 5.4k 行）+ 11 份发布说明
 - 自动化校验：`check-docs`（结构/链接）、`check-deploy`（镜像/注册表）、`evals --dry`（10 任务结构）
@@ -71,7 +71,8 @@
 |---|---|---|
 | 真实模型评测（10 任务） | 🚧 | 需要 `DEEPSEEK_API_KEY`；`npm run eval` |
 | Docker 镜像构建/运行实测 | 🚧 | 需要 docker；`deploy/README.md` |
-| 桌面壳 / 原生 App | 未做 | PWA 可用；原生需另立项目（设计上暂缓） |
+| 桌面客户端 | ✅ | Electron 瘦客户端，GitHub Actions 产出 win/linux 安装包（见 [15](15-desktop-client.md)）；macOS 需可用 runner |
+| 原生 iOS/Android | ⛔ | PWA 可加主屏；原生需独立工程与商店签名，明确不做 |
 | 真实支付网关 | ⛔ | 仅做卡信息填表，不做支付结算 |
 | 官方 Gmail/Calendar OAuth 应用 | 🚧 | 需自建 OAuth 应用（示例与回调已就绪） |
 | 实时低延迟串流（WebRTC） | 未做 | 已提供 CDP screencast + MJPEG（浏览器原生渲染，延迟低于 SSE）；真 WebRTC 未做 |
