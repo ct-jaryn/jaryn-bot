@@ -174,6 +174,18 @@ function showQuestion(event) {
 }
 
 async function send(text) {
+  if (text.startsWith('/')) {
+    addMessage('user', text)
+    try {
+      const result = await api(`/api/sessions/${state.sessionId}/command`, { method: 'POST', body: JSON.stringify({ command: text }) })
+      addMessage('tool', JSON.stringify(result, null, 2).slice(0, 1500))
+      if (text === '/new' && result.session) await selectSession(result.session.id)
+      if (text === '/stop') setStatus('idle')
+    } catch (err) {
+      addMessage('error', err.message)
+    }
+    return
+  }
   setStatus('running')
   addMessage('user', text)
   await api('/api/message', { method: 'POST', body: JSON.stringify({ sessionId: state.sessionId, text, botId: state.botId }) })

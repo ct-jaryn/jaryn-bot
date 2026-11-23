@@ -10,6 +10,9 @@ export type { Memory, MemoryKind, RememberInput } from './store.ts'
 
 export interface MemoryConfig {
   ns?: string
+  maxEntries?: number
+  episodeTtlDays?: number
+  decayDays?: number
 }
 
 export function memoryPlugin(cfg: MemoryConfig = {}): Plugin<MemoryConfig> {
@@ -19,7 +22,14 @@ export function memoryPlugin(cfg: MemoryConfig = {}): Plugin<MemoryConfig> {
     inject: ['store'],
     apply(ctx, config = {}) {
       const store = ctx.get<any>('store')
-      const memory = new MemoryStore(store.db)
+      const memory = new MemoryStore(store.db, {
+        maxEntries: config.maxEntries ?? cfg.maxEntries,
+        episodeTtlDays: config.episodeTtlDays ?? cfg.episodeTtlDays,
+        decayDays: config.decayDays ?? cfg.decayDays,
+      })
+      const timer = setInterval(() => { try { memory.maintain() } catch { /* best effort */ } }, 6 * 3600_000)
+      timer.unref?.()
+      ctx.effect(() => () => clearInterval(timer))
       ctx.provide('memory', memory)
       ctx.provide('memoryNs', config.ns ?? cfg.ns ?? 'global')
     },

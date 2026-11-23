@@ -20,6 +20,12 @@ export interface Memory {
   expiresAt?: number
 }
 
+export interface MemoryLimits {
+  maxEntries?: number
+  episodeTtlDays?: number
+  decayDays?: number
+}
+
 export interface RememberInput {
   ns: string
   text: string
@@ -66,9 +72,52 @@ CREATE TABLE IF NOT EXISTS memory_runs (
 
 export class MemoryStore {
   private db: DatabaseSync
-  constructor(db: DatabaseSync) {
+  limits: Required<MemoryLimits>
+  constructor(db: DatabaseSync, limits: MemoryLimits = {}) {
     this.db = db
     this.db.exec(SCHEMA)
+    this.limits = {
+      maxEntries: limits.maxEntries ?? 5000,
+      episodeTtlDays: limits.episodeTtlDays ?? 30,
+      decayDays: limits.decayDays ?? 90,
+    }
+  }
+
+  /** Enforce TTL, decay/archive and capacity. Returns how many rows were archived/removed. */
+  maintain(now = Date.now()): { expired: number; archived: number; evicted: number } {
+    let expired = 0
+    let archived = 0
+    let evicted = 0
+    if (this.limits.episodeTtlDays > 0) {
+      expired = this.db.prepare(`DELETE FROM memories WHERE kind = 'episode' AND created_at < ?`)
+        .run(now - this.limits.episodeTtlDays * 86_400_000).changes
+    }
+    if (this.limits.decayDays > 0) {
+      const cutoff = now - this.limits.decayDays * 86_400_000
+      const rows = this.db.prepare(
+        `SELECT id, created_at, last_used_at, use_count, confidence FROM memories
+         WHERE pinned = 0 AND (last_used_at IS NULL OR last_used_at < ?) AND created_at < ?`,
+      ).all(cutoff, cutoff) as any[]
+      for (const row of rows) {
+        const useCount = Number(row.use_count ?? 0)
+        const score = Number(row.confidence ?? 0.7) * Math.exp(-(now - (row.last_used_at ?? row.created_at)) / (this.limits.decayDays * 86_400_000)) + 0.1 * Math.min(useCount, 5)
+        if (score < 0.2) {
+          this.db.prepare('UPDATE memories SET expires_at = ? WHERE id = ?').run(now - 1, row.id)
+          archived++
+        }
+      }
+    }
+    const total = (this.db.prepare('SELECT COUNT(*) AS c FROM memories').get() as any).c
+    if (total > this.limits.maxEntries) {
+      const extra = total - Math.floor(this.limits.maxEntries * 0.9)
+      const victims = this.db.prepare(
+        `SELECT id FROM memories WHERE pinned = 0
+         ORDER BY confidence ASC, COALESCE(last_used_at, created_at) ASC LIMIT ?`,
+      ).all(extra) as any[]
+      for (const victim of victims) this.forget({ id: victim.id, ns: '' })
+      evicted = victims.length
+    }
+    return { expired, archived, evicted }
   }
 
   remember(input: RememberInput): Memory {

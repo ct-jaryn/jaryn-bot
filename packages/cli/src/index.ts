@@ -34,8 +34,9 @@ import { goalToolsPlugin, goalsPlugin } from '@jaryn/goals'
 import { bitwardenPlugin, onePasswordPlugin } from '@jaryn/secrets'
 import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { notificationsPlugin } from '@jaryn/notifications'
+import { maintenancePlugin } from '@jaryn/maintenance'
 
-const VERSION = '1.7.0'
+const VERSION = '1.8.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -44,6 +45,41 @@ interface Args {
   sub?: string
   flags: Record<string, string | boolean>
   positional: string[]
+}
+
+function readInstalledName(profileDir: string, spec: string): string | undefined {
+  const modulesDir = join(profileDir, 'node_modules')
+  if (!existsSync(modulesDir)) return undefined
+  for (const entry of readdirSync(modulesDir)) {
+    if (entry.startsWith('.')) continue
+    if (entry.startsWith('@')) {
+      for (const inner of readdirSync(join(modulesDir, entry))) {
+        const manifest = join(modulesDir, entry, inner, 'package.json')
+        if (existsSync(manifest)) return JSON.parse(readFileSync(manifest, 'utf8')).name
+      }
+      continue
+    }
+    const manifest = join(modulesDir, entry, 'package.json')
+    if (existsSync(manifest)) {
+      try { return JSON.parse(readFileSync(manifest, 'utf8')).name } catch { /* ignore */ }
+    }
+  }
+  void spec
+  return undefined
+}
+
+function redactSecrets(value: unknown, depth = 0): unknown {
+  if (depth > 6) return '[depth]'
+  if (Array.isArray(value)) return value.map((item) => redactSecrets(item, depth + 1))
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if (/pass(word)?|secret|token|api[_-]?key|authorization|cvc|cvv|card/i.test(key)) { out[key] = '[redacted]'; continue }
+      out[key] = redactSecrets(item, depth + 1)
+    }
+    return out
+  }
+  return value
 }
 
 function parseArgs(argv: string[]): Args {
@@ -115,6 +151,7 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/secrets/bitwarden', bitwardenPlugin()],
     ['@jaryn/plugin-host', pluginHostPlugin()],
     ['@jaryn/notifications', notificationsPlugin()],
+    ['@jaryn/maintenance', maintenancePlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/memory', memoryPlugin()],
     ['@jaryn/memory/tools', memoryToolsPlugin()],
@@ -208,6 +245,7 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   }
 
   if (cmd === 'session') {
+    const homeForExport = homeDir(flags)
     const home = homeDir(flags)
     const rows = resolveHomePaths(rowsFor(flags), home)
     const storeRow = rows.find((r) => r.id === 'store')
@@ -216,6 +254,25 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
     try {
       if (sub === 'list') {
         for (const s of store.listSessions()) console.log(`${s.id}\t${s.botId}\t${s.status}\t${new Date(s.updatedAt).toISOString()}`)
+        return 0
+      }
+      if (sub === 'export') {
+        const id = String(positional[0] ?? '')
+        if (!id) { console.error('usage: jary session export <id> [--out file]'); return 2 }
+        const events = store.events(id)
+        if (events.length === 0) { console.error(`session not found or empty: ${id}`); return 1 }
+        const redacted = process.env.JARY_EXPORT_RAW === '1'
+        const lines = events.map((e) => JSON.stringify(redacted ? e : { ...e, data: redactSecrets(e.data) }))
+        const out = typeof flags.out === 'string' ? resolve(flags.out) : join(home, 'exports', `${id}.jsonl`)
+        mkdirSync(dirname(out), { recursive: true })
+        writeFileSync(out, lines.join('\n') + '\n')
+        console.log(`exported ${events.length} events -> ${out}`)
+        return 0
+      }
+      if (sub === 'delete') {
+        const id = String(positional[0] ?? '')
+        if (!id || !flags.yes) { console.error('usage: jary session delete <id> --yes'); return 2 }
+        console.log(JSON.stringify({ deleted: store.deleteSession(id) }))
         return 0
       }
       if (sub === 'replay') {
@@ -454,6 +511,37 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
       for (const row of rows) console.log(`${row.disabled ? 'disabled' : 'enabled '} ${row.id}\t${row.name}`)
       return 0
     }
+    if (sub === 'add') {
+      const spec = positional[0]
+      if (!spec) { console.error('usage: jary plugin add npm:<pkg>@<ver> | git:<url> | file:<path> [--trust]'); return 2 }
+      const [kind, target] = spec.includes(':') ? [spec.slice(0, spec.indexOf(':')), spec.slice(spec.indexOf(':') + 1)] : ['npm', spec]
+      if (!['npm', 'git', 'file'].includes(kind)) { console.error(`unsupported spec: ${kind} (use npm:, git:, file:)`); return 2 }
+      const profileDir = join(home, 'profiles', 'default')
+      mkdirSync(profileDir, { recursive: true })
+      const pkgSpec = kind === 'npm' ? target : kind === 'file' ? `file:${resolve(target!)}` : target!
+      const result = spawnSync('npm', ['install', '--no-audit', '--no-fund', '--prefix', profileDir, pkgSpec], { encoding: 'utf8', timeout: 180_000 })
+      if (result.status !== 0) { console.error(`install failed: ${(result.stderr ?? '').slice(0, 800)}`); return 1 }
+      const installedName = readInstalledName(profileDir, pkgSpec)
+      if (!installedName) { console.error('install finished but package name could not be resolved'); return 1 }
+      mkdirSync(home, { recursive: true })
+      const profile = existsSync(profileFile) ? JSON.parse(readFileSync(profileFile, 'utf8')) : { name: 'default', bundles: [], patches: [] }
+      profile.patches = profile.patches ?? []
+      profile.patches.push({ id: `plugin-${installedName.replace(/[^a-z0-9-]+/gi, '-')}`, name: installedName, config: {} })
+      writeFileSync(profileFile, JSON.stringify(profile, null, 2))
+      console.log(`installed ${installedName} into ${profileDir}`)
+      if (!flags.trust) console.log('note: third-party plugin runs in-process; review it and pass --trust to silence this warning')
+      return 0
+    }
+    if (sub === 'remove') {
+      const name = positional[0]
+      if (!name) { console.error('usage: jary plugin remove <name>'); return 2 }
+      const profile = existsSync(profileFile) ? JSON.parse(readFileSync(profileFile, 'utf8')) : { patches: [] }
+      const before = (profile.patches ?? []).length
+      profile.patches = (profile.patches ?? []).filter((patch: any) => patch.name !== name)
+      writeFileSync(profileFile, JSON.stringify(profile, null, 2))
+      console.log(`removed ${name} (${before - profile.patches.length} row)`);
+      return 0
+    }
     if (sub === 'permissions') {
       const packagesDir = resolve(HERE, '../..')
       const dangerous: string[] = []
@@ -660,7 +748,7 @@ commands:
   stop-all                   pause scheduler and cancel turns
   backup [--out <dir>]       backup sqlite + workspaces
   restore --from <dir> --yes restore from backup
-  plugin list|doctor|permissions|enable|disable|index
+  plugin list|doctor|permissions|add|remove|enable|disable|index
   computer status|start|stop|snapshot [--bot id]
   vault add|list|remove|rotate|events
   tunnel --url ws://<server>/tunnel   client-side egress tunnel
@@ -668,7 +756,7 @@ commands:
   goal set|list|run|pause|clear       persistent multi-round goals
   usage [--session id]                token/cost totals
   audit [--limit n]                   audit log
-  session list|replay <id>   inspect persisted sessions
+  session list|replay|export|delete <id>
   doctor                     environment checks
   version                    print version`)
     return 0

@@ -141,7 +141,8 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
       }
 
       messages.push({ role: 'assistant', content: stepText, toolCalls: calls })
-      for (const call of calls) {
+
+      const runOne = async (call: ToolCall): Promise<{ call: ToolCall; content: string }> => {
         calledTools.push(call)
         append('tool.call', { id: call.id, name: call.name, args: call.args })
         let content: string
@@ -184,8 +185,31 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
           content = `error: ${(err as Error).message}`
           append('tool.result', { id: call.id, name: call.name, ok: false, error: (err as Error).message })
         }
-        messages.push({ role: 'tool', content, toolCallId: call.id })
+        return { call, content }
       }
+
+      // Execute consecutive parallel-safe, pre-approved calls together (cap 4), keep the rest serial.
+      const results: { call: ToolCall; content: string }[] = []
+      let index = 0
+      while (index < calls.length) {
+        const batch: ToolCall[] = []
+        while (index < calls.length && batch.length < 4) {
+          const candidate = calls[index]!
+          const definition = tools.get(candidate.name)
+          const needsApproval = definition ? ['execute', 'external', 'destructive'].includes(definition.risk) : true
+          if (definition?.parallelSafe && !needsApproval) batch.push(candidate)
+          else break
+          index++
+        }
+        if (batch.length === 0) {
+          results.push(await runOne(calls[index]!))
+          index++
+          continue
+        }
+        const settled = await Promise.all(batch.map((call) => runOne(call)))
+        results.push(...settled)
+      }
+      for (const { call, content } of results) messages.push({ role: 'tool', content, toolCallId: call.id })
     }
   } catch (err) {
     finishReason = controller.signal.aborted ? 'aborted' : 'error'

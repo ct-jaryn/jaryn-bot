@@ -212,6 +212,11 @@
         "id": "notifications",
         "name": "@jaryn/notifications",
         "config": {}
+      },
+      {
+        "id": "maintenance",
+        "name": "@jaryn/maintenance",
+        "config": {}
       }
     ]
   }

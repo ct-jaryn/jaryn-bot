@@ -16,6 +16,7 @@ import { goalToolsPlugin, goalsPlugin } from '@jaryn/goals'
 import { bitwardenPlugin, onePasswordPlugin } from '@jaryn/secrets'
 import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { notificationsPlugin } from '@jaryn/notifications'
+import { maintenancePlugin } from '@jaryn/maintenance'
 import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
 import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
 import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
@@ -64,6 +65,7 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/secrets/bitwarden', bitwardenPlugin()],
     ['@jaryn/plugin-host', pluginHostPlugin()],
     ['@jaryn/notifications', notificationsPlugin()],
+    ['@jaryn/maintenance', maintenancePlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/tools-fs', fsPlugin()],
     ['@jaryn/memory', memoryPlugin()],

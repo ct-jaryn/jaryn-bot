@@ -86,6 +86,7 @@ export function vaultToolsPlugin(cfg: VaultConfig = {}): Plugin {
             if (!allowCard) throw new Error('card filling is disabled (set vault.allowCardPayments=true)')
             const item = vault.reveal(String(args.itemId))
             if (!item) throw new Error(`vault item not found: ${args.itemId}`)
+            if (!vault.canUse(String(args.itemId), String(args.botId ?? 'default'))) throw new Error(`vault item ${args.itemId} is not granted to this bot`)
             if (item.kind !== 'card') throw new Error(`item ${args.itemId} is not a card`)
             const computer = ctx.get<any>('computer')
             if (!computer) throw new Error('computer not mounted; cannot fill card')

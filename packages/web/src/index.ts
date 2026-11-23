@@ -332,6 +332,18 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const body = await readBody(req).catch(() => ({}))
       return sendJson(res, 200, pages.share(id, body.enabled !== false))
     }
+    if (req.method === 'GET' && /^\/api\/pages\/[^/]+\/export$/.test(path)) {
+      const pages = ctx.get<any>('pages')
+      if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
+      const id = path.split('/')[3]!
+      try {
+        const html = pages.exportHtml(id)
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-disposition': `attachment; filename="${id}.html"` })
+        return void res.end(html)
+      } catch (err) {
+        return sendJson(res, 404, { error: (err as Error).message })
+      }
+    }
     if (req.method === 'GET' && path.startsWith('/pages/')) {
       const pages = ctx.get<any>('pages')
       if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
@@ -650,6 +662,56 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       if (command === '/status') {
         const usage = store.usageTotal?.(sessionId) ?? {}
         return sendJson(res, 200, { session, usage, tools: ctx.get<any>('tools')?.list?.().length ?? 0 })
+      }
+      if (command === '/help') {
+        return sendJson(res, 200, { commands: ['/status', '/compact', '/new', '/stop', '/memory', '/forget <词>', '/remember <文本>', '/artifacts', '/jobs', '/bots', '/approvals', '/help'] })
+      }
+      if (command === '/stop') {
+        const agent = ctx.get<any>('agent')
+        return sendJson(res, 200, { cancelled: agent?.cancel?.(sessionId) ?? false })
+      }
+      if (command === '/memory') {
+        const memory = ctx.get<any>('memory')
+        if (!memory) return sendJson(res, 404, { error: 'memory not mounted' })
+        const ns = session.botId ? `bot:${session.botId}` : 'global'
+        return sendJson(res, 200, { ns, categories: memory.catalog(ns), stats: memory.stats(ns) })
+      }
+      if (command.startsWith('/remember ')) {
+        const memory = ctx.get<any>('memory')
+        if (!memory) return sendJson(res, 404, { error: 'memory not mounted' })
+        const text = command.slice('/remember '.length).trim()
+        if (!text) return sendJson(res, 400, { error: 'nothing to remember' })
+        const ns = session.botId ? `bot:${session.botId}` : 'global'
+        return sendJson(res, 201, { item: memory.remember({ ns, text, kind: 'fact', source: 'user' }) })
+      }
+      if (command.startsWith('/forget ')) {
+        const memory = ctx.get<any>('memory')
+        if (!memory) return sendJson(res, 404, { error: 'memory not mounted' })
+        const query = command.slice('/forget '.length).trim()
+        const ns = session.botId ? `bot:${session.botId}` : 'global'
+        return sendJson(res, 200, { deleted: memory.forget({ ns, query }) })
+      }
+      if (command === '/artifacts') {
+        const artifacts = ctx.get<any>('artifacts')
+        return sendJson(res, 200, { artifacts: artifacts?.list?.() ?? [] })
+      }
+      if (command === '/jobs') {
+        const scheduler = ctx.get<any>('scheduler')
+        return sendJson(res, 200, { jobs: scheduler?.list?.() ?? [] })
+      }
+      if (command === '/bots') {
+        const bots = ctx.get<any>('bots')
+        return sendJson(res, 200, { bots: bots?.list?.() ?? [] })
+      }
+      if (command === '/approvals') {
+        return sendJson(res, 200, { pending: [...pending.values()].map((entry) => entry.req) })
+      }
+      if (command === '/new') {
+        const newId = `s_${Date.now().toString(36)}`
+        const bots = ctx.get<any>('bots')
+        const botId = session.botId ?? 'default'
+        store.createSession(newId, botId, bots?.workspaceFor?.(botId, process.cwd()) ?? process.cwd())
+        return sendJson(res, 201, { session: store.getSession(newId) })
       }
       if (command === '/compact') {
         const agent = ctx.get<any>('agent')

@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.8.0 — 补齐功能审计缺口
+
+### Fixed / Added
+
+- **Vault 授权强制**：`fill` / `fill_card` 现在校验 `vault_grants`（无授权记录则默认允许 owner，有记录则必须匹配 bot）
+- **记忆维护**：容量上限（默认 5000）、episode TTL、按得分衰减归档、超限淘汰、每 6 小时自动维护
+- **工具并行**：`parallelSafe` 且非审批风险的调用并发执行（≤4）
+- **`jary plugin add/remove`**：npm / git / file 安装到 profile，写入 patch 行；`--trust` 提示
+- **`jary session export`**（脱敏 JSONL，`JARY_EXPORT_RAW=1` 关闭脱敏）与 `session delete --yes`
+- **Pages 导出**：`pages.export` 工具 + `GET /api/pages/:id/export`
+- **Web 文本命令**：`/status /compact /new /stop /memory /forget /remember /artifacts /jobs /bots /approvals /help`
+- **维护插件** `@jaryn/maintenance`：30 天自动归档会话、清理停滞 goal
+- 137 个测试（含并行执行、命令、维护、授权）
+
+
 ## v1.7.0 — Android 客户端
 
 ### Added

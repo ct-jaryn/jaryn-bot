@@ -102,9 +102,18 @@ export class VaultService {
     return { ...toMeta(row), secret: decrypt(row.secret_enc, this.key) as Record<string, unknown> }
   }
 
+  /** True when the bot may use this item: explicit grant, or no grants configured for the item. */
+  canUse(itemId: string, botId?: string): boolean {
+    const grants = this.db.prepare('SELECT bot_id FROM vault_grants WHERE item_id = ?').all(itemId) as any[]
+    if (grants.length === 0) return true
+    if (!botId) return false
+    return grants.some((grant) => grant.bot_id === botId || grant.bot_id === '*')
+  }
+
   async fill(id: string, opts: { client: FillClient; botId?: string; origin?: string }): Promise<{ ok: boolean; filled: string[] }> {
     const item = this.reveal(id)
     if (!item) throw new Error(`vault item not found: ${id}`)
+    if (!this.canUse(id, opts.botId)) throw new Error(`vault item ${id} is not granted to bot ${opts.botId ?? '(none)'}`)
     if (item.kind !== 'login' && item.kind !== 'api_key') throw new Error(`item ${id} is not fillable`)
     if (item.origin && opts.origin) {
       const expected = new URL(item.origin).host

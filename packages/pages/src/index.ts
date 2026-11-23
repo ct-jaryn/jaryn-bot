@@ -154,6 +154,11 @@ export function pageToolsPlugin(): Plugin {
           async execute() { return pages.list() },
         },
         {
+          name: 'pages.export', description: 'Export a page as a self-contained HTML document.', risk: 'read',
+          schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+          async execute(args) { return { html: pages.exportHtml(String(args.id)) } },
+        },
+        {
           name: 'pages.share', description: 'Create or revoke a read-only share token for a page.', risk: 'external',
           schema: { type: 'object', properties: { id: { type: 'string' }, enabled: { type: 'boolean' } }, required: ['id'] },
           async execute(args) { return pages.share(String(args.id), args.enabled !== false) },

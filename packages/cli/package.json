@@ -37,6 +37,7 @@
     "@jaryn/goals": "workspace:*",
     "@jaryn/plugin-host": "workspace:*",
     "@jaryn/notifications": "workspace:*",
-    "@jaryn/secrets": "workspace:*"
+    "@jaryn/secrets": "workspace:*",
+    "@jaryn/maintenance": "workspace:*"
   }
 }
