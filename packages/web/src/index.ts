@@ -809,6 +809,22 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     sendJson(res, 404, { error: 'not found' })
   }
 
+  // Restore OAuth tokens stored in the Vault so connectors work after a restart.
+  try {
+    const vault = ctx.get<any>('vault')
+    const connectors = ctx.get<any>('connectors')
+    if (vault && connectors) {
+      for (const item of vault.list() ?? []) {
+        if (item.kind !== 'oauth') continue
+        const secret = vault.reveal?.(item.id)?.secret
+        if (secret?.access_token) {
+          const id = String(item.name).split(' ')[0]
+          connectors.setToken?.(id, String(secret.access_token))
+        }
+      }
+    }
+  } catch { /* vault/connectors optional */ }
+
   tunnel.attach(server)
   await new Promise<void>((resolve) => server.listen(port, host, resolve))
   const address = server.address()
