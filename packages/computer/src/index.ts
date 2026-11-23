@@ -156,6 +156,7 @@ export class ComputerService {
   private instances = new Map<string, ComputerInstance>()
   private clients = new Map<string, CdpClient>()
   private takeovers = new Set<string>()
+  private recordings = new Map<string, { startedAt: number; steps: string[] }>()
   private idleTimers = new Map<string, NodeJS.Timeout>()
   private backend: ComputerBackend
   readonly dataDir: string
@@ -213,6 +214,30 @@ export class ComputerService {
     if (event.type === 'click') await client.clickAt(Number(event.x ?? 0), Number(event.y ?? 0))
     else if (event.type === 'type') await client.typeText(String(event.text ?? ''))
     else await client.pressKey(String(event.key ?? 'Enter'))
+    if (event.type === 'click') this.record(botId, `click at (${event.x}, ${event.y})`)
+    else if (event.type === 'type') this.record(botId, `type "${String(event.text ?? '').slice(0, 60)}"`)
+    else this.record(botId, `press key ${event.key}`)
+  }
+
+  startRecording(botId: string): { startedAt: number } {
+    this.recordings.set(botId, { startedAt: Date.now(), steps: [] })
+    return { startedAt: Date.now() }
+  }
+
+  record(botId: string, step: string): void {
+    const rec = this.recordings.get(botId)
+    if (rec) rec.steps.push(step)
+  }
+
+  stopRecording(botId: string): { steps: string[]; durationMs: number } | undefined {
+    const rec = this.recordings.get(botId)
+    if (!rec) return undefined
+    this.recordings.delete(botId)
+    return { steps: rec.steps, durationMs: Date.now() - rec.startedAt }
+  }
+
+  isRecording(botId: string): boolean {
+    return this.recordings.has(botId)
   }
 
   proxyUrl?: string
@@ -369,7 +394,7 @@ export function computerToolsPlugin(): Plugin {
         {
           name: 'browser.goto', description: 'Open a URL in the bot computer browser.', risk: 'network',
           schema: { type: 'object', properties: { botId: { type: 'string' }, url: { type: 'string' } }, required: ['url'] },
-          async execute(args) { computer.assertAgentControl(botOf(args)); const client = await computer.client(botOf(args)); computer.touch(botOf(args)); await client.navigate(String(args.url)); return { url: String(args.url), title: await client.evaluate<string>('document.title') } },
+          async execute(args) { computer.assertAgentControl(botOf(args)); const client = await computer.client(botOf(args)); computer.touch(botOf(args)); computer.record(botOf(args), `goto ${String(args.url)}`); await client.navigate(String(args.url)); return { url: String(args.url), title: await client.evaluate<string>('document.title') } },
         },
         {
           name: 'browser.extract', description: 'Extract visible text from the current page.', risk: 'read',

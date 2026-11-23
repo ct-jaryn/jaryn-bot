@@ -168,6 +168,27 @@ test('session title, fork, archive and delete', async () => {
   } finally { await server.close(); await ctx.dispose() }
 })
 
+test('device token authorizes API and SSE stream', async () => {
+  const ctx = new Context({ scope: 'root' })
+  const store = new Store(':memory:')
+  ctx.provide('store', store)
+  ctx.provide('tools', { register: () => () => {}, list: () => [], get: () => undefined, execute: async () => undefined } as any)
+  ctx.provide('llm', new FakeProvider([]))
+  await ctx.mount(agentPlugin())
+  await ctx.mount(devicesPlugin())
+  const server = await startWebServer(ctx, { port: 0, apiToken: 'tok-2' })
+  try {
+    const devices = ctx.get<any>('devices')
+    const { code } = devices.createPairCode()
+    const { token } = devices.pair(code, 'phone')
+    const res = await fetch(`${server.url}/api/sessions`, { headers: { authorization: `Bearer ${token}` } })
+    assert.equal(res.status, 200)
+    const sse = await fetch(`${server.url}/api/stream?sessionId=web&token=${token}`)
+    assert.equal(sse.status, 200)
+    await sse.body?.cancel()
+  } finally { await server.close(); await ctx.dispose() }
+})
+
 test('usage, audit and rules endpoints', async () => {
   const { ctx, store, server } = await setup([])
   try {

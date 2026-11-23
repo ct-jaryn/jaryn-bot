@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.5.0 — 录屏教学 / 设备令牌与 SSE
+
+### Added
+
+- 操作录制：`computer.startRecording/record/stopRecording`，记录 goto/click/type/key 步骤
+- `teach.record_start` / `teach.record_stop`：录制结束直接产出 SKILL.md 草稿
+- SSE 设备令牌鉴权：`/api/stream?token=<device token>`（EventSource 无法带 header 的场景）
+- 127 个测试
+
+
 ## v1.4.0 — 收尾剩余 🟡 项
 
 ### Added

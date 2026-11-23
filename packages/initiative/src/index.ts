@@ -322,6 +322,26 @@ export function initiativeToolsPlugin(): Plugin {
           async execute(args) { return { markdown: teach.load(String(args.name ?? '')) } },
         },
         {
+          name: 'teach.record_start', description: 'Start recording user/bot actions on the computer to turn into a skill.', risk: 'write',
+          schema: { type: 'object', properties: { botId: { type: 'string' } } },
+          async execute(args) {
+            const computer = ctx.get<any>('computer')
+            if (!computer) throw new Error('computer not mounted')
+            return computer.startRecording(String(args.botId ?? 'default'))
+          },
+        },
+        {
+          name: 'teach.record_stop', description: 'Stop recording and draft a SKILL.md from the captured steps.', risk: 'write',
+          schema: { type: 'object', properties: { botId: { type: 'string' }, title: { type: 'string' } }, required: ['title'] },
+          async execute(args) {
+            const computer = ctx.get<any>('computer')
+            if (!computer) throw new Error('computer not mounted')
+            const rec = computer.stopRecording(String(args.botId ?? 'default'))
+            if (!rec) throw new Error('no recording in progress')
+            return { title: String(args.title), steps: rec.steps, durationMs: rec.durationMs, markdown: teach.draft({ title: String(args.title), steps: rec.steps }) }
+          },
+        },
+        {
           name: 'teach.list', description: 'List taught skills.', risk: 'read',
           schema: { type: 'object', properties: {} },
           async execute() { return teach.list() },
