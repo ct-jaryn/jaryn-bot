@@ -25,13 +25,16 @@ desktop/
 
 本地只做单测：`node --test desktop/test/*.test.cjs`（已包含在 `npm test`）。
 
-## 已构建产物（GitHub Actions，run 45175719792）
+## 已构建产物（GitHub Actions）
 
-| 平台 | 文件 | 大小 | 校验 |
+| 平台 | Release 资产（v1.7.0） | 大小 | 校验 |
 |---|---|---|---|
-| Windows | `jaryn Setup 1.6.0.exe` | 78 MB | `file` → PE32 GUI, Nullsoft Installer |
-| Linux | `jaryn-1.6.0.AppImage` | 103 MB | ELF x86-64 + 内嵌 squashfs（偏移 32609） |
-| Linux | `jaryn-desktop_1.6.0_amd64.deb` | 71 MB | `control`：Version 1.6.0、Maintainer、Homepage；payload 105 项含 `app.asar` |
+| Windows | `jaryn.Setup.1.7.0.exe` | 81.6 MB | `file` → PE32 GUI, Nullsoft Installer |
+| Linux | `jaryn-1.7.0.AppImage` | 108 MB | ELF x86-64 + 内嵌 squashfs |
+| Linux | `jaryn-desktop_1.7.0_amd64.deb` | 74.9 MB | `control`：Version 1.7.0、Maintainer、Homepage；payload 含 `app.asar` |
+
+tag `v1.7.0` 的 Actions 运行（ci / desktop / mobile-android 三个 workflow）全部通过，安装包自动附到
+<https://github.com/ct-jaryn/jaryn-bot/releases/tag/v1.7.0>。
 
 macOS 的 `.dmg` 需在可用 macOS runner 的账号上跑 `desktop-macos` 工作流（本地无法交叉编译）。
 

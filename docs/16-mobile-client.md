@@ -20,7 +20,7 @@ mobile/android/
 
 `.github/workflows/mobile-android.yml`：ubuntu + JDK 17 + Gradle 8.7 → `assembleDebug` → 上传 APK；`v*` tag 时自动附到 Release。
 
-**已构建产物（Actions run 45177562407）**：`app-debug.apk` 3.1 MB，zip 内 426 项，含 `classes.dex`、`resources.arsc`、`AndroidManifest.xml`。
+**已构建产物**：`app-debug.apk` 3.26 MB（v1.7.0 Release，Actions 自动附上）；zip 内 426 项，含 `classes.dex`、`resources.arsc`、`AndroidManifest.xml`。
 
 ## 安装
 
