@@ -1,0 +1,10 @@
+[
+  { "id": "connectors", "name": "@jaryn/connectors", "config": { "servers": [{
+    "id": "calendar", "name": "Google Calendar", "baseUrl": "https://www.googleapis.com",
+    "auth": { "type": "bearer", "env": "GCAL_ACCESS_TOKEN" },
+    "tools": [
+      { "name": "events", "description": "list events", "method": "GET", "path": "/calendar/v3/calendars/primary/events?timeMin=:timeMin", "risk": "network" },
+      { "name": "create", "description": "create event (body)", "method": "POST", "path": "/calendar/v3/calendars/primary/events", "risk": "external" }
+    ]
+  } ] } }
+]

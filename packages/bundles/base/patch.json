@@ -188,6 +188,13 @@
         "id": "goals-tools",
         "name": "@jaryn/goals/tools",
         "config": {}
+      },
+      {
+        "id": "onePassword",
+        "name": "@jaryn/secrets-1password",
+        "config": {
+          "references": {}
+        }
       }
     ]
   }

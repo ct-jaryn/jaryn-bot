@@ -9,6 +9,7 @@ export type Trigger =
   | { kind: 'cron'; expr: string; tz: string }
   | { kind: 'every'; seconds: number }
   | { kind: 'webhook'; path: string; secret?: string }
+  | { kind: 'rss'; url: string; everySeconds?: number }
 
 export interface JobBudget extends Partial<BudgetLimits> {
   maxRounds?: number
@@ -146,6 +147,7 @@ export class JobScheduler {
 
   async tick(): Promise<void> {
     if (this.stopped) return
+    await this.pollFeeds()
     const now = Date.now()
     const due = (this.db.prepare('SELECT * FROM jobs WHERE enabled = 1 AND next_run_at IS NOT NULL AND next_run_at <= ?').all(now) as any[]).map(toJob)
     for (const job of due) {
@@ -153,6 +155,35 @@ export class JobScheduler {
       await this.dispatch(job)
     }
   }
+
+  /** Poll RSS/Atom feeds and dispatch jobs when a new item appears. */
+  async pollFeeds(opts: { force?: boolean } = {}): Promise<void> {
+    const jobs = this.list().filter((job) => job.enabled && job.trigger.kind === 'rss')
+    for (const job of jobs) {
+      const trigger = job.trigger as { kind: 'rss'; url: string; everySeconds?: number }
+      const every = Math.max(60, trigger.everySeconds ?? 600) * 1000
+      if (!opts.force && job.lastRunAt && Date.now() - job.lastRunAt < every) continue
+      try {
+        const items = await fetchFeed(trigger.url)
+        const latest = items[0]
+        if (!latest) continue
+        const seenKey = `rss:${job.id}`
+        const previous = this.seen.get(seenKey)
+        this.seen.set(seenKey, latest.link)
+        if (previous === latest.link) continue
+        if (this.running.has(job.id)) continue
+        const originalMission = job.mission
+        const enriched = `${originalMission}\n\nNew feed item: ${latest.title} <${latest.link}>`
+        this.running.add(job.id)
+        this.running.delete(job.id)
+        await this.dispatch({ ...job, mission: enriched })
+      } catch (err) {
+        this.ctx.emit?.('rss/error', { job: job.id, message: (err as Error).message })
+      }
+    }
+  }
+
+  private seen = new Map<string, string>()
 
   /** Stop ticking and cancel active job turns. */
   stopAll(): void {
@@ -225,6 +256,7 @@ export class JobScheduler {
   private nextRun(trigger: Trigger): number | undefined {
     if (trigger.kind === 'cron') return nextCron(trigger.expr, trigger.tz).getTime()
     if (trigger.kind === 'every') return Date.now() + Math.max(60, trigger.seconds) * 1000
+    if (trigger.kind === 'rss') return Date.now() + Math.max(60, trigger.everySeconds ?? 600) * 1000
     return undefined
   }
 
@@ -233,6 +265,26 @@ export class JobScheduler {
     if (!job) throw new Error(`job not found: ${id}`)
     return job
   }
+}
+
+export interface FeedItem {
+  title: string
+  link: string
+}
+
+/** Minimal RSS/Atom reader via regex (no XML dependency). */
+export async function fetchFeed(url: string): Promise<FeedItem[]> {
+  const res = await fetch(url, { headers: { 'user-agent': 'jaryn-bot/1.1' }, signal: AbortSignal.timeout(15_000) })
+  if (!res.ok) throw new Error(`feed HTTP ${res.status}`)
+  const xml = await res.text()
+  const items: FeedItem[] = []
+  for (const match of xml.matchAll(/<(?:item|entry)[\s>][\s\S]*?<\/(?:item|entry)>/g)) {
+    const block = match[0]
+    const title = block.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, '').trim() ?? ''
+    const linkRaw = block.match(/<link[^>]*>([\s\S]*?)<\/link>/)?.[1]?.trim() ?? block.match(/<link[^>]*href="([^"]+)"/)?.[1] ?? ''
+    if (title) items.push({ title, link: linkRaw })
+  }
+  return items
 }
 
 function toJob(row: any): Job {

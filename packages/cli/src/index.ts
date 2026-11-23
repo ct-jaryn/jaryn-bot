@@ -31,6 +31,7 @@ import { fsPlugin } from '@jaryn/tools-fs'
 import { webPlugin } from '@jaryn/tools-web'
 import { officePlugin } from '@jaryn/office'
 import { goalToolsPlugin, goalsPlugin } from '@jaryn/goals'
+import { onePasswordPlugin } from '@jaryn/secrets-1password'
 
 const VERSION = '1.1.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -108,6 +109,7 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/office', officePlugin()],
     ['@jaryn/goals', goalsPlugin()],
     ['@jaryn/goals/tools', goalToolsPlugin()],
+    ['@jaryn/secrets-1password', onePasswordPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/memory', memoryPlugin()],
     ['@jaryn/memory/tools', memoryToolsPlugin()],

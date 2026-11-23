@@ -1,0 +1,10 @@
+[
+  { "id": "connectors", "name": "@jaryn/connectors", "config": { "servers": [{
+    "id": "gmail", "name": "Gmail", "baseUrl": "https://gmail.googleapis.com",
+    "auth": { "type": "bearer", "env": "GMAIL_ACCESS_TOKEN" },
+    "tools": [
+      { "name": "search", "description": "search messages", "method": "GET", "path": "/gmail/v1/users/me/messages?q=:q", "risk": "network" },
+      { "name": "message", "description": "read a message", "method": "GET", "path": "/gmail/v1/users/me/messages/:id", "risk": "network" }
+    ]
+  } ] } }
+]
