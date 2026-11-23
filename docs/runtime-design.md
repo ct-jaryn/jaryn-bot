@@ -25,7 +25,7 @@
 ### 做（v0.1）
 
 - 单/多 Bot 名册；每个 Bot 独立 persona、工具集、workspace、记忆。
-- IM：Telegram、飞书（Lark）；预留 Slack/企微/钉钉。
+- **入口**：v0.1 只有 **Web UI**（浏览器）；IM 通知通道**暂不做**（保留 channel 插件设计）。
 - Agent 循环：流式、原生 tool-calling、重试、取消、上下文压缩。
 - 工具：shell、文件读写、web 搜索/抓取、记忆、定时、产物。
 - 审批：风险分级 + IM 审批卡 + 审计。
@@ -74,7 +74,7 @@
 
 **v0 简化**：`LocalWorker`（同进程、同接口）用于开发与测试；subprocess 实现同一接口。第一天就把接口定成"跨进程也能用"。
 
-**接入层**：IM 只是通道之一。v0.2 起增加客户端/执行端（主动出站 WSS，服务端不反向拨号），统一为 `access` seam；设计见 [06-clients-and-topology.md](06-clients-and-topology.md)。
+**接入层**：v0.1 = **Web UI（浏览器）**，通过 `/ws/client` 接入；IM 通知通道暂不做。未来的桌面/手机/执行端通过主动出站 WSS 接入（`access` seam），设计见 [06-clients-and-topology.md](06-clients-and-topology.md)。
 
 ### 2.1 运行时是一棵插件树（DSH 理念）
 
@@ -567,7 +567,7 @@ interface Budget { maxSteps: number; maxInputTokens: number; maxOutputTokens: nu
 
 ---
 
-## 13. 通道层
+## 13. 通道层（v0.1 暂不做）
 
 ```ts
 export interface ChannelAdapter {
@@ -681,7 +681,7 @@ jaryn-bot/
 |---|---|---|---|
 | **P0 骨架** | kernel（四原语+loader+config）+ base bundle + Fake 插件 + agent-core 最小循环 + CLI REPL + shell 工具 + 事件回放 | **配置文件里禁用 shell 后，模型确实看不到它**；重启能续 | 3–4 周 |
 | **P1 真模型** | DeepSeek 流式 + 原生 tool-calling + 重试/取消 + 上下文装配 + 压缩 | 能完成"读仓库—改文件—跑测试" | 2–3 周 |
-| **P2 通道** | Telegram + 飞书（channel 插件）、流式编辑、审批卡、附件/产物 | 手机上派活、点按钮批准 | 2–3 周 |
+| **P2 Web UI** | 服务端静态资源 + `/ws/client`、流式、审批卡、附件/产物 | 浏览器里派活、点按钮批准 | 3–4 周 |
 | **P3 记忆+多Bot** | memory 插件（FTS+整理）、bus 插件、任务板、防环路 | 两个 bot 协作完成一件事，第二天记得偏好 | 2–3 周 |
 | **P4 主动** | scheduler 插件（cron/webhook）、goal 循环、预算、digest 交付、熔断 | 每早自动简报，超预算自停 | 2 周 |
 | **P5 硬化** | 容器沙箱、MCP、插件管理器/索引、指标、备份、安全用例、文档 | 可给陌生人 `docker compose up` | 3–4 周 |

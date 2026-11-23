@@ -38,7 +38,7 @@
 | 会话 / 事件 / 记忆 / 审批 / 审计 / 用量 | 本地 SQLite（`/data/jary.db`） | 否 |
 | 代码 / 文件 / 产物 | 本地 `/data/bots/*/workspace`、`/data/artifacts` | 否（除非你主动外发） |
 | 模型请求内容（prompt/上下文） | 发往模型端点 | **是**（默认 DeepSeek 云；可替换，见下） |
-| IM 消息 | 发往 IM 平台 | **是**（Telegram / 飞书云；内网 IM 需自建，v0.1 不支持） |
+| IM 消息 | —（暂不做通知通道） | 否 |
 | Web 搜索/抓取 | 发往搜索服务与目标站点 | **是**（可换自建 SearXNG，v0.2） |
 | MCP 工具调用 | 发往对应 MCP 服务 | 视配置 |
 | 客户端缓存 | 设备本地（最近消息/未读） | 否（可清空） |
@@ -82,12 +82,12 @@ services:
 
 ```
 DEEPSEEK_API_KEY=sk-...
-TELEGRAM_TOKEN=...
+# TELEGRAM_TOKEN=...   # 暂不需要（IM 通知通道暂不做）
 JARY_HOME=/data
 JARY_LOG_LEVEL=info
 ```
 
-**首次启动**：`docker compose up -d` → `docker compose exec jary jary doctor` → 在 IM 里给 Bot 发第一条消息。
+**首次启动**：`docker compose up -d` → `docker compose exec jary jary doctor` → 浏览器打开反代地址进 Web UI，给 Bot 发第一条消息。
 
 ---
 

@@ -1,7 +1,8 @@
 # 00 · 产品需求文档（PRD）
 
 > 状态：**现行**。目标：**个人版完全对标 Grok Bot，并在 6 个维度超越；团队协作 / 会议 / 企业管控 / 语音明确不做。**
-> 已拍板：单 owner · 云服务器 · **Web 优先** · 默认云 API · 容器云电脑 · **4C4G 机器** · 非商业许可（见 [12 决策清单](12-decision-register.md)）。
+> 已拍板：单 owner · 云服务器 · **Web 优先** · 默认云 API · 容器云电脑 · **4C4G 机器** · AGPL-3.0 + 商业双许可。
+> 暂缓（未排期）：IM 通知通道、桌面客户端、Vault、连接器/邮箱/Pages、Initiative、卡支付（见 [12 决策清单](12-decision-register.md)）。
 > 对标矩阵见 [11-parity-and-beyond.md](11-parity-and-beyond.md)；配套：[01 功能规格](01-functional-spec.md) · [03 规划](03-roadmap.md) · [文档地图](README.md)
 > 最后更新：2026-11-23
 
@@ -60,7 +61,7 @@
 | R-01 | Bot 名册：独立 persona/工具/workspace/记忆/预算 | Must | v0.1 | FR-1 |
 | R-02 | 会话：新建/续聊/归档/回放 | Must | v0.1 | FR-2 |
 | R-03 | **Web UI（主入口）**：会话/流式/审批/产物/多会话 | Must | v0.1 | FR-14/FR-20 |
-| R-03b | IM 通知（Telegram）：推送结果与审批提醒 | Must | v0.1 | FR-3 |
+| R-03b | IM 通知（Telegram）：推送结果与审批提醒 | Won't（暂不做） | — | FR-3 |
 | R-04 | Agent 运行：流式、工具、取消、重试、压缩 | Must | v0.1 | FR-4 |
 | R-05 | 工具：fs/shell/web/memory/task/artifact/ask | Must | v0.1 | FR-5 |
 | R-06 | 审批：风险分级、规则、卡片、超时、审计 | Must | v0.1 | FR-6 |
@@ -70,19 +71,19 @@
 | R-10 | 产物：文件/图片/office | Must | v0.1 | FR-10 |
 | R-11 | 命令与运维（doctor/config/replay/plugin） | Must | v0.1 | FR-11/12 |
 | R-12 | 插件体系：安装/禁用/patch/索引/权限 | Must | v0.1 | FR-13 |
-| R-13 | 多端客户端：桌面壳/手机、设备配对、多设备同步 | Must | v0.2 | FR-14 |
-| R-14 | 连接器：Gmail/Calendar/GitHub/Drive/Notion + MCP | Must | v0.3 | FR-17 |
-| R-15 | 个人邮箱：收发、附件、allowlist | Must | v0.3 | FR-17 |
-| R-16 | Pages：可交互产物、私有分享、离线导出 | Must | v0.3 | FR-18 |
+| R-13 | 多端客户端：桌面壳/手机、设备配对、多设备同步 | 暂缓 | 待定 | FR-14 |
+| R-14 | 连接器：Gmail/Calendar/GitHub/Drive/Notion + MCP | 暂缓 | 待定 | FR-17 |
+| R-15 | 个人邮箱：收发、附件、allowlist | 暂缓 | 待定 | FR-17 |
+| R-16 | Pages：可交互产物、私有分享、离线导出 | 暂缓 | 待定 | FR-18 |
 | R-17 | 云电脑：容器、浏览器/桌面/终端、看屏、接管 | Must | v0.4 | FR-15 |
 | R-18 | 任务级快照与回滚 | Must | v0.4 | FR-15 |
-| R-19 | Vault：write-only、填充代理、Secure Form、1Password | Must | v0.5 | FR-16 |
+| R-19 | Vault：write-only、填充代理、Secure Form、1Password | 暂缓 | 待定 | FR-16 |
 | R-20 | Auto Review：独立审查模型 + 规则 + 过期 | Must | v0.5 | FR-6 |
 | R-21 | Initiative：信号、打分、提议、接受 | Must | v1.0 | FR-19 |
 | R-22 | Teach-a-task：录制/手写 → 技能草稿 → 试跑 → 保存 | Must | v1.0 | FR-19 |
-| R-23 | 本机出网（解决数据中心 IP 被拦） | Should | v0.4 | 07 |
+| R-23 | 本机出网（解决数据中心 IP 被拦） | Must | v0.4（随云电脑） | 07 |
 | R-24 | 1Password/Bitwarden 集成 | Should | v0.5 | 08 |
-| R-25 | 卡支付填充（默认关，每笔审批） | Could | v0.5 | 08 |
+| R-25 | 卡支付填充（默认关，每笔审批） | Won't（暂不做） | — | 08 |
 | R-26 | 语音交互（TTS/通话） | Won't | v1.0 后评估 | — |
 | R-27 | 团队协作（多人、共享 Bot、群聊、Team 记忆） | Won't | — | — |
 | R-28 | 会议（入会/纪要/实时语音） | Won't | — | — |
@@ -134,32 +135,32 @@
 
 ## 7. 版本边界
 
-| 版本 | 内容 | 增量 | 累计 |
-|---|---|---|---|
-| **v0.1** | 运行时 + **Web UI** + 记忆 + 例程 + 多 Bot + 插件 + IM 通知 | 15–21 周（约 4–5 个月） | 4–5 个月 |
-| **v0.2** | 桌面/手机客户端 + 设备配对 + 多端同步 | +4–6 周 | 4.5–6 个月 |
-| **v0.3** | 连接器 + 邮箱 + Pages | +6–8 周 | 6–8 个月 |
-| **v0.4** | 云电脑 + 看屏接管 + 任务级快照 | +8–10 周 | 7.5–10.5 个月 |
-| **v0.5** | Vault + Secure Form + Auto Review | +6–8 周 | 9–12 个月 |
-| **v1.0** | Initiative + teach-a-task + 稳定化 | +4–6 周 | **10–14 个月** |
+| 版本/阶段 | 内容 | 状态 |
+|---|---|---|
+| **v0.1** | 运行时 + **Web UI** + 记忆 + 例程 + 多 Bot + 插件 | **进行中**：15–21 周（约 4–5 个月） |
+| **下一阶段** | 云电脑（容器）+ 看屏接管 + 任务级快照 + 本机出网 | v0.1 后启动 |
+| v0.2 桌面/手机客户端 | 设备配对、多端同步 | **暂缓（未排期）** |
+| v0.3 连接器/邮箱/Pages | Gmail/Calendar/GitHub、个人邮箱、Pages | **暂缓（未排期）** |
+| v0.5 Vault + Auto Review | write-only 凭据、填充代理、审查 | **暂缓（未排期）** |
+| v1.0 Initiative + teach-a-task | 主动提议、教学 | **暂缓（未排期）** |
 
-详见 [11-parity-and-beyond.md](11-parity-and-beyond.md) §5。
+**不再承诺固定总工期**：v0.1 之后按实际需要推进；暂缓项到对应阶段再定（见 [12 决策清单](12-decision-register.md)）。
 
 ---
 
 ## 8. 假设、依赖与风险
 
-**假设**：用户有常开机器；接受"客户端 + IM"双入口；DeepSeek/本地模型质量可接受；OAuth 应用可获批。
+**假设**：用户有常开云服务器（4C4G）；接受 **Web 单入口**；模型 API 可用；Docker/容器可用。
 
-**关键依赖**：模型 API；Telegram/飞书/Google/GitHub 开放平台；LibreOffice/Chromium 在容器内可用；OAuth 审核周期。
+**关键依赖**：模型 API；Chromium/LibreOffice 在容器内可用；本机出网需要一台在线客户端；OAuth 与 IM 平台**当前不需要**（暂缓）。
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
 | 云电脑反爬/风控 | 网页任务失败 | 本机出网、人工接管、不承诺绕过 |
 | 浏览器自动化可靠性 | 体验 | 录制回放 + 重试 + 接管兜底 |
-| Vault 安全 | 高危 | 开源 + 审计 + 最小权限 + 默认关支付 |
+| 云电脑资源 | 4C4G 吃紧 | 单云电脑并发、5 分钟休眠、Bot 容器配额 |
 | 单人周期 10–14 个月 | 半途而废 | 每阶段可交付；v0.1 后先自用 |
-| OAuth 审核延迟 | 连接器晚上线 | IMAP/device-code + MCP 兜底 |
+| 暂缓项拖成永久 | 功能缺口 | 每季度复核一次暂缓清单 |
 | 成本失控 | 主动任务烧钱 | 预算硬上限 + 熔断 |
 
 ---
@@ -178,8 +179,8 @@
 | 项 | 结论 |
 |---|---|
 | 仓库 | GitHub `ct-jaryn/jaryn-bot`（公开） |
-| 许可证 | **PolyForm Noncommercial 1.0.0**：仅限非商业用途；**商业使用需联系作者获取商业授权** |
-| 重要说明 | 该许可证**不是 OSI 定义的开源许可证**（OSI 不允许限制使用领域），项目按 **source-available / 源码公开** 表述；README 会写清 |
+| 许可证 | **AGPL-3.0**（OSI 开源、强 copyleft）：默认可自由使用；**网络提供服务须公开源码**；商业闭源/内部商业使用需**商业授权** |
+| 重要说明 | AGPL 允许商业使用，但网络使用有源码公开义务；商业授权用于闭源/免公开场景（双许可） |
 | 原创声明 | 灵感来自 **Grok Bot（xAI / SpaceXAI）**；代码与设计为**原创实现**，不含其代码；与 xAI 无关联、无背书；相关商标归其所有者 |
-| 贡献 | 欢迎 issue/PR；贡献默认按同一许可证授权（见 CONTRIBUTING.md） |
+| 贡献 | 欢迎 issue/PR；贡献按 AGPL-3.0 授权，并同意作者可再授权商业许可（见 CONTRIBUTING.md） |
 | 依赖许可 | 第三方依赖各自许可证；本项目不使用 DSH/Cordis 代码 |

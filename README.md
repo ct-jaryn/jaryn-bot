@@ -1,6 +1,6 @@
 # jaryn-bot
 
-**自托管的个人 AI 同事。** 跑在你自己的云服务器上：它在自己的云电脑里查资料、写文档、跑命令、收发邮件；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
+**自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
 > **状态：设计阶段（v0.1 开发中）。** 当前仓库以设计文档为主，尚无可用代码。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
 
@@ -35,23 +35,23 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 | Bot 名册 | 每个 Bot 独立人格/工具/工作区/记忆/预算 | v0.1 |
 | 记忆 | 长期事实、召回、查看/遗忘、每晚整理 | v0.1 |
 | 例程与主动 | cron/webhook/邮件触发、目标多轮、预算护栏 | v0.1 |
-| 云电脑（容器） | 浏览器/终端、看屏接管、任务级快照；Bot 可自建测试容器 | v0.4 |
-| Vault | write-only 凭据、模型盲填、Secure Form | v0.5 |
-| 连接器 / 邮箱 / Pages | Gmail/Calendar/GitHub、个人邮箱、可交互产物 | v0.3 |
-| 桌面/手机客户端 | 设备配对、多端同步 | v0.2 |
+| 云电脑（容器） | 浏览器/终端、看屏接管、任务级快照、本机出网；Bot 可自建测试容器 | 下一阶段 |
+| Vault | write-only 凭据、模型盲填、Secure Form | 暂缓 |
+| 连接器 / 邮箱 / Pages | Gmail/Calendar/GitHub、个人邮箱、可交互产物 | 暂缓 |
+| 桌面/手机客户端 | 设备配对、多端同步 | 暂缓 |
 
 **明确不做**：团队协作、会议、企业管控（SSO/SCIM/网络策略/组织 API）、语音、SaaS 计费。
+**暂不启动**：IM 通知通道、桌面/手机客户端、Vault、连接器、卡支付、Pages、Initiative（设计保留，等对应阶段再定）。
 
 ## 路线图（全职估算）
 
 | 版本 | 内容 | 累计 |
 |---|---|---|
 | v0.1 | 运行时 + Web UI + 记忆 + 例程 + 多 Bot + 插件 | 4–5 个月 |
-| v0.2 | 桌面/手机客户端 + 多端同步 | 4.5–6 个月 |
-| v0.3 | 连接器 + 邮箱 + Pages | 6–8 个月 |
-| v0.4 | 云电脑 + 看屏接管 + 任务级快照 | 7.5–10.5 个月 |
-| v0.5 | Vault + Auto Review | 9–12 个月 |
-| v1.0 | Initiative + teach-a-task + 稳定化 | **10–14 个月** |
+| 下一阶段 | 云电脑（容器）+ 看屏接管 + 任务级快照 + 本机出网 | v0.1 后启动 |
+| 暂缓 | 桌面/手机客户端、Vault、连接器/邮箱/Pages、Initiative、卡支付 | 未排期 |
+
+> v0.1 先跑通 Web UI；之后按实际需要再做云电脑。桌面客户端、Vault、连接器名单、卡支付等**暂不启动**，到对应阶段再定。
 
 ## 文档
 
@@ -65,11 +65,12 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 
 ## 许可
 
-**PolyForm Noncommercial 1.0.0** —— 仅限**非商业用途**。商业使用（含内部商业部署、SaaS、转售、集成进商业产品）需联系作者获取**商业授权**，见 [COMMERCIAL.md](COMMERCIAL.md)。
+**AGPL-3.0 + 商业双许可**：
 
-> 说明：该许可证**不是 OSI 定义的开源许可证**（OSI 不允许限制使用领域）。本项目按 **source-available（源码公开、非商业可用）** 表述；如果你需要一个 OSI 开源许可，可在 issue 里讨论。
+- 默认在 **AGPL-3.0** 下开源：可自由使用、修改、分发；**通过网络提供服务时须公开对应源码**。
+- 商业场景（内部商业使用、SaaS、闭源集成、转售等）请联系作者获取**商业授权**（可闭源），见 [COMMERCIAL.md](COMMERCIAL.md)。
 
-贡献欢迎，提交即同意按同一许可证授权，见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+贡献欢迎，提交即同意按同一许可证授权（AGPL-3.0），并同时授权作者以商业许可再授权，见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 免责声明
 
@@ -83,6 +84,6 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 
 It is **inspired by Grok Bot (xAI), but is an original, independent implementation** — no Grok Bot code or assets are used, and there is no affiliation or endorsement.
 
-**License:** PolyForm Noncommercial 1.0.0 (noncommercial use only). Commercial use requires a separate license — see [COMMERCIAL.md](COMMERCIAL.md). This is a source-available project, not an OSI open-source project.
+**License:** AGPL-3.0 (OSI-approved, strong copyleft) with a commercial dual license. Network use requires publishing your corresponding source under AGPL; for closed/commercial use contact the author for a commercial license — see [COMMERCIAL.md](COMMERCIAL.md).
 
 **Status:** design phase; v0.1 is not implemented yet. Design docs start at [docs/README.md](docs/README.md).

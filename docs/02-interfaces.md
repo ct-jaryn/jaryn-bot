@@ -60,10 +60,9 @@ digest_tokens = 2000
 consolidation_cron = "0 3 * * *"
 retention_days = 180
 
-[channels.telegram]
-token = "env:TELEGRAM_TOKEN"
-allowed_users = ["123456789"]
-stream_edit_ms = 1200
+# [channels.telegram]          # 暂不做（IM 通知通道暂缓）；启用时再打开
+# token = "env:TELEGRAM_TOKEN"
+# allowed_users = ["123456789"]
 
 [bots.jaryn]
 preset = "jaryn"
@@ -90,7 +89,7 @@ budget = { max_steps = 10, max_cost_usd = 0.08 }
 | `JARY_CONFIG` | 配置文件路径 |
 | `JARY_PROFILE` | 启动 profile（`server`/`worker`/`cli`/`minimal`） |
 | `DEEPSEEK_API_KEY` | 模型密钥（`env:` 引用） |
-| `TELEGRAM_TOKEN` / `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | 通道凭据 |
+| `TELEGRAM_TOKEN` / `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | **暂不需要**（IM 通知通道暂不做） |
 | `JARY_LOG_LEVEL` | `debug`/`info`/`warn`/`error` |
 | `JARY_OTEL_ENDPOINT` | 可选，OTLP 导出 |
 
@@ -172,7 +171,7 @@ interface RuntimeEvent<T = unknown> {
 | `GET /healthz` | 存活/依赖检查（DB、通道、worker 数） | 无（仅 bind 地址可达） |
 | `GET /metrics` | Prometheus 文本指标 | 可选 token |
 | `POST /hooks/:jobId` | 外部事件触发 job；`X-Jary-Signature: hmac-sha256` | HMAC |
-| `POST /webhook/telegram` | Telegram webhook（也可用长轮询） | secret token |
+| `POST /webhook/telegram` | **暂不做**（IM 通知通道暂缓） | — |
 | `POST /webhook/feishu` | 飞书事件回调 | 签名校验 |
 | `POST /approvals/:id` | 可选：外部审批（IM 按钮之外） | owner token |
 
@@ -220,7 +219,8 @@ interface RuntimeEvent<T = unknown> {
 控制端通过 `WSS /ws/client`（JSON-RPC）接入，执行端通过 `WSS /ws/node` 接入；文件走 REST。方法表、同步语义、配对与安全模型见 [06-clients-and-topology.md](06-clients-and-topology.md) §3–§4。
 
 - **v0.1**：服务端提供 Web UI 静态资源（`GET /`、`/assets/*`）+ `/ws/client`；Web 端同源 cookie/令牌鉴权（单 owner）。
-- **v0.2**：设备配对、桌面/手机客户端、多端同步。
+- **v0.2（暂缓）**：设备配对、桌面/手机客户端、多端同步。
+- **IM 通知**：暂不做，不配置任何通道凭据。
 
 ---
 
@@ -234,3 +234,5 @@ interface RuntimeEvent<T = unknown> {
 | 邮箱 | `POST /api/email/inbound`（或 IMAP 轮询）；SMTP 出站 | v0.3 | [09](09-connectors-and-artifacts.md) |
 | Pages | `POST /api/pages` `GET /api/pages/:id` `POST /api/pages/:id/share` | v0.3 | [09](09-connectors-and-artifacts.md) |
 | Initiative | `GET /api/initiative/proposals`；`POST /api/initiative/:id/accept / dismiss / mute` | v1.0 | [10](10-proactive-and-initiative.md) |
+
+> 以上除**云电脑**（下一阶段）外，v0.3–v1.0 子系统均**暂缓、未排期**；接口保留作设计。
