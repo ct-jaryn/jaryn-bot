@@ -10,6 +10,8 @@ import { memoryPlugin } from '@jaryn/memory'
 import { schedulerPlugin } from '@jaryn/scheduler'
 import { computerPlugin } from '@jaryn/computer'
 import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
+import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
+import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
 
 async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {}) {
   const ctx = new Context({ scope: 'root' })
@@ -37,6 +39,10 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
   await ctx.mount(computerPlugin())
   await ctx.mount(vaultPlugin())
   await ctx.mount(vaultToolsPlugin())
+  await ctx.mount(artifactsPlugin())
+  await ctx.mount(artifactToolsPlugin())
+  await ctx.mount(pagesPlugin())
+  await ctx.mount(pageToolsPlugin())
   store.createSession('web', 'default', '/tmp')
   const server = await startWebServer(ctx, { port: 0, ...opts })
   return { ctx, store, server }
@@ -92,6 +98,40 @@ test('approval allow path executes tool', async () => {
     await waitFor(async () => store.events('web').some((e: any) => e.type === 'tool.result'))
     const toolResult = store.events('web').find((e: any) => e.type === 'tool.result')
     assert.equal(toolResult.data.ok, true)
+  } finally {
+    await server.close()
+    await ctx.dispose()
+  }
+})
+
+test('pages create, render and share', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const created = await (await fetch(`${server.url}/api/pages`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '周报', template: 'table', data: [{ a: 1 }] }),
+    })).json()
+    const page = await (await fetch(`${server.url}/pages/${created.page.id}`)).text()
+    assert.match(page, /周报/)
+    assert.match(page, /Content-Security-Policy/)
+    const share = await (await fetch(`${server.url}/api/pages/${created.page.id}/share`, { method: 'POST' })).json()
+    const shared = await (await fetch(`${server.url}/p/${share.token}`)).text()
+    assert.match(shared, /周报/)
+  } finally {
+    await server.close()
+    await ctx.dispose()
+  }
+})
+
+test('artifacts save and list', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    await fetch(`${server.url}/api/artifacts`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'a.txt', content: 'hello' }),
+    })
+    const list = await (await fetch(`${server.url}/api/artifacts`)).json()
+    assert.equal(list.artifacts.length, 1)
   } finally {
     await server.close()
     await ctx.dispose()

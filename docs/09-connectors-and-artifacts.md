@@ -1,6 +1,6 @@
 # 09 · 连接器 · 邮箱 · Pages · 产物
 
-> 状态：**现行（待定包）**。目标：让 Bot 直接"在你常用的工具里干活"，而不是只能开网页点。
+> 状态：**现行（v0.4 已实现：通用 HTTP 连接器、SMTP 发信、Pages、产物；Gmail/Calendar 等官方连接器配置待补，IMAP 收信未实现）**。目标：让 Bot 直接"在你常用的工具里干活"，而不是只能开网页点。
 > 关联：[01 FR-17/FR-18](01-functional-spec.md) · [08 Vault](08-vault-and-credentials.md) · [06 客户端](06-clients-and-topology.md)
 
 ---

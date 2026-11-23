@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 import type { Context } from '@jaryn/kernel'
 import { newApprovalId } from '@jaryn/agent-core'
+import { renderPageDocument } from '@jaryn/pages'
 import type { ApprovalDecision, ApprovalRequest, ApprovalService } from '@jaryn/agent-core'
 
 export interface WebOptions {
@@ -166,6 +167,53 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       if (!scheduler) return sendJson(res, 404, { error: 'scheduler not mounted' })
       const id = path.split('/')[3]
       return sendJson(res, 200, { runs: scheduler.runs(id) })
+    }
+    if (req.method === 'GET' && path === '/api/pages') {
+      const pages = ctx.get<any>('pages')
+      if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
+      return sendJson(res, 200, { pages: pages.list() })
+    }
+    if (req.method === 'POST' && path === '/api/pages') {
+      const pages = ctx.get<any>('pages')
+      if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
+      const body = await readBody(req)
+      if (!body.title) return sendJson(res, 400, { error: 'title required' })
+      return sendJson(res, 201, { page: pages.create({ title: body.title, html: body.html, data: body.data, template: body.template }) })
+    }
+    if (req.method === 'POST' && /^\/api\/pages\/[^/]+\/share$/.test(path)) {
+      const pages = ctx.get<any>('pages')
+      if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
+      const id = path.split('/')[3]
+      const body = await readBody(req).catch(() => ({}))
+      return sendJson(res, 200, pages.share(id, body.enabled !== false))
+    }
+    if (req.method === 'GET' && path.startsWith('/pages/')) {
+      const pages = ctx.get<any>('pages')
+      if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
+      const page = pages.get(path.slice('/pages/'.length))
+      if (!page) return sendJson(res, 404, { error: 'not found' })
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      return void res.end(renderPageDocument(page))
+    }
+    if (req.method === 'GET' && path.startsWith('/p/')) {
+      const pages = ctx.get<any>('pages')
+      if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
+      const page = pages.byToken(path.slice('/p/'.length))
+      if (!page) return sendJson(res, 404, { error: 'not found' })
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      return void res.end(renderPageDocument(page))
+    }
+    if (req.method === 'GET' && path === '/api/artifacts') {
+      const artifacts = ctx.get<any>('artifacts')
+      if (!artifacts) return sendJson(res, 404, { error: 'artifacts not mounted' })
+      return sendJson(res, 200, { artifacts: artifacts.list() })
+    }
+    if (req.method === 'POST' && path === '/api/artifacts') {
+      const artifacts = ctx.get<any>('artifacts')
+      if (!artifacts) return sendJson(res, 404, { error: 'artifacts not mounted' })
+      const body = await readBody(req)
+      if (!body.name || body.content === undefined) return sendJson(res, 400, { error: 'name and content required' })
+      return sendJson(res, 201, { artifact: artifacts.save({ name: body.name, content: body.content, mime: body.mime }) })
     }
     if (req.method === 'GET' && path === '/api/vault') {
       const vault = ctx.get<any>('vault')

@@ -16,6 +16,10 @@ import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
 import { schedulerPlugin } from '@jaryn/scheduler'
 import { computerPlugin, computerToolsPlugin } from '@jaryn/computer'
 import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
+import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
+import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
+import { connectorsPlugin } from '@jaryn/connectors'
+import { smtpPlugin, emailToolsPlugin } from '@jaryn/email'
 
 const ROOT = resolve(import.meta.dirname, '../../..')
 const CLI = join(ROOT, 'packages/cli/src/index.ts')
@@ -54,6 +58,13 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/computer/tools', computerToolsPlugin()],
     ['@jaryn/vault', vaultPlugin()],
     ['@jaryn/vault/tools', vaultToolsPlugin()],
+    ['@jaryn/artifacts', artifactsPlugin()],
+    ['@jaryn/artifacts/tools', artifactToolsPlugin()],
+    ['@jaryn/pages', pagesPlugin()],
+    ['@jaryn/pages/tools', pageToolsPlugin()],
+    ['@jaryn/connectors', connectorsPlugin()],
+    ['@jaryn/email', smtpPlugin()],
+    ['@jaryn/email/tools', emailToolsPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
   const result = await loadComposition(ctx, rows, registry)

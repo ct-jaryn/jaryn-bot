@@ -24,6 +24,10 @@
     "@jaryn/sandbox-docker": "workspace:*",
     "@jaryn/mcp": "workspace:*",
     "@jaryn/computer": "workspace:*",
-    "@jaryn/vault": "workspace:*"
+    "@jaryn/vault": "workspace:*",
+    "@jaryn/artifacts": "workspace:*",
+    "@jaryn/pages": "workspace:*",
+    "@jaryn/connectors": "workspace:*",
+    "@jaryn/email": "workspace:*"
   }
 }

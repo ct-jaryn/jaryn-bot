@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.4.0 — 连接器 / 邮箱 / Pages / 产物
+
+### Added
+
+- `@jaryn/connectors`：通用 HTTP 连接器（API Key/Bearer、路径参数、超时），OAuth 授权 URL 助手；工具 `<id>.<tool>`
+- `@jaryn/email`：SMTP 发信（EHLO/AUTH LOGIN/MAIL/RCPT/DATA），`email.send`
+- `@jaryn/pages`：Pages（表格/报告模板、更新、分享 token、CSP 无脚本渲染、导出）
+- `@jaryn/artifacts`：产物库（20MB 上限、sha256、列表/读取）
+- CLI/Web：`/api/pages`、`/pages/:id`、`/p/:token`、`/api/artifacts`、`/api/vault*`
+- 62 个测试
+
+
 ## v0.3.0 — Vault 凭据
 
 ### Added

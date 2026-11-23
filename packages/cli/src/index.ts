@@ -20,9 +20,13 @@ import { dockerSandboxPlugin } from '@jaryn/sandbox-docker'
 import { mcpPlugin } from '@jaryn/mcp'
 import { computerPlugin, computerToolsPlugin } from '@jaryn/computer'
 import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
+import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
+import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
+import { connectorsPlugin } from '@jaryn/connectors'
+import { smtpPlugin, emailToolsPlugin } from '@jaryn/email'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.3.0'
+const VERSION = '0.4.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -105,6 +109,13 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/computer/tools', computerToolsPlugin()],
     ['@jaryn/vault', vaultPlugin()],
     ['@jaryn/vault/tools', vaultToolsPlugin()],
+    ['@jaryn/artifacts', artifactsPlugin()],
+    ['@jaryn/artifacts/tools', artifactToolsPlugin()],
+    ['@jaryn/pages', pagesPlugin()],
+    ['@jaryn/pages/tools', pageToolsPlugin()],
+    ['@jaryn/connectors', connectorsPlugin()],
+    ['@jaryn/email', smtpPlugin()],
+    ['@jaryn/email/tools', emailToolsPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
 }

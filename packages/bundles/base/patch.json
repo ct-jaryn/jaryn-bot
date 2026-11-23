@@ -89,6 +89,43 @@
         "id": "vault-tools",
         "name": "@jaryn/vault/tools",
         "config": {}
+      },
+      {
+        "id": "artifacts",
+        "name": "@jaryn/artifacts",
+        "config": {}
+      },
+      {
+        "id": "artifacts-tools",
+        "name": "@jaryn/artifacts/tools",
+        "config": {}
+      },
+      {
+        "id": "pages",
+        "name": "@jaryn/pages",
+        "config": {}
+      },
+      {
+        "id": "pages-tools",
+        "name": "@jaryn/pages/tools",
+        "config": {}
+      },
+      {
+        "id": "connectors",
+        "name": "@jaryn/connectors",
+        "config": {
+          "servers": []
+        }
+      },
+      {
+        "id": "email",
+        "name": "@jaryn/email",
+        "config": {}
+      },
+      {
+        "id": "email-tools",
+        "name": "@jaryn/email/tools",
+        "config": {}
       }
     ]
   }
