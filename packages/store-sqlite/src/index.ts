@@ -23,6 +23,8 @@ export interface SessionRecord {
   botId: string
   cwd: string
   status: string
+  title?: string
+  archived: boolean
   createdAt: number
   updatedAt: number
 }
@@ -34,6 +36,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   bot_id TEXT NOT NULL,
   cwd TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'idle',
+  title TEXT,
+  archived INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -105,6 +109,9 @@ export class Store {
     this.db = new DatabaseSync(path)
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;')
     this.db.exec(SCHEMA)
+    for (const migration of ['ALTER TABLE sessions ADD COLUMN title TEXT', 'ALTER TABLE sessions ADD COLUMN archived INTEGER NOT NULL DEFAULT 0']) {
+      try { this.db.exec(migration) } catch { /* already applied */ }
+    }
     this.db.exec(`INSERT OR IGNORE INTO schema_meta(key, value) VALUES ('schema_version', '1')`)
   }
 
@@ -123,27 +130,45 @@ export class Store {
   getSession(id: string): SessionRecord | undefined {
     const row = this.db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as any
     if (!row) return undefined
-    return {
-      id: row.id,
-      botId: row.bot_id,
-      cwd: row.cwd,
-      status: row.status,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }
+    return toSession(row)
   }
 
-  listSessions(): SessionRecord[] {
-    return (this.db.prepare('SELECT * FROM sessions ORDER BY updated_at DESC').all() as any[]).map(
-      (row) => ({
-        id: row.id,
-        botId: row.bot_id,
-        cwd: row.cwd,
-        status: row.status,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      }),
-    )
+  listSessions(opts: { includeArchived?: boolean } = {}): SessionRecord[] {
+    const sql = opts.includeArchived
+      ? 'SELECT * FROM sessions ORDER BY updated_at DESC'
+      : 'SELECT * FROM sessions WHERE archived = 0 ORDER BY updated_at DESC'
+    return (this.db.prepare(sql).all() as any[]).map(toSession)
+  }
+
+  setSessionTitle(id: string, title: string): void {
+    this.db.prepare('UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?').run(title.slice(0, 120), Date.now(), id)
+  }
+
+  archiveSession(id: string, archived = true): void {
+    this.db.prepare('UPDATE sessions SET archived = ?, updated_at = ? WHERE id = ?').run(archived ? 1 : 0, Date.now(), id)
+  }
+
+  deleteSession(id: string): boolean {
+    this.db.prepare('DELETE FROM events WHERE session_id = ?').run(id)
+    return this.db.prepare('DELETE FROM sessions WHERE id = ?').run(id).changes > 0
+  }
+
+  /** Fork a session: copy its event log into a new session id. */
+  forkSession(sourceId: string, newId: string, opts: { upToSeq?: number } = {}): SessionRecord {
+    const source = this.getSession(sourceId)
+    if (!source) throw new Error(`session not found: ${sourceId}`)
+    this.createSession(newId, source.botId, source.cwd)
+    const rows = this.db.prepare('SELECT * FROM events WHERE session_id = ? AND seq <= ? ORDER BY seq')
+      .all(sourceId, opts.upToSeq ?? Number.MAX_SAFE_INTEGER) as any[]
+    for (const row of rows) {
+      this.append({
+        sessionId: newId, type: row.type, turnId: row.turn_id ?? undefined,
+        actorKind: row.actor_kind, actorId: row.actor_id ?? undefined,
+        provenance: row.provenance, data: JSON.parse(row.data),
+      })
+    }
+    this.setSessionTitle(newId, `${source.title ?? source.id} (fork)`)
+    return this.getSession(newId)!
   }
 
   append(input: EventInput): StoredEvent {
@@ -228,6 +253,19 @@ export class Store {
 
   close(): void {
     this.db.close()
+  }
+}
+
+function toSession(row: any): SessionRecord {
+  return {
+    id: row.id,
+    botId: row.bot_id,
+    cwd: row.cwd,
+    status: row.status,
+    title: row.title ?? undefined,
+    archived: !!row.archived,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }
 

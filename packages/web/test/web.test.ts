@@ -105,6 +105,9 @@ test('serves UI and chat events', async () => {
   try {
     const html = await (await fetch(`${server.url}/`)).text()
     assert.match(html, /jaryn/)
+    assert.match(html, /panel-toggle/)
+    assert.match(html, /stop-btn/)
+    assert.match(html, /questions/)
     const res = await fetch(`${server.url}/api/message`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -145,6 +148,24 @@ test('approval allow path executes tool', async () => {
     await server.close()
     await ctx.dispose()
   }
+})
+
+test('session title, fork, archive and delete', async () => {
+  const { ctx, store, server } = await setup([[{ type: 'text', text: 'hi' }, { type: 'finish', reason: 'stop' }]])
+  try {
+    await fetch(`${server.url}/api/message`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: 'web', text: 'hello' }) })
+    await new Promise((r) => setTimeout(r, 100))
+    const patched = await (await fetch(`${server.url}/api/sessions/web`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: '周报会话' }) })).json()
+    assert.equal(patched.session.title, '周报会话')
+    const fork = await (await fetch(`${server.url}/api/sessions/web/fork`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: 'web-fork' }) })).json()
+    assert.equal(fork.session.id, 'web-fork')
+    assert.ok(store.events('web-fork').length > 0)
+    await fetch(`${server.url}/api/sessions/web`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ archived: true }) })
+    const list = await (await fetch(`${server.url}/api/sessions`)).json()
+    assert.ok(!list.sessions.some((s: any) => s.id === 'web'))
+    const del = await (await fetch(`${server.url}/api/sessions/web-fork`, { method: 'DELETE' })).json()
+    assert.equal(del.deleted, true)
+  } finally { await server.close(); await ctx.dispose() }
 })
 
 test('usage, audit and rules endpoints', async () => {

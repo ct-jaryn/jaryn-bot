@@ -175,7 +175,33 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
 
     if (req.method === 'GET' && path === '/api/sessions') {
       const store = ctx.get<any>('store')
-      return sendJson(res, 200, { sessions: store.listSessions() })
+      return sendJson(res, 200, { sessions: store.listSessions({ includeArchived: url.searchParams.get('archived') === '1' }) })
+    }
+    if ((req.method === 'PATCH' || req.method === 'POST') && /^\/api\/sessions\/[^/]+$/.test(path) && req.method === 'PATCH') {
+      const store = ctx.get<any>('store')
+      const id = path.split('/')[3]!
+      if (!store.getSession(id)) return sendJson(res, 404, { error: 'not found' })
+      const body = await readBody(req)
+      if (typeof body.title === 'string') store.setSessionTitle(id, body.title)
+      if (typeof body.archived === 'boolean') store.archiveSession(id, body.archived)
+      return sendJson(res, 200, { session: store.getSession(id) })
+    }
+    if (req.method === 'DELETE' && /^\/api\/sessions\/[^/]+$/.test(path)) {
+      const store = ctx.get<any>('store')
+      const id = path.split('/')[3]!
+      return sendJson(res, 200, { deleted: store.deleteSession(id) })
+    }
+    if (req.method === 'POST' && /^\/api\/sessions\/[^/]+\/fork$/.test(path)) {
+      const store = ctx.get<any>('store')
+      const id = path.split('/')[3]!
+      const body = await readBody(req).catch(() => ({}))
+      const newId = body.id ?? `${id}-fork-${Date.now().toString(36)}`
+      try {
+        const session = store.forkSession(id, newId, { upToSeq: body.upToSeq })
+        return sendJson(res, 201, { session })
+      } catch (err) {
+        return sendJson(res, 400, { error: (err as Error).message })
+      }
     }
     if (req.method === 'POST' && path === '/api/sessions') {
       const body = await readBody(req)

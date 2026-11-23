@@ -12,13 +12,17 @@
   <aside id="sidebar">
     <h1>jaryn</h1>
     <button id="new-session">+ 新会话</button>
+    <select id="bot-select" title="选择 Bot"></select>
     <ul id="sessions"></ul>
-    <footer>v0.0.1 · self-hosted</footer>
+    <footer>v1.1 · self-hosted</footer>
   </aside>
   <main>
     <header>
       <span id="session-label">web</span>
       <span id="status" class="idle">idle</span>
+      <span class="spacer"></span>
+      <button id="stop-btn" class="ghost">停止</button>
+      <button id="panel-toggle" class="ghost">面板</button>
       <button id="screen-toggle" class="ghost">看屏</button>
     </header>
     <section id="screen-panel" hidden>
@@ -31,12 +35,26 @@
       </div>
     </section>
     <section id="messages"></section>
+    <section id="questions"></section>
     <section id="approvals"></section>
     <form id="composer">
       <textarea id="input" rows="2" placeholder="派活给 jaryn…（Enter 发送，Shift+Enter 换行）"></textarea>
       <button type="submit">发送</button>
     </form>
   </main>
+  <aside id="panels" hidden>
+    <div class="tabs">
+      <button data-tab="memory" class="tab active">记忆</button>
+      <button data-tab="tasks" class="tab">任务</button>
+      <button data-tab="pages" class="tab">页面</button>
+      <button data-tab="artifacts" class="tab">产物</button>
+      <button data-tab="jobs" class="tab">例程</button>
+      <button data-tab="initiative" class="tab">提议</button>
+      <button data-tab="usage" class="tab">用量</button>
+      <button data-tab="audit" class="tab">审计</button>
+    </div>
+    <div id="panel-body"></div>
+  </aside>
   <script type="module" src="/app.js"></script>
 </body>
 </html>
