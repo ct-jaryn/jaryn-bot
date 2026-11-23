@@ -1,0 +1,7 @@
+[
+  { "id": "connectors", "name": "@jaryn/connectors", "config": { "servers": [{
+    "id": "demo", "name": "Demo API", "baseUrl": "https://httpbin.org",
+    "auth": { "type": "api_key", "header": "x-api-key", "env": "DEMO_API_KEY" },
+    "tools": [{ "name": "get", "description": "httpbin get", "method": "GET", "path": "/get", "risk": "network" }]
+  } ] } }
+]

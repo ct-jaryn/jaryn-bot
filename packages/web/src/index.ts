@@ -179,6 +179,32 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const id = path.split('/')[3]
       return sendJson(res, 200, { runs: scheduler.runs(id) })
     }
+    if (req.method === 'POST' && path === '/api/devices/pair-code') {
+      const devices = ctx.get<any>('devices')
+      if (!devices) return sendJson(res, 404, { error: 'devices not mounted' })
+      return sendJson(res, 201, devices.createPairCode())
+    }
+    if (req.method === 'POST' && path === '/api/devices/pair') {
+      const devices = ctx.get<any>('devices')
+      if (!devices) return sendJson(res, 404, { error: 'devices not mounted' })
+      const body = await readBody(req)
+      try {
+        return sendJson(res, 201, devices.pair(String(body.code ?? ''), String(body.name ?? 'device')))
+      } catch (err) {
+        return sendJson(res, 400, { error: (err as Error).message })
+      }
+    }
+    if (req.method === 'GET' && path === '/api/devices') {
+      const devices = ctx.get<any>('devices')
+      if (!devices) return sendJson(res, 404, { error: 'devices not mounted' })
+      return sendJson(res, 200, { devices: devices.list() })
+    }
+    if (req.method === 'POST' && /^\/api\/devices\/[^/]+\/revoke$/.test(path)) {
+      const devices = ctx.get<any>('devices')
+      if (!devices) return sendJson(res, 404, { error: 'devices not mounted' })
+      const id = path.split('/')[3]
+      return sendJson(res, 200, { revoked: devices.revoke(id) })
+    }
     if (req.method === 'GET' && path === '/api/initiative') {
       const initiative = ctx.get<any>('initiative')
       if (!initiative) return sendJson(res, 404, { error: 'initiative not mounted' })

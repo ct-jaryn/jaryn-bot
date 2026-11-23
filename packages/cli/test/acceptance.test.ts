@@ -21,6 +21,7 @@ import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
 import { connectorsPlugin } from '@jaryn/connectors'
 import { smtpPlugin, emailToolsPlugin } from '@jaryn/email'
 import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
+import { devicesPlugin } from '@jaryn/devices'
 
 const ROOT = resolve(import.meta.dirname, '../../..')
 const CLI = join(ROOT, 'packages/cli/src/index.ts')
@@ -68,6 +69,7 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/email/tools', emailToolsPlugin()],
     ['@jaryn/initiative', initiativePlugin()],
     ['@jaryn/initiative/tools', initiativeToolsPlugin()],
+    ['@jaryn/devices', devicesPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
   const result = await loadComposition(ctx, rows, registry)

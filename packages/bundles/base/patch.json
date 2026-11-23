@@ -136,6 +136,11 @@
         "id": "initiative-tools",
         "name": "@jaryn/initiative/tools",
         "config": {}
+      },
+      {
+        "id": "devices",
+        "name": "@jaryn/devices",
+        "config": {}
       }
     ]
   }

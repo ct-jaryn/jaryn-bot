@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.7.0 — 多设备配对 + 连接器示例
+
+### Added
+
+- `@jaryn/devices`：6 位一次性配对码（10 分钟）、设备令牌（sha256 存储）、设备列表/吊销
+- Web API：`/api/devices/pair-code|pair|list|:id/revoke`
+- CLI：`jary device pair-code|list|revoke`
+- 连接器示例：GitHub（Bearer token）、httpbin（API Key）；`examples/connectors/`
+- 70 个测试
+
+
 ## v0.6.0 — 实时看屏 / 接管 / 本机出网
 
 ### Added

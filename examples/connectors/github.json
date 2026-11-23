@@ -1,0 +1,11 @@
+[
+  { "id": "connectors", "name": "@jaryn/connectors", "config": { "servers": [{
+    "id": "github", "name": "GitHub", "baseUrl": "https://api.github.com",
+    "auth": { "type": "bearer", "env": "GITHUB_TOKEN" },
+    "headers": { "accept": "application/vnd.github+json", "user-agent": "jaryn-bot" },
+    "tools": [
+      { "name": "repo", "description": "get repository", "method": "GET", "path": "/repos/:owner/:repo", "risk": "network" },
+      { "name": "issues", "description": "list issues", "method": "GET", "path": "/repos/:owner/:repo/issues?state=:state", "risk": "network" }
+    ]
+  } ] } }
+]

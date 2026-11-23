@@ -13,6 +13,7 @@ import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
 import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
 import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
 import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
+import { devicesPlugin } from '@jaryn/devices'
 
 async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {}) {
   const ctx = new Context({ scope: 'root' })
@@ -46,6 +47,7 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
   await ctx.mount(pageToolsPlugin())
   await ctx.mount(initiativePlugin())
   await ctx.mount(initiativeToolsPlugin())
+  await ctx.mount(devicesPlugin())
   store.createSession('web', 'default', '/tmp')
   const server = await startWebServer(ctx, { port: 0, ...opts })
   return { ctx, store, server }
@@ -117,6 +119,23 @@ test('approval allow path executes tool', async () => {
     await server.close()
     await ctx.dispose()
   }
+})
+
+test('device pairing flow', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const code = await (await fetch(`${server.url}/api/devices/pair-code`, { method: 'POST' })).json()
+    assert.match(code.code, /^\d{6}$/)
+    const paired = await (await fetch(`${server.url}/api/devices/pair`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: code.code, name: 'phone' }),
+    })).json()
+    assert.ok(paired.token)
+    const list = await (await fetch(`${server.url}/api/devices`)).json()
+    assert.equal(list.devices.length, 1)
+    const revoke = await (await fetch(`${server.url}/api/devices/${paired.deviceId}/revoke`, { method: 'POST' })).json()
+    assert.equal(revoke.revoked, true)
+  } finally { await server.close(); await ctx.dispose() }
 })
 
 test('initiative API creates, accepts and dismisses proposals', async () => {

@@ -26,9 +26,10 @@ import { connectorsPlugin } from '@jaryn/connectors'
 import { smtpPlugin, emailToolsPlugin } from '@jaryn/email'
 import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
 import { TunnelClient } from '@jaryn/tunnel'
+import { devicesPlugin } from '@jaryn/devices'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.6.0'
+const VERSION = '0.7.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -120,6 +121,7 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/email/tools', emailToolsPlugin()],
     ['@jaryn/initiative', initiativePlugin()],
     ['@jaryn/initiative/tools', initiativeToolsPlugin()],
+    ['@jaryn/devices', devicesPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
 }
@@ -304,6 +306,18 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
       process.once('SIGTERM', stop)
     })
     return 0
+  }
+
+  if (cmd === 'device') {
+    const { ctx } = await createRuntime(flags)
+    const devices = ctx.get<any>('devices')
+    try {
+      if (sub === 'pair-code') { console.log(JSON.stringify(devices.createPairCode(), null, 2)); return 0 }
+      if (sub === 'list') { console.log(JSON.stringify(devices.list(), null, 2)); return 0 }
+      if (sub === 'revoke') { console.log(JSON.stringify({ revoked: devices.revoke(String(positional[0])) })); return 0 }
+      console.error('usage: jary device pair-code|list|revoke')
+      return 2
+    } finally { await ctx.dispose() }
   }
 
   if (cmd === 'vault') {
@@ -549,6 +563,7 @@ commands:
   computer status|start|stop|snapshot [--bot id]
   vault add|list|remove|rotate|events
   tunnel --url ws://<server>/tunnel   client-side egress tunnel
+  device pair-code|list|revoke        multi-device pairing
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)
