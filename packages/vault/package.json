@@ -2,10 +2,22 @@
   "name": "@jaryn/vault",
   "version": "0.3.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
     "@jaryn/kernel": "workspace:*",
     "@jaryn/agent-core": "workspace:*",
     "@jaryn/store-sqlite": "workspace:*"
+  },
+  "jaryn": {
+    "permissions": {
+      "fs": "workspace",
+      "process": false,
+      "network": [],
+      "secrets": [
+        "JARY_VAULT_KEY"
+      ]
+    }
   }
 }

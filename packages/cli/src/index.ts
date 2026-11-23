@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { Store as SqliteStore } from '@jaryn/store-sqlite'
@@ -32,7 +32,7 @@ import { webPlugin } from '@jaryn/tools-web'
 import { officePlugin } from '@jaryn/office'
 import { goalToolsPlugin, goalsPlugin } from '@jaryn/goals'
 
-const VERSION = '1.0.0'
+const VERSION = '1.1.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -447,6 +447,27 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
       for (const row of rows) console.log(`${row.disabled ? 'disabled' : 'enabled '} ${row.id}\t${row.name}`)
       return 0
     }
+    if (sub === 'permissions') {
+      const packagesDir = resolve(HERE, '../..')
+      const dangerous: string[] = []
+      let scanned = 0
+      for (const name of readdirSync(packagesDir)) {
+        const manifest = join(packagesDir, name, 'package.json')
+        if (!existsSync(manifest)) continue
+        const data = JSON.parse(readFileSync(manifest, 'utf8'))
+        const perms = data.jaryn?.permissions
+        scanned++
+        if (!perms) continue
+        if (perms.process || perms.network === '*' || (Array.isArray(perms.secrets) && perms.secrets.length > 0) || perms.fs === 'full') {
+          dangerous.push(`${data.name}: ${JSON.stringify(perms)}`)
+        }
+      }
+      console.log(`scanned ${scanned} packages`)
+      if (dangerous.length === 0) { console.log('no high-risk permission declarations'); return 0 }
+      console.log('high-risk declarations (require --trust in third-party installs):')
+      for (const line of dangerous) console.log(' - ' + line)
+      return 0
+    }
     if (sub === 'doctor') {
       const registry = allPlugins()
       const provides = new Set<string>()
@@ -632,7 +653,7 @@ commands:
   stop-all                   pause scheduler and cancel turns
   backup [--out <dir>]       backup sqlite + workspaces
   restore --from <dir> --yes restore from backup
-  plugin list|doctor|enable|disable|index
+  plugin list|doctor|permissions|enable|disable|index
   computer status|start|stop|snapshot [--bot id]
   vault add|list|remove|rotate|events
   tunnel --url ws://<server>/tunnel   client-side egress tunnel

@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.1.0 — 补齐审计缺口
+
+### Added
+
+- 工具：`fs.write` / `fs.edit`、`web.search` / `web.fetch`（DNS/私网 SSRF 防护）、`ask_user`、`schedule.*`、`artifact.present`、`bot.spawn_worker` / `bot.inbox`、`computer.exec`、`vault.rotate` / `vault.grant`、`office.docx/xlsx/pptx`、`goal.*`
+- 会话：标题、归档、删除、fork、`/api/sessions/:id/cancel`
+- 多 Bot：`spawn_worker` 子会话落在 bot workspace；会话按 bot 路由 cwd；`bot.edit`
+- 用量/费用：usage 表、按模型记账、`maxCostUsd` 预算、`/api/usage`、`jary usage`
+- 审批：规则引擎（deny>ask>allow、glob/risk/path）、once/session 授权、approvals/audit 表、`/api/rules`
+- 技能：SKILL.md 目录注入 system prompt
+- 邮件：HTML→文本、MIME base64 附件→artifact、发件人 allowlist
+- 连接器：OAuth 授权 URL + `/api/oauth/callback/:id` 换 token 并存 Vault
+- 云电脑：空闲自动停机（可配）、容器网络策略、镜像增加 Xvfb/x11vnc/noVNC、容器内 `computer.exec`
+- 插件：`jaryn.permissions` 声明 + `jary plugin permissions` 扫描
+- Web UI：停止按钮、ask_user 卡片、面板（记忆/任务/页面/产物/例程/提议/用量/审计）、会话重命名/归档/删除、bot 选择
+- 文档：[14 完成度审计](docs/14-completion-audit.md)；109 个测试
+
+
 ## v1.0.0 — 收尾与发布
 
 ### Added

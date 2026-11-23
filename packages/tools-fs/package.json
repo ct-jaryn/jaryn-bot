@@ -2,6 +2,18 @@
   "name": "@jaryn/tools-fs",
   "version": "0.0.1",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "dependencies": { "@jaryn/kernel": "workspace:*", "@jaryn/agent-core": "workspace:*" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@jaryn/kernel": "workspace:*",
+    "@jaryn/agent-core": "workspace:*"
+  },
+  "jaryn": {
+    "permissions": {
+      "fs": "workspace",
+      "process": false,
+      "network": []
+    }
+  }
 }

@@ -2,6 +2,19 @@
   "name": "@jaryn/tunnel",
   "version": "0.6.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "dependencies": { "@jaryn/kernel": "workspace:*" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@jaryn/kernel": "workspace:*"
+  },
+  "jaryn": {
+    "permissions": {
+      "fs": "none",
+      "process": true,
+      "network": [
+        "*"
+      ]
+    }
+  }
 }

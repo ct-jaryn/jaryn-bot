@@ -28,6 +28,11 @@ for (const name of registry) {
   if (!existsSync(join(ROOT, 'packages', dir, 'package.json'))) problems.push(`registry references missing package: ${name}`)
 }
 
+const computerDockerfile = readFileSync(join(ROOT, 'deploy/computer/Dockerfile'), 'utf8')
+for (const need of ['chromium', 'Xvfb', 'websockify', '--remote-debugging-port']) {
+  if (!computerDockerfile.includes(need)) problems.push(`computer image missing: ${need}`)
+}
+
 if (problems.length > 0) {
   console.error('deploy check failed:')
   for (const p of problems) console.error(' - ' + p)

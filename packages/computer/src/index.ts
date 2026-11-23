@@ -22,6 +22,7 @@ export interface ComputerBackend {
   readonly kind: string
   start(botId: string): Promise<ComputerInstance>
   stop(instance: ComputerInstance): Promise<void>
+  exec?(instance: ComputerInstance, command: string, timeoutMs?: number): Promise<{ stdout: string; stderr: string; exitCode: number | null }>
 }
 
 export interface ComputerConfig {
@@ -138,6 +139,14 @@ export class DockerComputerBackend implements ComputerBackend {
   async stop(instance: ComputerInstance): Promise<void> {
     if (instance.container) spawnSync('docker', ['rm', '-f', instance.container])
   }
+
+  async exec(instance: ComputerInstance, command: string, timeoutMs = 60_000): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+    if (!instance.container) throw new Error('docker computer is not running')
+    const result = spawnSync('docker', ['exec', '-w', '/workspace', instance.container, 'sh', '-lc', command], {
+      encoding: 'utf8', timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024,
+    })
+    return { stdout: (result.stdout ?? '').slice(0, 64_000), stderr: (result.stderr ?? '').slice(0, 8_000), exitCode: result.status }
+  }
 }
 
 export class ComputerService {
@@ -172,6 +181,13 @@ export class ComputerService {
 
   assertAgentControl(botId: string): void {
     if (this.takeovers.has(botId)) throw new Error('computer is under human takeover; bot actions are paused')
+  }
+
+  async exec(botId: string, command: string, timeoutMs?: number): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+    const inst = this.instances.get(botId)
+    if (!inst) throw new Error(`computer not running: ${botId}`)
+    if (!this.backend.exec) throw new Error(`backend ${this.backend.kind} does not support exec`)
+    return await this.backend.exec(inst, command, timeoutMs)
   }
 
   async frame(botId: string): Promise<{ image: string; ts: number }> {
@@ -323,6 +339,19 @@ export function computerToolsPlugin(): Plugin {
           name: 'computer.restore', description: 'Restore a computer snapshot.', risk: 'execute',
           schema: { type: 'object', properties: { botId: { type: 'string' }, path: { type: 'string' } }, required: ['path'] },
           async execute(args) { await computer.restore(botOf(args), String(args.path)); return { ok: true } },
+        },
+        {
+          name: 'computer.exec',
+          description: 'Run a shell command inside the bot computer container (Docker backend only).',
+          risk: 'execute',
+          schema: { type: 'object', properties: { botId: { type: 'string' }, command: { type: 'string' } }, required: ['command'] },
+          async execute(args) {
+            const botId = botOf(args)
+            computer.assertAgentControl(botId)
+            computer.touch(botId)
+            const result = await computer.exec(botId, String(args.command ?? ''))
+            return `${result.stdout}${result.stderr ? '\n' + result.stderr : ''}\n[exit ${result.exitCode}]`
+          },
         },
         {
           name: 'browser.goto', description: 'Open a URL in the bot computer browser.', risk: 'network',
