@@ -136,4 +136,42 @@ $('new-session').onclick = async () => {
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
 
+let screenSource = null
+let takeover = false
+const screenPanel = $('screen-panel')
+const screenImg = $('screen-img')
+
+$('screen-toggle').onclick = () => {
+  screenPanel.hidden = !screenPanel.hidden
+  if (screenPanel.hidden) { screenSource?.close(); screenSource = null; return }
+  if (!screenSource) {
+    screenSource = new EventSource('/api/computer/screen?botId=' + encodeURIComponent(state.sessionId) + '&fps=2')
+    screenSource.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data)
+      if (msg.type === 'frame') screenImg.src = `data:image/png;base64,${msg.image}`
+    }
+  }
+}
+
+screenImg.onclick = (ev) => {
+  const rect = screenImg.getBoundingClientRect()
+  const x = Math.round(((ev.clientX - rect.left) / rect.width) * 1280)
+  const y = Math.round(((ev.clientY - rect.top) / rect.height) * 900)
+  fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'click', x, y } }) })
+}
+
+$('takeover-btn').onclick = async () => {
+  takeover = !takeover
+  await fetch('/api/computer/takeover', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ botId: state.sessionId, enabled: takeover }) })
+  $('takeover-btn').textContent = takeover ? '交还' : '接管'
+}
+
+$('screen-send').onclick = async () => {
+  const text = $('screen-text').value
+  if (!text) return
+  $('screen-text').value = ''
+  await fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'type', text } }) })
+  await fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'key', key: 'Enter' } }) })
+}
+
 loadSessions().then(() => selectSession(state.sessionId)).catch((err) => addMessage('error', err.message))

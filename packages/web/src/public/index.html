@@ -19,7 +19,17 @@
     <header>
       <span id="session-label">web</span>
       <span id="status" class="idle">idle</span>
+      <button id="screen-toggle" class="ghost">看屏</button>
     </header>
+    <section id="screen-panel" hidden>
+      <img id="screen-img" alt="bot screen" />
+      <div class="screen-controls">
+        <button id="takeover-btn" class="ghost">接管</button>
+        <input id="screen-text" placeholder="输入文字后发送" />
+        <button id="screen-send">输入</button>
+        <span id="screen-tip">点击画面 = 点击网页；接管时 Bot 暂停</span>
+      </div>
+    </section>
     <section id="messages"></section>
     <section id="approvals"></section>
     <form id="composer">

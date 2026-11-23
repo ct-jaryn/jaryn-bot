@@ -25,9 +25,10 @@ import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
 import { connectorsPlugin } from '@jaryn/connectors'
 import { smtpPlugin, emailToolsPlugin } from '@jaryn/email'
 import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
+import { TunnelClient } from '@jaryn/tunnel'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.5.0'
+const VERSION = '0.6.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -291,6 +292,20 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
     }
   }
 
+  if (cmd === 'tunnel') {
+    const url = String(flags.url ?? '')
+    if (!url) { console.error('usage: jary tunnel --url ws://<server>/tunnel'); return 2 }
+    const client = new TunnelClient(url)
+    await client.connect()
+    console.log(`tunnel connected: ${url}`)
+    await new Promise<void>((resolve) => {
+      const stop = () => { client.close(); resolve() }
+      process.once('SIGINT', stop)
+      process.once('SIGTERM', stop)
+    })
+    return 0
+  }
+
   if (cmd === 'vault') {
     const { ctx } = await createRuntime(flags)
     const vault = ctx.get<any>('vault')
@@ -533,6 +548,7 @@ commands:
   plugin list|doctor|enable|disable|index
   computer status|start|stop|snapshot [--bot id]
   vault add|list|remove|rotate|events
+  tunnel --url ws://<server>/tunnel   client-side egress tunnel
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)

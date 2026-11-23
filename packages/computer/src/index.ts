@@ -41,6 +41,13 @@ export class LocalChromeBackend implements ComputerBackend {
     this.cfg = cfg
   }
 
+  proxyUrl?: string
+
+  setProxy(url: string | undefined): void {
+    this.proxyUrl = url
+    ;(this.backend as any).cfg = { ...((this.backend as any).cfg ?? {}), proxyUrl: url }
+  }
+
   async start(botId: string): Promise<ComputerInstance> {
     const dataDir = resolve(this.cfg.dataDir ?? join(process.env.JARY_HOME ?? join(process.cwd(), 'data'), 'computers'))
     const workspace = join(dataDir, botId, 'workspace')
@@ -50,6 +57,7 @@ export class LocalChromeBackend implements ComputerBackend {
     const chrome = this.cfg.chromePath ?? process.env.CHROME_PATH ?? (existsSync(DEFAULT_CHROME) ? DEFAULT_CHROME : 'google-chrome')
     const args = [
       '--headless=new',
+      ...(this.cfg.proxyUrl ? [`--proxy-server=${this.cfg.proxyUrl}`] : []),
       '--remote-debugging-port=0',
       `--user-data-dir=${profile}`,
       '--no-first-run',
@@ -92,6 +100,13 @@ export class DockerComputerBackend implements ComputerBackend {
     this.cfg = cfg
   }
 
+  proxyUrl?: string
+
+  setProxy(url: string | undefined): void {
+    this.proxyUrl = url
+    ;(this.backend as any).cfg = { ...((this.backend as any).cfg ?? {}), proxyUrl: url }
+  }
+
   async start(botId: string): Promise<ComputerInstance> {
     const dataDir = resolve(this.cfg.dataDir ?? join(process.env.JARY_HOME ?? join(process.cwd(), 'data'), 'computers'))
     const workspace = join(dataDir, botId, 'workspace')
@@ -125,6 +140,7 @@ export class DockerComputerBackend implements ComputerBackend {
 export class ComputerService {
   private instances = new Map<string, ComputerInstance>()
   private clients = new Map<string, CdpClient>()
+  private takeovers = new Set<string>()
   private backend: ComputerBackend
   readonly dataDir: string
 
@@ -133,10 +149,43 @@ export class ComputerService {
     this.backend = backend ?? (cfg.backend === 'docker' ? new DockerComputerBackend(cfg) : new LocalChromeBackend(cfg))
   }
 
-  status(botId: string): { state: ComputerState; baseUrl?: string; startedAt?: number } {
+  status(botId: string): { state: ComputerState; baseUrl?: string; startedAt?: number; takeover: boolean } {
     const inst = this.instances.get(botId)
-    if (!inst) return { state: 'stopped' }
-    return { state: 'running', baseUrl: inst.baseUrl, startedAt: inst.startedAt }
+    if (!inst) return { state: 'stopped', takeover: false }
+    return { state: 'running', baseUrl: inst.baseUrl, startedAt: inst.startedAt, takeover: this.takeovers.has(botId) }
+  }
+
+  takeover(botId: string, enabled: boolean): { takeover: boolean } {
+    if (enabled) this.takeovers.add(botId)
+    else this.takeovers.delete(botId)
+    return { takeover: enabled }
+  }
+
+  isTakenOver(botId: string): boolean {
+    return this.takeovers.has(botId)
+  }
+
+  assertAgentControl(botId: string): void {
+    if (this.takeovers.has(botId)) throw new Error('computer is under human takeover; bot actions are paused')
+  }
+
+  async frame(botId: string): Promise<{ image: string; ts: number }> {
+    const client = await this.client(botId)
+    return { image: await client.screenshot(), ts: Date.now() }
+  }
+
+  async input(botId: string, event: { type: 'click' | 'type' | 'key'; x?: number; y?: number; text?: string; key?: string }): Promise<void> {
+    const client = await this.client(botId)
+    if (event.type === 'click') await client.clickAt(Number(event.x ?? 0), Number(event.y ?? 0))
+    else if (event.type === 'type') await client.typeText(String(event.text ?? ''))
+    else await client.pressKey(String(event.key ?? 'Enter'))
+  }
+
+  proxyUrl?: string
+
+  setProxy(url: string | undefined): void {
+    this.proxyUrl = url
+    ;(this.backend as any).cfg = { ...((this.backend as any).cfg ?? {}), proxyUrl: url }
   }
 
   async start(botId: string): Promise<ComputerInstance> {
@@ -147,6 +196,7 @@ export class ComputerService {
   }
 
   async stop(botId: string): Promise<void> {
+    this.takeovers.delete(botId)
     const inst = this.instances.get(botId)
     this.clients.get(botId)?.close()
     this.clients.delete(botId)
@@ -243,7 +293,7 @@ export function computerToolsPlugin(): Plugin {
         {
           name: 'browser.goto', description: 'Open a URL in the bot computer browser.', risk: 'network',
           schema: { type: 'object', properties: { botId: { type: 'string' }, url: { type: 'string' } }, required: ['url'] },
-          async execute(args) { const client = await computer.client(botOf(args)); await client.navigate(String(args.url)); return { url: String(args.url), title: await client.evaluate<string>('document.title') } },
+          async execute(args) { computer.assertAgentControl(botOf(args)); const client = await computer.client(botOf(args)); await client.navigate(String(args.url)); return { url: String(args.url), title: await client.evaluate<string>('document.title') } },
         },
         {
           name: 'browser.extract', description: 'Extract visible text from the current page.', risk: 'read',
@@ -253,12 +303,12 @@ export function computerToolsPlugin(): Plugin {
         {
           name: 'browser.click', description: 'Click an element by CSS selector.', risk: 'execute',
           schema: { type: 'object', properties: { botId: { type: 'string' }, selector: { type: 'string' } }, required: ['selector'] },
-          async execute(args) { const client = await computer.client(botOf(args)); await client.click(String(args.selector)); return { ok: true } },
+          async execute(args) { computer.assertAgentControl(botOf(args)); const client = await computer.client(botOf(args)); await client.click(String(args.selector)); return { ok: true } },
         },
         {
           name: 'browser.type', description: 'Type into an input by CSS selector.', risk: 'execute',
           schema: { type: 'object', properties: { botId: { type: 'string' }, selector: { type: 'string' }, text: { type: 'string' } }, required: ['selector', 'text'] },
-          async execute(args) { const client = await computer.client(botOf(args)); await client.type(String(args.selector), String(args.text)); return { ok: true } },
+          async execute(args) { computer.assertAgentControl(botOf(args)); const client = await computer.client(botOf(args)); await client.type(String(args.selector), String(args.text)); return { ok: true } },
         },
         {
           name: 'browser.screenshot', description: 'Capture the page screenshot to a PNG file.', risk: 'read',

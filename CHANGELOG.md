@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.0 — 实时看屏 / 接管 / 本机出网
+
+### Added
+
+- SSE 实时看屏：`/api/computer/screen?botId&fps`，Web UI 看屏面板
+- 人工接管：`/api/computer/takeover`；接管期间 Bot 的浏览器动作被拒绝
+- 输入通道：点击（坐标）、文本、按键 → CDP Input
+- `@jaryn/tunnel`：WebSocket 出网隧道，服务器本地 HTTP/CONNECT 代理经客户端网络转发；`jary tunnel --url ws://.../tunnel`
+- 云电脑启动时自动使用隧道代理（新启动的实例）
+- 67 个测试
+
+
 ## v0.5.0 — Initiative / teach-a-task / PWA
 
 ### Added

@@ -79,6 +79,20 @@ export class CdpClient {
     if (!ok) throw new Error(`selector not found: ${selector}`)
   }
 
+  async clickAt(x: number, y: number): Promise<void> {
+    await this.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 })
+    await this.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 })
+  }
+
+  async typeText(text: string): Promise<void> {
+    await this.send('Input.insertText', { text })
+  }
+
+  async pressKey(key: string): Promise<void> {
+    await this.send('Input.dispatchKeyEvent', { type: 'keyDown', key })
+    await this.send('Input.dispatchKeyEvent', { type: 'keyUp', key })
+  }
+
   async screenshot(): Promise<string> {
     const result = await this.send<any>('Page.captureScreenshot', { format: 'png' })
     return result.data as string

@@ -5,6 +5,7 @@ import { basename, join, resolve } from 'node:path'
 import type { Context } from '@jaryn/kernel'
 import { newApprovalId } from '@jaryn/agent-core'
 import { renderPageDocument } from '@jaryn/pages'
+import { TunnelServer } from '@jaryn/tunnel'
 import type { ApprovalDecision, ApprovalRequest, ApprovalService } from '@jaryn/agent-core'
 
 export interface WebOptions {
@@ -69,6 +70,13 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       },
     } satisfies ApprovalService)
   }
+
+  const tunnel = new TunnelServer()
+  tunnel.onConnect = (proxyUrl) => {
+    const computer = ctx.get<any>('computer')
+    computer?.setProxy?.(proxyUrl)
+  }
+  if (!ctx.has('tunnel')) ctx.provide('tunnel', tunnel)
 
   const server = createServer(async (req, res) => {
     try {
@@ -321,6 +329,46 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
         return sendJson(res, 400, { error: (err as Error).message })
       }
     }
+    if (req.method === 'GET' && path === '/api/computer/screen') {
+      const computer = ctx.get<any>('computer')
+      if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
+      const botId = url.searchParams.get('botId') ?? 'default'
+      const fps = Math.max(0.5, Math.min(Number(url.searchParams.get('fps') ?? 2), 10))
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
+      let closed = false
+      req.on('close', () => { closed = true })
+      const tick = async () => {
+        if (closed) return
+        try {
+          const frame = await computer.frame(botId)
+          res.write(`data: ${JSON.stringify({ type: 'frame', ...frame })}\n\n`)
+        } catch (err) {
+          res.write(`data: ${JSON.stringify({ type: 'error', message: (err as Error).message })}\n\n`)
+        }
+      }
+      void tick()
+      const timer = setInterval(tick, Math.round(1000 / fps))
+      req.on('close', () => clearInterval(timer))
+      return
+    }
+    if (req.method === 'POST' && path === '/api/computer/takeover') {
+      const computer = ctx.get<any>('computer')
+      if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
+      const body = await readBody(req)
+      return sendJson(res, 200, computer.takeover(body.botId ?? 'default', !!body.enabled))
+    }
+    if (req.method === 'POST' && path === '/api/computer/input') {
+      const computer = ctx.get<any>('computer')
+      if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
+      const body = await readBody(req)
+      await computer.input(body.botId ?? 'default', body.event ?? {})
+      return sendJson(res, 200, { ok: true })
+    }
+    if (req.method === 'GET' && path === '/api/tunnel') {
+      const tunnelServer = ctx.get<any>('tunnel')
+      if (!tunnelServer) return sendJson(res, 404, { error: 'tunnel not mounted' })
+      return sendJson(res, 200, tunnelServer.status())
+    }
     if (req.method === 'GET' && path === '/api/computer') {
       const computer = ctx.get<any>('computer')
       if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
@@ -469,6 +517,7 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     sendJson(res, 404, { error: 'not found' })
   }
 
+  tunnel.attach(server)
   await new Promise<void>((resolve) => server.listen(port, host, resolve))
   const address = server.address()
   const actualPort = typeof address === 'object' && address ? address.port : port
@@ -477,6 +526,7 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     url,
     server,
     async close() {
+      tunnel.close()
       for (const client of clients) client.res.end()
       clients.clear()
       for (const p of pending.values()) {

@@ -197,6 +197,11 @@ test('computer status API reports stopped', async () => {
   try {
     const data = await (await fetch(`${server.url}/api/computer?botId=bot-a`)).json()
     assert.equal(data.status.state, 'stopped')
+    const takeover = await (await fetch(`${server.url}/api/computer/takeover`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ botId: 'bot-a', enabled: true }),
+    })).json()
+    assert.equal(takeover.takeover, true)
   } finally {
     await server.close()
     await ctx.dispose()

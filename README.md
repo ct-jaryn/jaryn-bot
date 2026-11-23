@@ -2,7 +2,7 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-> **状态：v0.5.0 已发布（Initiative + PWA）。** 加入主动提议（信号、打分、去重/限额、接受/拒绝/静音）、teach-a-task 技能草稿与保存、PWA（manifest + service worker）；66 个测试通过。见 [RELEASE-v0.5.0.md](RELEASE-v0.5.0.md)。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
+> **状态：v0.6.0 已发布（实时看屏 / 接管 / 本机出网）。** 加入 SSE 实时看屏、人工接管与鼠标键盘输入、WebSocket 出网隧道（client 主动连服务器，HTTP/CONNECT 代理）；67 个测试通过。见 [RELEASE-v0.6.0.md](RELEASE-v0.6.0.md)。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
 
 ---
 
@@ -72,7 +72,8 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 - ✅ **v0.2 云电脑**：Local Chrome / Docker 容器后端、`browser.goto/extract/click/type/screenshot`、看屏截图、任务级快照/恢复、`jary computer`、`/api/computer`
 - ✅ **v0.3 Vault**：AES-256-GCM write-only 存储、模型盲填（`vault.fill`）、一次性 Secure Form、审计/轮换/授权
 - ✅ **v0.4 连接器/邮箱/Pages**：通用 HTTP 连接器（API Key/Bearer、OAuth URL 助手）、SMTP 发信、Pages（表格/报告模板、CSP、分享 token）、产物库
-- ✅ **v0.5 Initiative + PWA**：主动提议（失败任务/停滞任务扫描、打分、去重、限额、接受建任务/拒绝/静音）、teach-a-task（草稿/保存/列表）、PWA manifest/service worker；66 个测试
+- ✅ **v0.5 Initiative + PWA**：主动提议（失败任务/停滞任务扫描、打分、去重、限额、接受建任务/拒绝/静音）、teach-a-task（草稿/保存/列表）、PWA manifest/service worker
+- ✅ **v0.6 看屏/接管/出网**：SSE 实时看屏、接管后暂停 Bot 动作、鼠标/键盘/文本输入、`jary tunnel` 出网隧道（HTTP + CONNECT）；67 个测试
 
 ```bash
 node packages/cli/src/index.ts init
@@ -111,6 +112,9 @@ node packages/cli/src/index.ts vault add --name GitHub --origin https://github.c
 node packages/cli/src/index.ts vault list
 
 # 连接器/Pages/产物（v0.4）：通过 profile patch 配置 connectors；Web 打开 /pages/<id>
+
+# 出网隧道（v0.6）：在有家宽/公司网的机器上
+node packages/cli/src/index.ts tunnel --url ws://<server>:8787/tunnel
 ```
 
 开发计划见 [docs/03-roadmap.md](docs/03-roadmap.md)。

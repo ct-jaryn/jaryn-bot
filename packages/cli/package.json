@@ -29,6 +29,7 @@
     "@jaryn/pages": "workspace:*",
     "@jaryn/connectors": "workspace:*",
     "@jaryn/email": "workspace:*",
-    "@jaryn/initiative": "workspace:*"
+    "@jaryn/initiative": "workspace:*",
+    "@jaryn/tunnel": "workspace:*"
   }
 }
