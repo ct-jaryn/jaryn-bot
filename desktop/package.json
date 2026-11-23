@@ -1,10 +1,13 @@
 {
-  "name": "@jaryn/desktop",
+  "name": "jaryn-desktop",
   "version": "1.6.0",
   "private": true,
   "description": "jaryn-bot desktop shell (Electron wrapper for the self-hosted Web UI)",
   "main": "main.cjs",
-  "author": "ct-jaryn",
+  "author": {
+    "name": "ct-jaryn",
+    "email": "ct-jaryn@users.noreply.github.com"
+  },
   "license": "AGPL-3.0-only",
   "scripts": {
     "start": "electron .",
@@ -19,11 +22,47 @@
   "build": {
     "appId": "com.jaryn.bot",
     "productName": "jaryn",
-    "directories": { "output": "dist" },
-    "files": ["main.cjs", "preload.cjs", "setup.html", "config.cjs", "package.json"],
-    "mac": { "category": "public.app-category.productivity", "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }] },
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
-    "linux": { "target": ["AppImage", "deb"], "category": "Utility" },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "setup.html",
+      "config.cjs",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "maintainer": "ct-jaryn <ct-jaryn@users.noreply.github.com>"
+    },
     "publish": null
-  }
+  },
+  "homepage": "https://github.com/ct-jaryn/jaryn-bot"
 }

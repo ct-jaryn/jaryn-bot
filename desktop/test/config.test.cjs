@@ -23,8 +23,12 @@ test('saves and loads config with 0600 file mode', () => {
   const loaded = loadConfig(dir)
   assert.equal(loaded.serverUrl, 'http://example.com:8787')
   assert.equal(loaded.configured, true)
-  const mode = fs.statSync(path.join(dir, 'config.json')).mode & 0o777
-  assert.equal(mode, 0o600)
+  if (process.platform !== 'win32') {
+    const mode = fs.statSync(path.join(dir, 'config.json')).mode & 0o777
+    assert.equal(mode, 0o600)
+  } else {
+    assert.ok(fs.existsSync(path.join(dir, 'config.json')))
+  }
 })
 
 test('rejects invalid url on save', () => {
