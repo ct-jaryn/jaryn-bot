@@ -53,13 +53,14 @@
 | 第一等接缝 | 8 个：`llm` `tools` `store` `fs+shell` `approvals` `memory` `channels` `scheduler`（P0 先落 5 个） |
 | **v0.1（P0–P5）** | 运行时 + Web UI + 记忆 + 例程 + 多 Bot + 插件；**按 Gate 发版，不设日期** |
 | 下一阶段 | **云电脑（容器）+ 本机出网**；v0.1 Gate 全过后启动 |
-| 待定包（不排期） | 桌面/手机客户端、Vault、连接器/邮箱/Pages、Initiative、卡支付、IM 通知 |
+| 已完成 | 运行时/Web/记忆/多Bot/主动/硬化/云电脑(看屏/接管/出网)/Vault/连接器/邮箱(SMTP+IMAP+webhook)/Pages/产物/Initiative/teach/多设备/鉴权 |
+| 未实现（明确） | 桌面壳/原生 App、1Password/Bitwarden、卡支付、官方 Gmail/Calendar OAuth 应用、HTML/附件邮件解析、实时低延迟串流、真实模型评测（需 key）、Docker 实测（本机无 docker） |
 | 明确不做 | 团队协作 / 会议 / 企业管控（SSO·SCIM·网络策略·组织 API·审计导出）/ 语音 / SaaS 计费 |
 | 私有化 | 单租户自托管；数据与密钥本地；出网仅模型（IM/连接器暂不做） |
 | 许可 | AGPL-3.0 + 商业双许可（网络使用须公开源码；闭源商业需授权） |
 | 记忆 | 每轮 digest ≤600 token；整理 ≤1 次 LLM/天（≤2K token）；默认无向量库/embedding；DB <1MB/年 |
 | 目录检索 | 文件：`fs.list/glob/grep`（上限 200/200/50，忽略 .git/node_modules）；记忆：`memory.catalog` ≤200 token |
-| 实现进度 | **v0.9.0 已发布**（v0.1–v0.9，74 测试）；等：真实模型评测、桌面壳、Docker 实测、v1.0 收尾 |
+| 实现进度 | **v1.0.0 已发布**（v0.1–v0.9 + 收尾，76 测试，docs/deploy/eval 自动校验）；未实现项见下 |
 
 ## 四、维护约定
 

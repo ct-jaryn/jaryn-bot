@@ -2,7 +2,9 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-> **状态：v0.9.0 已发布（IMAP 收信）。** 加入 IMAP 轮询（LOGIN/SELECT/SEARCH UNSEEN/FETCH/STORE）→ `input.email` 事件；74 个测试通过。见 [RELEASE-v0.9.0.md](RELEASE-v0.9.0.md)。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
+**状态：v1.0.0 已发布。** 目标能力全部落地：运行时、Web UI、记忆、多 Bot、主动任务、云电脑（含看屏/接管/出网）、Vault、连接器/邮箱（SMTP+IMAP+入站 webhook）、Pages/产物、Initiative/teach、多设备配对、鉴权；**76 个测试 + 文档/部署自动校验**。
+
+> 目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。见 [RELEASE-v1.0.0.md](RELEASE-v1.0.0.md)。
 
 ---
 
@@ -59,7 +61,16 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 
 ## 开发
 
-技术栈：TypeScript / Node 24 · pnpm monorepo · SQLite (WAL) + 事件溯源 · JSON-RPC over stdio/WSS · 默认 DeepSeek（兼容 OpenAI 协议）。
+技术栈：TypeScript / Node 24（原生运行 TS，无编译步骤）· npm workspaces · SQLite (WAL) + 事件溯源 · HTTP/SSE/WebSocket · 默认 DeepSeek（兼容 OpenAI 协议）。
+
+```bash
+node packages/cli/src/index.ts init --home ./data-home
+node packages/cli/src/index.ts doctor
+node packages/cli/src/index.ts serve --home ./data-home --port 8787
+npm test          # 76 tests
+npm run check     # docs + deploy + eval 结构校验
+npm run eval      # 真实模型评测（需 DEEPSEEK_API_KEY）
+```
 
 ## 开发进度
 
@@ -76,7 +87,8 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 - ✅ **v0.6 看屏/接管/出网**：SSE 实时看屏、接管后暂停 Bot 动作、鼠标/键盘/文本输入、`jary tunnel` 出网隧道（HTTP + CONNECT）
 - ✅ **v0.7 多设备 + 示例**：设备配对码/令牌/吊销（phone/desktop/web）、`/api/devices`、`jary device`、GitHub/HTTP 连接器示例
 - ✅ **v0.8 鉴权 + 入站邮件**：`JARY_API_TOKEN`（Bearer/设备令牌）保护 `/api/*`；`/api/email/inbound` 入站邮件 webhook
-- ✅ **v0.9 IMAP 收信**：IMAP 轮询（SEARCH UNSEEN → FETCH → 标已读）→ `input.email` 事件；74 个测试
+- ✅ **v0.9 IMAP 收信**：IMAP 轮询（SEARCH UNSEEN → FETCH → 标已读）→ `input.email` 事件
+- ✅ **v1.0 收尾**：文档/部署/评测自动校验脚本、Docker 说明、发布说明；**76 个测试**
 
 ```bash
 node packages/cli/src/index.ts init

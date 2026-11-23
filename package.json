@@ -1,6 +1,6 @@
 {
   "name": "jaryn-bot",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Self-hosted personal AI teammate runtime",
@@ -12,9 +12,12 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node --test packages/*/test/*.test.ts",
+    "test": "node --test --test-timeout=20000 packages/*/test/*.test.ts scripts/*.test.ts",
     "jary": "node packages/cli/src/index.ts",
-    "config": "node packages/cli/src/index.ts config print",
-    "eval": "node evals/run.ts"
+    "check:docs": "node scripts/check-docs.ts",
+    "check:deploy": "node scripts/check-deploy.ts",
+    "check": "node scripts/check-docs.ts && node scripts/check-deploy.ts && node evals/run.ts --dry",
+    "eval": "node evals/run.ts",
+    "serve": "node packages/cli/src/index.ts serve --port 8787"
   }
 }

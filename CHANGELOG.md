@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.0 — 收尾与发布
+
+### Added
+
+- `scripts/check-docs.ts`：代码围栏/表格列数/相对链接/必需文件校验
+- `scripts/check-deploy.ts`：Dockerfile/compose 与 CLI 插件注册表一致性校验
+- `evals/run.ts --dry`：无 key 也能做 10 任务结构校验；有 key 跑真实评测
+- `deploy/README.md`、`npm test` / `npm run check` / `npm run eval` 脚本
+- 76 个测试（含 docs/deploy 校验）
+
+
 ## v0.9.0 — IMAP 收信
 
 ### Added
