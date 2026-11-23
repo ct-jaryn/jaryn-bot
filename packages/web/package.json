@@ -11,6 +11,7 @@
     "@jaryn/store-sqlite": "workspace:*",
     "@jaryn/pages": "workspace:*",
     "@jaryn/tunnel": "workspace:*",
-    "@jaryn/connectors": "workspace:*"
+    "@jaryn/connectors": "workspace:*",
+    "@jaryn/notifications": "workspace:*"
   }
 }

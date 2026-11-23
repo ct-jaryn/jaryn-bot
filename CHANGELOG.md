@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.3.0 — 通知中心 / Bitwarden / 卡填充
+
+### Added
+
+- `@jaryn/notifications`：通知表 + 未读计数 + 安静时段（越夜窗口判定）；例程完成/Initiative/新邮件自动通知
+- Web：`/api/notifications`（list/read/read-all）、通知铃铛与通知面板（15s 轮询未读数）
+- `@jaryn/secrets`：1Password 与 Bitwarden（`bw get item --raw`）读取 + 填充代理；TOTP 保留
+- Vault：卡类型与 `vault.fill_card`（默认关闭，risk=destructive 每次审批，值不回传）
+- 123 个测试
+
+
 ## v1.2.0 — RSS / 1Password / 进程外插件 / 快速看屏
 
 ### Added

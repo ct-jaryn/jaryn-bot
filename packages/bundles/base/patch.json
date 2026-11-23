@@ -191,10 +191,15 @@
       },
       {
         "id": "onePassword",
-        "name": "@jaryn/secrets-1password",
+        "name": "@jaryn/secrets/onePassword",
         "config": {
           "references": {}
         }
+      },
+      {
+        "id": "bitwarden",
+        "name": "@jaryn/secrets/bitwarden",
+        "config": {}
       },
       {
         "id": "plugin-host",
@@ -202,6 +207,11 @@
         "config": {
           "hosts": []
         }
+      },
+      {
+        "id": "notifications",
+        "name": "@jaryn/notifications",
+        "config": {}
       }
     ]
   }

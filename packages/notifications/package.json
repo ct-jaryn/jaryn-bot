@@ -1,0 +1,11 @@
+{
+  "name": "@jaryn/notifications",
+  "version": "1.3.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@jaryn/kernel": "workspace:*",
+    "@jaryn/agent-core": "workspace:*",
+    "@jaryn/store-sqlite": "workspace:*"
+  }
+}

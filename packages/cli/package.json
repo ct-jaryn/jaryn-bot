@@ -35,7 +35,8 @@
     "@jaryn/tools-web": "workspace:*",
     "@jaryn/office": "workspace:*",
     "@jaryn/goals": "workspace:*",
-    "@jaryn/secrets-1password": "workspace:*",
-    "@jaryn/plugin-host": "workspace:*"
+    "@jaryn/plugin-host": "workspace:*",
+    "@jaryn/notifications": "workspace:*",
+    "@jaryn/secrets": "workspace:*"
   }
 }

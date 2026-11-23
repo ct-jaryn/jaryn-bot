@@ -249,6 +249,7 @@ export class JobScheduler {
       const next = job.trigger.kind === 'webhook' ? null : this.nextRun(job.trigger)
       this.db.prepare('UPDATE jobs SET last_run_at = ?, next_run_at = ?, run_count = run_count + 1 WHERE id = ?')
         .run(run.endedAt, next ?? null, job.id)
+      this.ctx.emit?.('job/finished', { jobId: job.id, sessionId, status: run.status, summary: run.summary })
     }
     return run
   }

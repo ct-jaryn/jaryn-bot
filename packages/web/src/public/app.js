@@ -214,6 +214,19 @@ for (const tab of document.querySelectorAll('.tab')) {
 
 const sol = (image, ts) => `<img src="data:image/png;base64,${image}" style="max-width:100%" data-ts="${ts}">`
 
+async function refreshNotifications() {
+  try {
+    const data = await api('/api/notifications?unread=1')
+    $('notify-count').textContent = String(data.unread ?? 0)
+  } catch { /* notifications optional */ }
+}
+$('notify-btn').onclick = async () => {
+  $('panels').hidden = false
+  for (const t of document.querySelectorAll('.tab')) t.classList.toggle('active', t.dataset.tab === 'notifications')
+  state.panel = 'notifications'
+  await refreshPanel()
+}
+
 async function refreshPanel() {
   const body = panelBody
   body.innerHTML = '<div class="muted">加载中…</div>'
@@ -271,6 +284,13 @@ async function refreshPanel() {
       body.innerHTML = `<div class="row">输入 tokens：${usage.inputTokens}</div><div class="row">输出 tokens：${usage.outputTokens}</div><div class="row">缓存读：${usage.cacheReadTokens}</div><div class="row">累计费用：$${Number(usage.costUsd).toFixed(4)}</div>`
       return
     }
+    if (state.panel === 'notifications') {
+      const data = await api('/api/notifications?limit=50')
+      body.innerHTML = `<button id="read-all">全部已读</button>` + (data.notifications.length === 0 ? '<div class="muted">暂无通知</div>'
+        : data.notifications.map((n) => `<div class="row${n.read ? ' muted' : ''}"><strong>${esc(n.title)}</strong><div class="muted">${esc(n.kind)} · ${new Date(n.ts).toLocaleString()}${n.suppressed ? ' · 安静时段' : ''}</div><div class="muted">${esc(n.body ?? '')}</div></div>`).join(''))
+      $('read-all').onclick = async () => { await api('/api/notifications/read-all', { method: 'POST' }); await refreshNotifications(); refreshPanel() }
+      return
+    }
     if (state.panel === 'audit') {
       const { entries } = await api('/api/audit?limit=30')
       body.innerHTML = entries.length === 0 ? '<div class="muted">暂无审计</div>'
@@ -319,4 +339,4 @@ $('screen-send').onclick = async () => {
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
 
-Promise.all([loadBots(), loadSessions()]).then(() => selectSession(state.sessionId)).catch((err) => addMessage('error', err.message))
+Promise.all([loadBots(), loadSessions()]).then(() => { void refreshNotifications(); setInterval(refreshNotifications, 15000); return selectSession(state.sessionId) }).catch((err) => addMessage('error', err.message))

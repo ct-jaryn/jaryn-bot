@@ -639,6 +639,22 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
         return sendJson(res, 502, { error: (err as Error).message })
       }
     }
+    if (req.method === 'GET' && path === '/api/notifications') {
+      const notifications = ctx.get<any>('notifications')
+      if (!notifications) return sendJson(res, 404, { error: 'notifications not mounted' })
+      return sendJson(res, 200, { notifications: notifications.list({ limit: Number(url.searchParams.get('limit') ?? 50), unreadOnly: url.searchParams.get('unread') === '1' }), unread: notifications.unreadCount() })
+    }
+    if (req.method === 'POST' && path === '/api/notifications/read-all') {
+      const notifications = ctx.get<any>('notifications')
+      if (!notifications) return sendJson(res, 404, { error: 'notifications not mounted' })
+      return sendJson(res, 200, { marked: notifications.markAllRead() })
+    }
+    if (req.method === 'POST' && /^\/api\/notifications\/[^/]+\/read$/.test(path)) {
+      const notifications = ctx.get<any>('notifications')
+      if (!notifications) return sendJson(res, 404, { error: 'notifications not mounted' })
+      const id = Number(path.split('/')[3])
+      return sendJson(res, 200, { read: notifications.markRead(id) })
+    }
     if (req.method === 'GET' && path === '/api/usage') {
       const store = ctx.get<any>('store')
       if (!store?.usageTotal) return sendJson(res, 404, { error: 'usage unavailable' })

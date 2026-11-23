@@ -60,6 +60,7 @@ export interface InitiativeConfig {
 export class InitiativeService {
   private db: any
   private cfg: Required<InitiativeConfig>
+  emit?: (event: string, payload: unknown) => void
 
   constructor(db: any, config: InitiativeConfig = {}) {
     this.db = db
@@ -93,7 +94,9 @@ export class InitiativeService {
       `INSERT INTO initiative_proposals(id, bot_id, kind, title, title_hash, reason, score, evidence_json, status, created_at, expires_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
     ).run(id, botId, signal.kind ?? 'generic', signal.title, hash, signal.reason, score, signal.evidence ? JSON.stringify(signal.evidence) : null, now, now + this.cfg.ttlMs)
-    return { created: this.get(id)! }
+    const proposal = this.get(id)!
+    this.emit?.('initiative/proposal', proposal)
+    return { created: proposal }
   }
 
   get(id: string): Proposal | undefined {
@@ -241,6 +244,7 @@ export function initiativePlugin(cfg: InitiativeConfig = {}): Plugin<InitiativeC
       const store = ctx.get<any>('store')
       const service = new InitiativeService(store.db, { ...cfg, ...config })
       service.storeDb = store.db
+      service.emit = (event, payload) => ctx.emit(event, payload)
       ctx.provide('initiative', service)
       const home = process.env.JARY_HOME ?? join(process.cwd(), 'data')
       const teachService = new TeachService(home)
