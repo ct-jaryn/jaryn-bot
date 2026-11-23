@@ -3,6 +3,8 @@ import type { Plugin } from '@jaryn/kernel'
 import { cancelTurn, runTurn } from './loop.ts'
 
 export { cancelTurn, estimateTokens, runTurn } from './loop.ts'
+export { approvalPlugin, createApprovalService, newApprovalId, DEFAULT_ASK_RISKS } from './approvals.ts'
+export type { ApprovalDecision, ApprovalPluginConfig, ApprovalRequest, ApprovalService } from './approvals.ts'
 export { toolRegistryPlugin } from './tools.ts'
 export type { ToolRegistry } from './tools.ts'
 export * from './types.ts'

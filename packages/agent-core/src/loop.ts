@@ -12,6 +12,8 @@ import type {
   TurnResult,
 } from './types.ts'
 import type { ToolRegistry } from './tools.ts'
+import { newApprovalId } from './approvals.ts'
+import type { ApprovalService } from './approvals.ts'
 
 const DEFAULT_SYSTEM = 'You are jaryn, a self-hosted personal AI teammate. Be concise and useful.'
 const DEFAULT_BUDGET: BudgetLimits = { maxSteps: 8, maxToolCalls: 20, maxWallMs: 120_000 }
@@ -35,6 +37,7 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
   const store = ctx.get<EventStore>('store')
   const tools = ctx.get<ToolRegistry>('tools')
   const llm = ctx.get<Provider>('llm')
+  const approvals = ctx.get<ApprovalService>('approvals')
   if (!store) throw new Error('runTurn needs a store service')
   if (!tools) throw new Error('runTurn needs a tools service')
   if (!llm) throw new Error('runTurn needs an llm service')
@@ -122,6 +125,20 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
         try {
           const tool = tools.get(call.name)
           if (!tool) throw new Error(`unknown tool: ${call.name}`)
+          if (approvals) {
+            const req = {
+              id: newApprovalId(),
+              sessionId: input.sessionId,
+              turnId,
+              toolName: call.name,
+              risk: tool.risk,
+              args: call.args,
+            }
+            append('approval.requested', req)
+            const decision = await approvals.request(req, controller.signal)
+            append('approval.resolved', { id: req.id, decision })
+            if (decision !== 'allowed') throw new Error('not-approved')
+          }
           const output = await tool.execute(call.args, {
             signal: controller.signal,
             sessionId: input.sessionId,

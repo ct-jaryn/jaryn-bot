@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>jaryn-bot</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <aside id="sidebar">
+    <h1>jaryn</h1>
+    <button id="new-session">+ 新会话</button>
+    <ul id="sessions"></ul>
+    <footer>v0.0.1 · self-hosted</footer>
+  </aside>
+  <main>
+    <header>
+      <span id="session-label">web</span>
+      <span id="status" class="idle">idle</span>
+    </header>
+    <section id="messages"></section>
+    <section id="approvals"></section>
+    <form id="composer">
+      <textarea id="input" rows="2" placeholder="派活给 jaryn…（Enter 发送，Shift+Enter 换行）"></textarea>
+      <button type="submit">发送</button>
+    </form>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

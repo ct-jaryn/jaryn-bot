@@ -10,6 +10,7 @@ import { Store, storePlugin } from '@jaryn/store-sqlite'
 import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
 import { deepseekPlugin } from '@jaryn/llm-deepseek'
+import { startWebServer } from '@jaryn/web'
 import { fsPlugin } from '@jaryn/tools-fs'
 
 const VERSION = '0.0.1'
@@ -174,6 +175,24 @@ async function main(): Promise<number> {
     return ok ? 0 : 1
   }
 
+  if (cmd === 'serve') {
+    const { ctx } = await createRuntime(flags)
+    const port = Number(flags.port ?? 8787)
+    const host = typeof flags.host === 'string' ? flags.host : '127.0.0.1'
+    const web = await startWebServer(ctx, { port, host })
+    console.log(`jary web: ${web.url}`)
+    await new Promise<void>((resolve) => {
+      const shutdown = async () => {
+        await web.close()
+        await ctx.dispose()
+        resolve()
+      }
+      process.once('SIGINT', shutdown)
+      process.once('SIGTERM', shutdown)
+    })
+    return 0
+  }
+
   if (cmd === 'chat') {
     const text = positional.join(' ').trim() || (typeof flags.text === 'string' ? flags.text : '')
     if (!text) {
@@ -200,6 +219,7 @@ commands:
   init                       initialize home/profile
   config print [--patch f]   print composed plugin rows
   chat --bot <id> "text"     run one turn (echo provider by default)
+  serve [--port 8787]        start Web UI + API
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)

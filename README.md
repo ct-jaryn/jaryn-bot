@@ -2,7 +2,7 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-> **状态：v0.1 P1 完成（开发中）。** 已有可运行的 kernel/store/agent/CLI/工具 + DeepSeek 流式适配、目录检索、压缩、取消与 22 个测试；下一步 P2（Web UI）。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
+> **状态：v0.1 P2 完成（开发中）。** 已有 Web UI + 流式 SSE + 审批桥 + 会话/文件 API；27 个测试通过；下一步 P3（记忆 + 多 Bot）。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
 
 ---
 
@@ -65,7 +65,8 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 
 - ✅ **P0 骨架**：kernel、SQLite store（事件回放）、agent 循环、`shell.run`、CLI、Fake provider
 - ✅ **P1 真模型**：DeepSeek 流式 + 原生 tool-calling + 重试；`fs.list/glob/grep` 目录检索；上下文压缩；`cancelTurn` 取消；10 任务评测脚本（需 `DEEPSEEK_API_KEY`）
-- ⬜ P2 Web UI / P3 记忆与多 Bot / P4 主动 / P5 硬化
+- ✅ **P2 Web UI**：单页 UI（会话列表/流式聊天/工具步骤/审批卡/附件上传）、SSE 事件流、审批桥（允许/拒绝/超时）、会话与文件 API、`jary serve`
+- ⬜ P3 记忆与多 Bot / P4 主动 / P5 硬化
 
 ```bash
 node packages/cli/src/index.ts init
@@ -74,6 +75,9 @@ node packages/cli/src/index.ts chat --bot jaryn "hello"
 node packages/cli/src/index.ts doctor
 # 真实模型（需 DEEPSEEK_API_KEY）
 node packages/cli/src/index.ts chat --home ~/.jary --patch packages/bundles/deepseek/patch.json "hello"
+# Web UI
+node packages/cli/src/index.ts serve --port 8787
+# → http://127.0.0.1:8787
 ```
 
 开发计划见 [docs/03-roadmap.md](docs/03-roadmap.md)。

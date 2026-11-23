@@ -1,0 +1,11 @@
+{
+  "name": "@jaryn/web",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@jaryn/kernel": "workspace:*",
+    "@jaryn/agent-core": "workspace:*",
+    "@jaryn/store-sqlite": "workspace:*"
+  }
+}

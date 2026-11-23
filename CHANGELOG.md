@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — P2 Web UI（已完成）
+
+### Added
+
+- `@jaryn/web`：单页 Web UI（会话列表、流式聊天、工具步骤、审批卡、附件上传）
+- HTTP API：`GET/POST /api/sessions`、`POST /api/message`、`GET /api/stream`（SSE）、`GET /api/events`、`GET/POST /api/approvals`、`GET/POST /api/files`、`/healthz`
+- 审批桥：execute/external/destructive 默认 ask；允许/拒绝/超时（默认 deny）三路径
+- CLI：`jary serve --port 8787`
+- 测试：UI 服务、聊天事件、审批允许/拒绝/超时、文件上传下载，共 27 个
+
 ## Unreleased — P1 真模型（已完成）
 
 ### Added

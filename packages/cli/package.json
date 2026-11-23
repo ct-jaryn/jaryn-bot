@@ -14,6 +14,7 @@
     "@jaryn/store-sqlite": "workspace:*",
     "@jaryn/tools-shell": "workspace:*",
     "@jaryn/testing": "workspace:*",
+    "@jaryn/web": "workspace:*",
     "@jaryn/llm-deepseek": "workspace:*",
     "@jaryn/tools-fs": "workspace:*"
   }
