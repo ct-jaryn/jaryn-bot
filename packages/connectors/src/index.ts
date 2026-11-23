@@ -129,6 +129,32 @@ export async function exchangeOAuthCode(cfg: OAuthExchangeConfig): Promise<Recor
   try { return JSON.parse(text) } catch { return { raw: text } }
 }
 
+export interface OAuthRefreshConfig {
+  tokenUrl: string
+  clientId: string
+  clientSecret?: string
+  refreshToken: string
+}
+
+/** Exchange a refresh token for a new access token. */
+export async function refreshOAuthToken(cfg: OAuthRefreshConfig): Promise<Record<string, unknown>> {
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: cfg.refreshToken,
+    client_id: cfg.clientId,
+  })
+  if (cfg.clientSecret) body.set('client_secret', cfg.clientSecret)
+  const res = await fetch(cfg.tokenUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+    body: body.toString(),
+    signal: AbortSignal.timeout(20_000),
+  })
+  const text = await res.text()
+  if (!res.ok) throw new Error(`oauth refresh failed: HTTP ${res.status} ${text.slice(0, 200)}`)
+  try { return JSON.parse(text) } catch { return { raw: text } }
+}
+
 export function buildAuthorizeUrl(server: ConnectorServerConfig & { auth: { type: 'oauth2'; authorizeUrl: string; clientId: string; redirectUri: string; scopes: string[] } }, state: string): string {
   const url = new URL(server.auth.authorizeUrl)
   url.searchParams.set('client_id', server.auth.clientId)

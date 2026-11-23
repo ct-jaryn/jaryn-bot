@@ -19,8 +19,8 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Show version
         run: node -v && npm -v
-      - name: Install root (workspace links are resolved at runtime)
-        run: npm install --no-audit --no-fund --ignore-scripts || true
+      - name: Link internal workspaces
+        run: node scripts/link-workspaces.mjs
       - name: Tests
         run: npm test
       - name: Docs / deploy / eval checks

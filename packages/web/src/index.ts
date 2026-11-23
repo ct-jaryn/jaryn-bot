@@ -6,7 +6,7 @@ import type { Context } from '@jaryn/kernel'
 import { newApprovalId } from '@jaryn/agent-core'
 import { renderPageDocument } from '@jaryn/pages'
 import { TunnelServer } from '@jaryn/tunnel'
-import { exchangeOAuthCode } from '@jaryn/connectors'
+import { exchangeOAuthCode, refreshOAuthToken } from '@jaryn/connectors'
 import type { ApprovalDecision, ApprovalRequest, ApprovalService } from '@jaryn/agent-core'
 
 export interface WebOptions {
@@ -708,6 +708,30 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       if (!notifications) return sendJson(res, 404, { error: 'notifications not mounted' })
       const id = Number(path.split('/')[3])
       return sendJson(res, 200, { read: notifications.markRead(id) })
+    }
+    if (req.method === 'POST' && path.startsWith('/api/oauth/refresh/')) {
+      const connectorId = path.slice('/api/oauth/refresh/'.length)
+      const tokenUrl = process.env[`JARY_OAUTH_TOKEN_URL_${connectorId.toUpperCase()}`]
+      const clientId = process.env[`JARY_OAUTH_CLIENT_ID_${connectorId.toUpperCase()}`]
+      const clientSecret = process.env[`JARY_OAUTH_CLIENT_SECRET_${connectorId.toUpperCase()}`]
+      if (!tokenUrl || !clientId) return sendJson(res, 500, { error: `oauth not configured for ${connectorId}` })
+      const vault = ctx.get<any>('vault')
+      const connectors = ctx.get<any>('connectors')
+      const items = vault?.list?.() ?? []
+      const stored = items.find((item: any) => item.kind === 'oauth' && String(item.name).startsWith(connectorId))
+      const secret = stored ? vault.reveal?.(stored.id)?.secret : undefined
+      if (!secret?.refresh_token) return sendJson(res, 400, { error: `no refresh token for ${connectorId}` })
+      try {
+        const tokens = await refreshOAuthToken({ tokenUrl, clientId, clientSecret, refreshToken: String(secret.refresh_token) })
+        if ((tokens as any).access_token) {
+          vault.rotate?.(stored.id, { ...secret, access_token: (tokens as any).access_token, expires_in: (tokens as any).expires_in })
+          connectors?.setToken?.(connectorId, String((tokens as any).access_token))
+        }
+        ctx.get<any>('store')?.audit?.('oauth.refreshed', connectorId, { ok: true })
+        return sendJson(res, 200, { refreshed: true, expiresIn: (tokens as any).expires_in })
+      } catch (err) {
+        return sendJson(res, 502, { error: (err as Error).message })
+      }
     }
     if (req.method === 'GET' && path === '/api/usage') {
       const store = ctx.get<any>('store')
