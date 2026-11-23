@@ -23,6 +23,7 @@
     "@jaryn/scheduler": "workspace:*",
     "@jaryn/sandbox-docker": "workspace:*",
     "@jaryn/mcp": "workspace:*",
-    "@jaryn/computer": "workspace:*"
+    "@jaryn/computer": "workspace:*",
+    "@jaryn/vault": "workspace:*"
   }
 }

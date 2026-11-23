@@ -19,9 +19,10 @@ import { schedulerPlugin } from '@jaryn/scheduler'
 import { dockerSandboxPlugin } from '@jaryn/sandbox-docker'
 import { mcpPlugin } from '@jaryn/mcp'
 import { computerPlugin, computerToolsPlugin } from '@jaryn/computer'
+import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.2.0'
+const VERSION = '0.3.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -102,6 +103,8 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/mcp', mcpPlugin()],
     ['@jaryn/computer', computerPlugin()],
     ['@jaryn/computer/tools', computerToolsPlugin()],
+    ['@jaryn/vault', vaultPlugin()],
+    ['@jaryn/vault/tools', vaultToolsPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
 }
@@ -272,6 +275,38 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
     } finally {
       await ctx.dispose()
     }
+  }
+
+  if (cmd === 'vault') {
+    const { ctx } = await createRuntime(flags)
+    const vault = ctx.get<any>('vault')
+    try {
+      if (sub === 'add') {
+        const name = String(flags.name ?? positional.join(' ') ?? '')
+        const password = String(flags.password ?? '')
+        if (!name || !password) { console.error('usage: jary vault add --name GitHub --origin https://github.com --username me --password ...'); return 2 }
+        const item = vault.add({
+          kind: (flags.kind as any) ?? 'login',
+          name,
+          origin: flags.origin as string | undefined,
+          username: flags.username as string | undefined,
+          secret: { password, username: flags.username },
+        })
+        console.log(JSON.stringify(item, null, 2))
+        return 0
+      }
+      if (sub === 'list') { console.log(JSON.stringify(vault.list(), null, 2)); return 0 }
+      if (sub === 'remove') { console.log(JSON.stringify({ removed: vault.remove(String(positional[0])) })); return 0 }
+      if (sub === 'rotate') {
+        const id = String(positional[0]); const password = String(flags.password ?? '')
+        vault.rotate(id, { password, username: flags.username })
+        console.log('rotated')
+        return 0
+      }
+      if (sub === 'events') { console.log(JSON.stringify(vault.events(), null, 2)); return 0 }
+      console.error('usage: jary vault add|list|remove|rotate|events')
+      return 2
+    } finally { await ctx.dispose() }
   }
 
   if (cmd === 'computer') {
@@ -483,6 +518,7 @@ commands:
   restore --from <dir> --yes restore from backup
   plugin list|doctor|enable|disable|index
   computer status|start|stop|snapshot [--bot id]
+  vault add|list|remove|rotate|events
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)

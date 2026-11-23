@@ -167,6 +167,74 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const id = path.split('/')[3]
       return sendJson(res, 200, { runs: scheduler.runs(id) })
     }
+    if (req.method === 'GET' && path === '/api/vault') {
+      const vault = ctx.get<any>('vault')
+      if (!vault) return sendJson(res, 404, { error: 'vault not mounted' })
+      return sendJson(res, 200, { items: vault.list() })
+    }
+    if (req.method === 'POST' && path === '/api/vault') {
+      const vault = ctx.get<any>('vault')
+      if (!vault) return sendJson(res, 404, { error: 'vault not mounted' })
+      const body = await readBody(req)
+      if (!body.name || !body.secret) return sendJson(res, 400, { error: 'name and secret required' })
+      return sendJson(res, 201, { item: vault.add({ kind: body.kind ?? 'login', name: body.name, origin: body.origin, username: body.username, secret: body.secret }) })
+    }
+    if (req.method === 'DELETE' && path.startsWith('/api/vault/')) {
+      const vault = ctx.get<any>('vault')
+      if (!vault) return sendJson(res, 404, { error: 'vault not mounted' })
+      const id = path.slice('/api/vault/'.length)
+      return sendJson(res, 200, { removed: vault.remove(id) })
+    }
+    if (req.method === 'POST' && /^\/api\/vault\/[^/]+\/fill$/.test(path)) {
+      const vault = ctx.get<any>('vault')
+      const computer = ctx.get<any>('computer')
+      if (!vault || !computer) return sendJson(res, 404, { error: 'vault or computer not mounted' })
+      const id = path.split('/')[3]
+      const body = await readBody(req)
+      const botId = body.botId ?? 'default'
+      const client = await computer.client(botId)
+      const origin = body.origin ?? await client.evaluate<string>('location.origin')
+      return sendJson(res, 200, await vault.fill(id, { client, botId, origin }))
+    }
+    if (req.method === 'POST' && path === '/api/vault/secure-form') {
+      const vault = ctx.get<any>('vault')
+      if (!vault) return sendJson(res, 404, { error: 'vault not mounted' })
+      const body = await readBody(req)
+      if (!body.origin || !body.purpose) return sendJson(res, 400, { error: 'origin and purpose required' })
+      const token = vault.createSecureForm({ origin: body.origin, purpose: body.purpose, kind: body.kind })
+      return sendJson(res, 201, { token, url: `/secure/${token}` })
+    }
+    if (req.method === 'GET' && path.startsWith('/secure/')) {
+      const vault = ctx.get<any>('vault')
+      if (!vault) return sendJson(res, 404, { error: 'vault not mounted' })
+      const token = path.slice('/secure/'.length)
+      const html = `<!doctype html><html><body style="font-family:system-ui;max-width:420px;margin:60px auto">
+<h2>jaryn secure form</h2>
+<form method="post" action="/secure/${token}">
+  <label>Username <input name="username" autocomplete="username"></label><br><br>
+  <label>Password <input name="password" type="password" autocomplete="current-password"></label><br><br>
+  <button type="submit">保存到 Vault</button>
+</form></body></html>`
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      return void res.end(html)
+    }
+    if (req.method === 'POST' && path.startsWith('/secure/')) {
+      const vault = ctx.get<any>('vault')
+      if (!vault) return sendJson(res, 404, { error: 'vault not mounted' })
+      const token = path.slice('/secure/'.length)
+      const raw = (await readRaw(req)).toString('utf8')
+      const form = new URLSearchParams(raw)
+      try {
+        const item = vault.consumeSecureForm(token, {
+          username: form.get('username') ?? undefined,
+          secret: { username: form.get('username') ?? undefined, password: form.get('password') ?? '' },
+        })
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        return void res.end(`<!doctype html><html><body style="font-family:system-ui;max-width:420px;margin:60px auto"><h2>已保存</h2><p>${item.name} 已写入 Vault。</p></body></html>`)
+      } catch (err) {
+        return sendJson(res, 400, { error: (err as Error).message })
+      }
+    }
     if (req.method === 'GET' && path === '/api/computer') {
       const computer = ctx.get<any>('computer')
       if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })

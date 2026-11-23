@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.0 — Vault 凭据
+
+### Added
+
+- `@jaryn/vault`：AES-256-GCM 加密、write-only 存储、元数据列表不含 secret
+- 填充代理 `vault.fill`：按 origin 校验后把账号/密码写入页面，模型与日志不见明文
+- 一次性 Secure Form：`/api/vault/secure-form` + `/secure/:token` 表单 → 直接入库
+- 审计（add/fill/rotate/remove/grant）、轮换、授权
+- CLI `jary vault add|list|remove|rotate|events`；Web `/api/vault*`
+- 56 个测试
+
+
 ## v0.2.0 — 云电脑
 
 ### Added

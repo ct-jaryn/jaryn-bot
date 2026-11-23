@@ -1,6 +1,6 @@
 # 08 · Vault 与凭据（Credentials）
 
-> 状态：**现行（待定包）**。目标：**模型永远看不到密码**，但能"用"密码。
+> 状态：**现行（v0.3 已实现：AES-GCM write-only、fill 代理、Secure Form、审计/轮换/授权；1Password/Bitwarden、卡支付未实现）**。目标：**模型永远看不到密码**，但能"用"密码。
 > 关联：[07 云电脑](07-cloud-computer.md) · [01 FR-16](01-functional-spec.md) · [06 客户端](06-clients-and-topology.md)
 
 ---

@@ -9,6 +9,7 @@ import { startWebServer } from '../src/index.ts'
 import { memoryPlugin } from '@jaryn/memory'
 import { schedulerPlugin } from '@jaryn/scheduler'
 import { computerPlugin } from '@jaryn/computer'
+import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
 
 async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {}) {
   const ctx = new Context({ scope: 'root' })
@@ -34,6 +35,8 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
   await ctx.mount(agentPlugin())
   await ctx.mount(schedulerPlugin())
   await ctx.mount(computerPlugin())
+  await ctx.mount(vaultPlugin())
+  await ctx.mount(vaultToolsPlugin())
   store.createSession('web', 'default', '/tmp')
   const server = await startWebServer(ctx, { port: 0, ...opts })
   return { ctx, store, server }
@@ -89,6 +92,30 @@ test('approval allow path executes tool', async () => {
     await waitFor(async () => store.events('web').some((e: any) => e.type === 'tool.result'))
     const toolResult = store.events('web').find((e: any) => e.type === 'tool.result')
     assert.equal(toolResult.data.ok, true)
+  } finally {
+    await server.close()
+    await ctx.dispose()
+  }
+})
+
+test('secure form stores a credential', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const created = await (await fetch(`${server.url}/api/vault/secure-form`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ origin: 'https://example.com', purpose: '登录' }),
+    })).json()
+    const page = await (await fetch(`${server.url}${created.url}`)).text()
+    assert.match(page, /secure form/)
+    const submit = await fetch(`${server.url}${created.url}`, {
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ username: 'me', password: 'pw' }).toString(),
+    })
+    assert.equal(submit.status, 200)
+    const list = await (await fetch(`${server.url}/api/vault`)).json()
+    assert.equal(list.items.length, 1)
+    assert.equal(list.items[0].username, 'me')
+    assert.equal(JSON.stringify(list.items).includes('pw'), false)
   } finally {
     await server.close()
     await ctx.dispose()

@@ -79,6 +79,16 @@
         "id": "computer-tools",
         "name": "@jaryn/computer/tools",
         "config": {}
+      },
+      {
+        "id": "vault",
+        "name": "@jaryn/vault",
+        "config": {}
+      },
+      {
+        "id": "vault-tools",
+        "name": "@jaryn/vault/tools",
+        "config": {}
       }
     ]
   }
