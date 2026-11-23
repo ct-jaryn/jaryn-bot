@@ -104,7 +104,9 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
       const digest = memory && memoryNs ? memory.digest({ ns: memoryNs, query: input.text, budgetTokens: 600 }) : ''
       const skills = ctx.get<{ catalog(limit?: number): string }>('skills')
       const skillCatalog = skills?.catalog?.(12) ?? ''
-      const system = [ctx.get<string>('systemPrompt') ?? DEFAULT_SYSTEM, digest, skillCatalog].filter(Boolean).join('\n\n')
+      const goals = ctx.get<{ promptSection(sessionId: string): string }>('goals')
+      const goalSection = goals?.promptSection?.(input.sessionId) ?? ''
+      const system = [ctx.get<string>('systemPrompt') ?? DEFAULT_SYSTEM, goalSection, digest, skillCatalog].filter(Boolean).join('\n\n')
       const req: ModelRequest = {
         messages: [{ role: 'system', content: system }, ...messages.filter((m) => m.role !== 'system')],
         tools: tools.list().map((t) => ({ name: t.name, description: t.description, schema: t.schema })),

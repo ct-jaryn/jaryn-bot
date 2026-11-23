@@ -30,6 +30,7 @@ import { devicesPlugin } from '@jaryn/devices'
 import { fsPlugin } from '@jaryn/tools-fs'
 import { webPlugin } from '@jaryn/tools-web'
 import { officePlugin } from '@jaryn/office'
+import { goalToolsPlugin, goalsPlugin } from '@jaryn/goals'
 
 const VERSION = '1.0.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -105,6 +106,8 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/agent-core/questions', questionsPlugin()],
     ['@jaryn/tools-web', webPlugin()],
     ['@jaryn/office', officePlugin()],
+    ['@jaryn/goals', goalsPlugin()],
+    ['@jaryn/goals/tools', goalToolsPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/memory', memoryPlugin()],
     ['@jaryn/memory/tools', memoryToolsPlugin()],
@@ -325,6 +328,35 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
       process.once('SIGTERM', stop)
     })
     return 0
+  }
+
+  if (cmd === 'goal') {
+    const { ctx } = await createRuntime(flags)
+    const goals = ctx.get<any>('goals')
+    const sessionId = String(flags.session ?? 'cli')
+    try {
+      if (sub === 'set') {
+        const objective = positional.join(' ').trim()
+        if (!objective) { console.error('usage: jary goal set "objective" [--session id] [--max-rounds n]'); return 2 }
+        console.log(JSON.stringify(goals.set({ sessionId, objective, maxRounds: flags['max-rounds'] ? Number(flags['max-rounds']) : undefined }), null, 2))
+        return 0
+      }
+      if (sub === 'list') { console.log(JSON.stringify(goals.list(), null, 2)); return 0 }
+      if (sub === 'run') {
+        const goal = flags.id ? goals.get(String(flags.id)) : goals.active(sessionId)
+        if (!goal) { console.error('no active goal'); return 1 }
+        console.log(JSON.stringify(await goals.run(goal.id), null, 2))
+        return 0
+      }
+      if (sub === 'pause' || sub === 'clear') {
+        const goal = flags.id ? goals.get(String(flags.id)) : goals.active(sessionId)
+        if (!goal) { console.error('no active goal'); return 1 }
+        console.log(JSON.stringify(goals.update(goal.id, { status: sub === 'clear' ? 'cleared' : 'paused' }), null, 2))
+        return 0
+      }
+      console.error('usage: jary goal set|list|run|pause|clear')
+      return 2
+    } finally { await ctx.dispose() }
   }
 
   if (cmd === 'usage') {
@@ -605,6 +637,7 @@ commands:
   vault add|list|remove|rotate|events
   tunnel --url ws://<server>/tunnel   client-side egress tunnel
   device pair-code|list|revoke        multi-device pairing
+  goal set|list|run|pause|clear       persistent multi-round goals
   usage [--session id]                token/cost totals
   audit [--limit n]                   audit log
   session list|replay <id>   inspect persisted sessions

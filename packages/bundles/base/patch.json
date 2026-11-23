@@ -178,6 +178,16 @@
         "id": "office",
         "name": "@jaryn/office",
         "config": {}
+      },
+      {
+        "id": "goals",
+        "name": "@jaryn/goals",
+        "config": {}
+      },
+      {
+        "id": "goals-tools",
+        "name": "@jaryn/goals/tools",
+        "config": {}
       }
     ]
   }

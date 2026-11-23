@@ -33,6 +33,7 @@
     "@jaryn/tunnel": "workspace:*",
     "@jaryn/devices": "workspace:*",
     "@jaryn/tools-web": "workspace:*",
-    "@jaryn/office": "workspace:*"
+    "@jaryn/office": "workspace:*",
+    "@jaryn/goals": "workspace:*"
   }
 }
