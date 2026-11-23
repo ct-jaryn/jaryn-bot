@@ -10,7 +10,7 @@
 | 版本 | 判定条件 |
 |---|---|
 | `v0.0.x` | 内部可用：P0/P1 验收通过（CLI + 真模型 + shell） |
-| `v0.1.0-alpha` | P2 验收通过（IM 通道 + 审批 + 文件），自己能天天用 |
+| `v0.1.0-alpha` | P2 验收通过（Web UI + 通知 + 审批 + 文件），自己能天天用 |
 | `v0.1.0-beta` | P4 验收通过（记忆 + 多 Bot + 主动任务） |
 | `v0.1.0` | P5 验收通过（插件体系 + 沙箱 + 文档 + 安全清单），陌生人可 `docker compose up` |
 
@@ -204,7 +204,7 @@ kernel ─► store ─► agent-core ─► llm-deepseek ─► channels ─►
 ## 10. 范围削减顺序（延期时从下往上砍）
 
 1. Pages 交互产物（本就不在 v0.1）
-2. 第二个 IM 通道（只留 Telegram）
+2. 第二个通知通道（只留 Telegram）
 3. RSS/邮件触发（只留 cron + webhook）
 4. office 产物（先只支持 md/csv/json）
 5. 插件索引/市场（只留 `plugin add`）
@@ -220,7 +220,7 @@ kernel ─► store ─► agent-core ─► llm-deepseek ─► channels ─►
 |---|---|---|
 | W1–W4 | P0 骨架 | 组合生效 + 回放通过 |
 | W5–W7 | P1 真模型 | CLI 能干真活 |
-| W8–W10 | P2 通道 | **v0.1.0-alpha** |
+| W8–W10 | P2 Web UI + 通知 | **v0.1.0-alpha** |
 | W11–W13 | P3 记忆 + 多 Bot | 两个 Bot 能协作 |
 | W14–W15 | P4 主动 | **v0.1.0-beta** |
 | W16–W19 | P5 硬化 | **v0.1.0** |
