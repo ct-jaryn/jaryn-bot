@@ -1,0 +1,14 @@
+{
+  "name": "@jaryn/cli",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": { "jary": "./src/index.ts" },
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@jaryn/kernel": "workspace:*",
+    "@jaryn/agent-core": "workspace:*",
+    "@jaryn/store-sqlite": "workspace:*",
+    "@jaryn/tools-shell": "workspace:*",
+    "@jaryn/testing": "workspace:*"
+  }
+}

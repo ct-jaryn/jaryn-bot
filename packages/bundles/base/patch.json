@@ -1,0 +1,11 @@
+[
+  {
+    "insert": [
+      { "id": "store", "name": "@jaryn/store-sqlite", "config": { "path": "data/jary.db" } },
+      { "id": "llm", "name": "@jaryn/testing/echo", "config": {} },
+      { "id": "tools", "name": "@jaryn/agent-core/tools", "config": {} },
+      { "id": "shell", "name": "@jaryn/tools-shell", "config": {} },
+      { "id": "agent", "name": "@jaryn/agent-core", "config": {} }
+    ]
+  }
+]

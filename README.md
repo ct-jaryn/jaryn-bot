@@ -2,7 +2,7 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-> **状态：设计阶段（v0.1 开发中）。** 当前仓库以设计文档为主，尚无可用代码。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
+> **状态：v0.1 P0 骨架已完成（开发中）。** 已有可运行的 kernel/store/agent/CLI/工具与 15 个测试；下一步 P1（真实模型 + 上下文装配）。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
 
 ---
 
@@ -61,7 +61,20 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 
 技术栈：TypeScript / Node 24 · pnpm monorepo · SQLite (WAL) + 事件溯源 · JSON-RPC over stdio/WSS · 默认 DeepSeek（兼容 OpenAI 协议）。
 
-当前处于 P0 之前；开发计划见 [docs/03-roadmap.md](docs/03-roadmap.md)。
+## 开发进度
+
+- ✅ **P0 骨架**：kernel（Context/Effect/Event/Loader）、SQLite store（事件回放）、agent 循环、`shell.run`、CLI、Fake provider、15 个测试
+- ⬜ **P1 真模型**：DeepSeek 适配、上下文装配、压缩、目录检索
+- ⬜ P2 Web UI / P3 记忆与多 Bot / P4 主动 / P5 硬化
+
+```bash
+node packages/cli/src/index.ts init
+node packages/cli/src/index.ts config print
+node packages/cli/src/index.ts chat --bot jaryn "hello"
+node packages/cli/src/index.ts doctor
+```
+
+开发计划见 [docs/03-roadmap.md](docs/03-roadmap.md)。
 
 ## 许可
 
