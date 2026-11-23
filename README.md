@@ -2,7 +2,7 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-> **状态：v0.4.0 已发布（连接器/邮箱/Pages/产物）。** 加入通用连接器（API Key/Bearer + OAuth URL 助手）、SMTP 发信、Pages 可交互页面（CSP 渲染/分享）、产物库；62 个测试通过。见 [RELEASE-v0.4.0.md](RELEASE-v0.4.0.md)。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
+> **状态：v0.5.0 已发布（Initiative + PWA）。** 加入主动提议（信号、打分、去重/限额、接受/拒绝/静音）、teach-a-task 技能草稿与保存、PWA（manifest + service worker）；66 个测试通过。见 [RELEASE-v0.5.0.md](RELEASE-v0.5.0.md)。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
 
 ---
 
@@ -71,7 +71,8 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 - ✅ **P5 硬化**：Docker 沙箱（可选）、MCP stdio 客户端、插件管理、`/metrics`、备份/恢复、untrusted 包装、Compose/Dockerfile、v0.1.0
 - ✅ **v0.2 云电脑**：Local Chrome / Docker 容器后端、`browser.goto/extract/click/type/screenshot`、看屏截图、任务级快照/恢复、`jary computer`、`/api/computer`
 - ✅ **v0.3 Vault**：AES-256-GCM write-only 存储、模型盲填（`vault.fill`）、一次性 Secure Form、审计/轮换/授权
-- ✅ **v0.4 连接器/邮箱/Pages**：通用 HTTP 连接器（API Key/Bearer、OAuth URL 助手）、SMTP 发信、Pages（表格/报告模板、CSP、分享 token）、产物库；62 个测试
+- ✅ **v0.4 连接器/邮箱/Pages**：通用 HTTP 连接器（API Key/Bearer、OAuth URL 助手）、SMTP 发信、Pages（表格/报告模板、CSP、分享 token）、产物库
+- ✅ **v0.5 Initiative + PWA**：主动提议（失败任务/停滞任务扫描、打分、去重、限额、接受建任务/拒绝/静音）、teach-a-task（草稿/保存/列表）、PWA manifest/service worker；66 个测试
 
 ```bash
 node packages/cli/src/index.ts init

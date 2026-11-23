@@ -85,6 +85,9 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     if (req.method === 'GET' && (path === '/' || path === '/index.html')) return sendFile(res, 'index.html', 'text/html')
     if (req.method === 'GET' && path === '/app.js') return sendFile(res, 'app.js', 'text/javascript')
     if (req.method === 'GET' && path === '/style.css') return sendFile(res, 'style.css', 'text/css')
+    if (req.method === 'GET' && path === '/manifest.json') return sendFile(res, 'manifest.json', 'application/manifest+json')
+    if (req.method === 'GET' && path === '/sw.js') return sendFile(res, 'sw.js', 'text/javascript')
+    if (req.method === 'GET' && path === '/icon.svg') return sendFile(res, 'icon.svg', 'image/svg+xml')
     if (req.method === 'GET' && path === '/healthz') {
       const store = ctx.get<any>('store')
       const checks = {
@@ -167,6 +170,41 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       if (!scheduler) return sendJson(res, 404, { error: 'scheduler not mounted' })
       const id = path.split('/')[3]
       return sendJson(res, 200, { runs: scheduler.runs(id) })
+    }
+    if (req.method === 'GET' && path === '/api/initiative') {
+      const initiative = ctx.get<any>('initiative')
+      if (!initiative) return sendJson(res, 404, { error: 'initiative not mounted' })
+      return sendJson(res, 200, { proposals: initiative.list(url.searchParams.get('botId') ?? undefined) })
+    }
+    if (req.method === 'POST' && path === '/api/initiative/scan') {
+      const initiative = ctx.get<any>('initiative')
+      if (!initiative) return sendJson(res, 404, { error: 'initiative not mounted' })
+      return sendJson(res, 200, { created: initiative.scan() })
+    }
+    if (req.method === 'POST' && /^\/api\/initiative\/[^/]+\/(accept|dismiss)$/.test(path)) {
+      const initiative = ctx.get<any>('initiative')
+      if (!initiative) return sendJson(res, 404, { error: 'initiative not mounted' })
+      const [, , , id, action] = path.split('/')
+      const body = await readBody(req).catch(() => ({}))
+      if (action === 'accept') {
+        const proposal = initiative.accept(id)
+        const tasks = ctx.get<any>('tasks')
+        const task = tasks ? tasks.create({ sessionId: `initiative:${proposal.id}`, title: proposal.title, body: proposal.reason }) : undefined
+        return sendJson(res, 200, { proposal, task })
+      }
+      return sendJson(res, 200, { proposal: initiative.dismiss(id, !!body.mute) })
+    }
+    if (req.method === 'GET' && path === '/api/teach') {
+      const teach = ctx.get<any>('teach')
+      if (!teach) return sendJson(res, 404, { error: 'teach not mounted' })
+      return sendJson(res, 200, { skills: teach.list() })
+    }
+    if (req.method === 'POST' && path === '/api/teach') {
+      const teach = ctx.get<any>('teach')
+      if (!teach) return sendJson(res, 404, { error: 'teach not mounted' })
+      const body = await readBody(req)
+      if (!body.title) return sendJson(res, 400, { error: 'title required' })
+      return sendJson(res, 201, teach.save({ title: body.title, markdown: body.markdown, steps: body.steps }))
     }
     if (req.method === 'GET' && path === '/api/pages') {
       const pages = ctx.get<any>('pages')

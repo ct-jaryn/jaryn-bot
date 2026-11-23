@@ -134,4 +134,6 @@ $('new-session').onclick = async () => {
   await selectSession(data.session.id)
 }
 
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
+
 loadSessions().then(() => selectSession(state.sessionId)).catch((err) => addMessage('error', err.message))

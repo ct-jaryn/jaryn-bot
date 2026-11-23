@@ -126,6 +126,16 @@
         "id": "email-tools",
         "name": "@jaryn/email/tools",
         "config": {}
+      },
+      {
+        "id": "initiative",
+        "name": "@jaryn/initiative",
+        "config": {}
+      },
+      {
+        "id": "initiative-tools",
+        "name": "@jaryn/initiative/tools",
+        "config": {}
       }
     ]
   }

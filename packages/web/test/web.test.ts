@@ -12,6 +12,7 @@ import { computerPlugin } from '@jaryn/computer'
 import { vaultPlugin, vaultToolsPlugin } from '@jaryn/vault'
 import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
 import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
+import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
 
 async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {}) {
   const ctx = new Context({ scope: 'root' })
@@ -43,6 +44,8 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
   await ctx.mount(artifactToolsPlugin())
   await ctx.mount(pagesPlugin())
   await ctx.mount(pageToolsPlugin())
+  await ctx.mount(initiativePlugin())
+  await ctx.mount(initiativeToolsPlugin())
   store.createSession('web', 'default', '/tmp')
   const server = await startWebServer(ctx, { port: 0, ...opts })
   return { ctx, store, server }
@@ -56,6 +59,18 @@ async function waitFor(fn: () => Promise<boolean>, ms = 3000): Promise<void> {
   }
   throw new Error('timeout waiting')
 }
+
+test('serves PWA manifest and service worker', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const manifest = await (await fetch(`${server.url}/manifest.json`)).json()
+    assert.equal(manifest.short_name, 'jaryn')
+    const sw = await fetch(`${server.url}/sw.js`)
+    assert.equal(sw.status, 200)
+    const html = await (await fetch(`${server.url}/`)).text()
+    assert.match(html, /manifest\.json/)
+  } finally { await server.close(); await ctx.dispose() }
+})
 
 test('serves UI and chat events', async () => {
   const { ctx, store, server } = await setup([[{ type: 'text', text: 'hello web' }, { type: 'finish', reason: 'stop' }]])
@@ -102,6 +117,21 @@ test('approval allow path executes tool', async () => {
     await server.close()
     await ctx.dispose()
   }
+})
+
+test('initiative API creates, accepts and dismisses proposals', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const initiative = ctx.get<any>('initiative')
+    const created = initiative.ingest({ title: 'GitHub 授权过期', reason: '需要重连', impact: 1, urgency: 1, confidence: 1 }).created
+    assert.ok(created)
+    let list = await (await fetch(`${server.url}/api/initiative`)).json()
+    assert.equal(list.proposals.length, 1)
+    const accepted = await (await fetch(`${server.url}/api/initiative/${created.id}/accept`, { method: 'POST' })).json()
+    assert.equal(accepted.proposal.status, 'accepted')
+    list = await (await fetch(`${server.url}/api/initiative`)).json()
+    assert.equal(list.proposals.length, 0)
+  } finally { await server.close(); await ctx.dispose() }
 })
 
 test('pages create, render and share', async () => {

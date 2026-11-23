@@ -24,9 +24,10 @@ import { artifactsPlugin, artifactToolsPlugin } from '@jaryn/artifacts'
 import { pagesPlugin, pageToolsPlugin } from '@jaryn/pages'
 import { connectorsPlugin } from '@jaryn/connectors'
 import { smtpPlugin, emailToolsPlugin } from '@jaryn/email'
+import { initiativePlugin, initiativeToolsPlugin } from '@jaryn/initiative'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.4.0'
+const VERSION = '0.5.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -116,6 +117,8 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/connectors', connectorsPlugin()],
     ['@jaryn/email', smtpPlugin()],
     ['@jaryn/email/tools', emailToolsPlugin()],
+    ['@jaryn/initiative', initiativePlugin()],
+    ['@jaryn/initiative/tools', initiativeToolsPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
 }

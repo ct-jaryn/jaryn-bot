@@ -28,6 +28,7 @@
     "@jaryn/artifacts": "workspace:*",
     "@jaryn/pages": "workspace:*",
     "@jaryn/connectors": "workspace:*",
-    "@jaryn/email": "workspace:*"
+    "@jaryn/email": "workspace:*",
+    "@jaryn/initiative": "workspace:*"
   }
 }

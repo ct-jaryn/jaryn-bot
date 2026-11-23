@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.0 — Initiative / teach-a-task / PWA
+
+### Added
+
+- `@jaryn/initiative`：信号摄入、打分（影响×紧急×置信−噪音）、阈值、24h 去重、每日限额、接受/拒绝/静音
+- 扫描源：失败/超预算 job、停滞任务（>3 天）
+- `@jaryn/initiative` 的 teach：步骤→SKILL.md 草稿、保存到 `$JARY_HOME/skills`、列表
+- Web：`/api/initiative`（list/scan/accept/dismiss）、`/api/teach`
+- PWA：`manifest.json`、`sw.js`（shell 缓存、API 不缓存）、图标
+- 66 个测试
+
+
 ## v0.4.0 — 连接器 / 邮箱 / Pages / 产物
 
 ### Added
