@@ -19,6 +19,7 @@
     "@jaryn/tools-fs": "workspace:*",
     "@jaryn/memory": "workspace:*",
     "@jaryn/bots": "workspace:*",
-    "@jaryn/tasks": "workspace:*"
+    "@jaryn/tasks": "workspace:*",
+    "@jaryn/scheduler": "workspace:*"
   }
 }

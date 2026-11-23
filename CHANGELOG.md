@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — P4 主动任务（已完成）
+
+### Added
+
+- `@jaryn/scheduler`：cron（5 字段 + 时区）、every、webhook（HMAC-SHA256）触发
+- job 模型：mission、预算（步数/工具数/墙钟/轮数）、投递会话、运行历史、启停
+- goal 多轮：`maxRounds` 循环直到 `DONE` 或预算截断
+- `stop-all`：暂停调度并取消运行中的 turn
+- Web API：`/api/jobs`、`/api/jobs/:id/run|enable|disable|runs`、`/hooks/:id`
+- CLI：`job add|list|run|enable|disable|remove|runs`、`stop-all`
+- 测试：cron 计算、job 执行、目标多轮、预算截断、webhook 签名，共 41 个
+
 ## Unreleased — P3 记忆 + 多 Bot（已完成）
 
 ### Added

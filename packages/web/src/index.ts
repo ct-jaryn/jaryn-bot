@@ -97,6 +97,44 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const session = store.createSession(id, body.botId ?? 'default', body.cwd ?? process.cwd())
       return sendJson(res, 201, { session })
     }
+    if (req.method === 'POST' && path.startsWith('/hooks/')) {
+      const id = path.slice('/hooks/'.length)
+      const scheduler = ctx.get<any>('scheduler')
+      if (!scheduler) return sendJson(res, 404, { error: 'scheduler not mounted' })
+      const raw = (await readRaw(req)).toString('utf8')
+      const signature = String(req.headers['x-jary-signature'] ?? '')
+      try {
+        const run = await scheduler.triggerWebhook(id, raw, signature)
+        return sendJson(res, 202, { run })
+      } catch (err) {
+        return sendJson(res, 401, { error: (err as Error).message })
+      }
+    }
+    if (req.method === 'GET' && path === '/api/jobs') {
+      const scheduler = ctx.get<any>('scheduler')
+      if (!scheduler) return sendJson(res, 404, { error: 'scheduler not mounted' })
+      return sendJson(res, 200, { jobs: scheduler.list(), runs: scheduler.runs() })
+    }
+    if (req.method === 'POST' && path === '/api/jobs') {
+      const scheduler = ctx.get<any>('scheduler')
+      if (!scheduler) return sendJson(res, 404, { error: 'scheduler not mounted' })
+      const body = await readBody(req)
+      if (!body.mission || !body.trigger) return sendJson(res, 400, { error: 'mission and trigger required' })
+      return sendJson(res, 201, { job: scheduler.add(body) })
+    }
+    if (req.method === 'POST' && /^\/api\/jobs\/[^/]+\/(run|enable|disable)$/.test(path)) {
+      const scheduler = ctx.get<any>('scheduler')
+      if (!scheduler) return sendJson(res, 404, { error: 'scheduler not mounted' })
+      const [, , , id, action] = path.split('/')
+      if (action === 'run') return sendJson(res, 200, { run: await scheduler.runNow(id) })
+      return sendJson(res, 200, { job: scheduler.enable(id, action === 'enable') })
+    }
+    if (req.method === 'GET' && /^\/api\/jobs\/[^/]+\/runs$/.test(path)) {
+      const scheduler = ctx.get<any>('scheduler')
+      if (!scheduler) return sendJson(res, 404, { error: 'scheduler not mounted' })
+      const id = path.split('/')[3]
+      return sendJson(res, 200, { runs: scheduler.runs(id) })
+    }
     if (req.method === 'GET' && path === '/api/memory') {
       const memory = ctx.get<any>('memory')
       if (!memory) return sendJson(res, 404, { error: 'memory not mounted' })
@@ -252,6 +290,17 @@ async function sendFile(res: ServerResponse, name: string, type: string): Promis
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
   res.end(JSON.stringify(body))
+}
+
+async function readRaw(req: IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = []
+  let size = 0
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length
+    if (size > 1_000_000) throw new Error('body too large')
+    chunks.push(chunk as Buffer)
+  }
+  return Buffer.concat(chunks)
 }
 
 async function readBody(req: IncomingMessage): Promise<any> {

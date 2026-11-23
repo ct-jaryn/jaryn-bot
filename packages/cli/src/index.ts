@@ -14,6 +14,7 @@ import { startWebServer } from '@jaryn/web'
 import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
 import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
 import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
+import { schedulerPlugin } from '@jaryn/scheduler'
 import { fsPlugin } from '@jaryn/tools-fs'
 
 const VERSION = '0.0.1'
@@ -92,6 +93,7 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/bots/tools', botToolsPlugin()],
     ['@jaryn/tasks', tasksPlugin()],
     ['@jaryn/tasks/tools', taskToolsPlugin()],
+    ['@jaryn/scheduler', schedulerPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
 }
@@ -264,10 +266,59 @@ async function main(): Promise<number> {
     }
   }
 
+  if (cmd === 'job') {
+    const { ctx } = await createRuntime(flags)
+    const scheduler = ctx.get<any>('scheduler')
+    try {
+      if (sub === 'add') {
+        const mission = positional.join(' ').trim() || String(flags.mission ?? '')
+        if (!mission) { console.error('usage: jary job add --cron "0 8 * * *" --tz Asia/Shanghai "mission"'); return 2 }
+        let trigger: any
+        if (typeof flags.cron === 'string') trigger = { kind: 'cron', expr: flags.cron, tz: String(flags.tz ?? 'UTC') }
+        else if (typeof flags.every === 'string') trigger = { kind: 'every', seconds: Number(flags.every) }
+        else if (typeof flags.webhook === 'string') trigger = { kind: 'webhook', path: flags.webhook, secret: flags.secret }
+        else { console.error('need --cron, --every or --webhook'); return 2 }
+        const job = scheduler.add({
+          botId: String(flags.bot ?? 'default'),
+          name: flags.name as string | undefined,
+          trigger,
+          mission,
+          budget: {
+            maxRounds: flags['max-rounds'] ? Number(flags['max-rounds']) : undefined,
+            maxSteps: flags['max-steps'] ? Number(flags['max-steps']) : undefined,
+          },
+        })
+        console.log(JSON.stringify(job, null, 2))
+        return 0
+      }
+      if (sub === 'list') { console.log(JSON.stringify(scheduler.list(), null, 2)); return 0 }
+      if (sub === 'run') { console.log(JSON.stringify(await scheduler.runNow(String(positional[0])), null, 2)); return 0 }
+      if (sub === 'enable' || sub === 'disable') { console.log(JSON.stringify(scheduler.enable(String(positional[0]), sub === 'enable'), null, 2)); return 0 }
+      if (sub === 'remove') { console.log(JSON.stringify({ removed: scheduler.remove(String(positional[0])) })); return 0 }
+      if (sub === 'runs') { console.log(JSON.stringify(scheduler.runs(positional[0]), null, 2)); return 0 }
+      console.error('usage: jary job add|list|run|enable|disable|remove|runs')
+      return 2
+    } finally {
+      await ctx.dispose()
+    }
+  }
+
+  if (cmd === 'stop-all') {
+    const { ctx } = await createRuntime(flags)
+    try {
+      ctx.get<any>('scheduler')?.stopAll?.()
+      console.log('stopped: scheduler paused, running turns cancelled')
+      return 0
+    } finally {
+      await ctx.dispose()
+    }
+  }
+
   if (cmd === 'serve') {
     const { ctx } = await createRuntime(flags)
     const port = Number(flags.port ?? 8787)
     const host = typeof flags.host === 'string' ? flags.host : '127.0.0.1'
+    ctx.get<any>('scheduler')?.start?.(5000)
     const web = await startWebServer(ctx, { port, host })
     console.log(`jary web: ${web.url}`)
     await new Promise<void>((resolve) => {
@@ -311,6 +362,8 @@ commands:
   serve [--port 8787]        start Web UI + API
   memory add|list|search|catalog|digest|forget|consolidate
   bot add|list|remove
+  job add|list|run|enable|disable|remove|runs
+  stop-all                   pause scheduler and cancel turns
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)

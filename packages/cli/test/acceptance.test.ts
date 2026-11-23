@@ -13,6 +13,7 @@ import { fsPlugin } from '@jaryn/tools-fs'
 import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
 import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
 import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
+import { schedulerPlugin } from '@jaryn/scheduler'
 
 const ROOT = resolve(import.meta.dirname, '../../..')
 const CLI = join(ROOT, 'packages/cli/src/index.ts')
@@ -46,6 +47,7 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/bots/tools', botToolsPlugin()],
     ['@jaryn/tasks', tasksPlugin()],
     ['@jaryn/tasks/tools', taskToolsPlugin()],
+    ['@jaryn/scheduler', schedulerPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
   const result = await loadComposition(ctx, rows, registry)

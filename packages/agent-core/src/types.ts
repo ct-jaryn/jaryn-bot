@@ -92,6 +92,7 @@ export interface BudgetLimits {
 
 export interface TurnInput {
   sessionId: string
+  limits?: Partial<BudgetLimits>
   text: string
   provenance?: 'owner' | 'bot' | 'system'
   actorId?: string

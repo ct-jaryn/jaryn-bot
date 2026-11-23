@@ -46,7 +46,7 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
 
   const session = store.getSession(input.sessionId) ?? store.createSession(input.sessionId, 'default', process.cwd())
   const memoryNs = memory ? `bot:${session.botId ?? 'default'}` : undefined
-  const limits = { ...DEFAULT_BUDGET, ...(ctx.get<Partial<BudgetLimits>>('budget') ?? {}) }
+  const limits = { ...DEFAULT_BUDGET, ...(ctx.get<Partial<BudgetLimits>>('budget') ?? {}), ...(input.limits ?? {}) }
   const contextCfg = ctx.get<{ windowTokens?: number; compactAt?: number }>('context') ?? {}
   const windowTokens = contextCfg.windowTokens ?? 128_000
   const compactAt = contextCfg.compactAt ?? 0.7
