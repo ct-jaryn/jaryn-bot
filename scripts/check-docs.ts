@@ -51,7 +51,7 @@ for (const file of files) {
 }
 
 // top-level layout checks
-for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'package.json', 'deploy/Dockerfile', 'deploy/docker-compose.yml', 'docs/README.md']) {
+for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'package.json', 'deploy/Dockerfile', 'deploy/docker-compose.yml', 'docs/README.md', 'desktop/package.json', 'desktop/main.cjs', '.github/workflows/desktop.yml']) {
   if (!existsSync(join(ROOT, required))) problems.push(`missing required file: ${required}`)
 }
 if (statSync(join(ROOT, 'docs')).isDirectory() && readdirSync(join(ROOT, 'docs')).filter((f) => f.endsWith('.md')).length < 15) {

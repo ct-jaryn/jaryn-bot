@@ -1,0 +1,29 @@
+{
+  "name": "@jaryn/desktop",
+  "version": "1.6.0",
+  "private": true,
+  "description": "jaryn-bot desktop shell (Electron wrapper for the self-hosted Web UI)",
+  "main": "main.cjs",
+  "author": "ct-jaryn",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder -p onTagOrDraft",
+    "test": "node --test test/*.test.cjs"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.jaryn.bot",
+    "productName": "jaryn",
+    "directories": { "output": "dist" },
+    "files": ["main.cjs", "preload.cjs", "setup.html", "config.cjs", "package.json"],
+    "mac": { "category": "public.app-category.productivity", "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }] },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
+    "linux": { "target": ["AppImage", "deb"], "category": "Utility" },
+    "publish": null
+  }
+}

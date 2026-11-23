@@ -12,12 +12,14 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node --test --test-concurrency=1 --test-timeout=40000 packages/*/test/*.test.ts scripts/*.test.ts",
+    "test": "node --test --test-concurrency=1 --test-timeout=40000 packages/*/test/*.test.ts scripts/*.test.ts desktop/test/*.test.cjs",
     "jary": "node packages/cli/src/index.ts",
     "check:docs": "node scripts/check-docs.ts",
     "check:deploy": "node scripts/check-deploy.ts",
-    "check": "node scripts/check-docs.ts && node scripts/check-deploy.ts && node evals/run.ts --dry",
+    "check": "node scripts/check-docs.ts && node scripts/check-deploy.ts && node scripts/check-desktop.ts && node evals/run.ts --dry",
     "eval": "node evals/run.ts",
-    "serve": "node packages/cli/src/index.ts serve --port 8787"
+    "serve": "node packages/cli/src/index.ts serve --port 8787",
+    "desktop": "cd desktop && npm start",
+    "check:desktop": "node scripts/check-desktop.ts"
   }
 }
