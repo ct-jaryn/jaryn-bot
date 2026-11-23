@@ -151,6 +151,9 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
             cwd: session.cwd,
           })
           content = typeof output === 'string' ? output : JSON.stringify(output)
+          if (/^(mcp|web|bot)\./.test(call.name)) {
+            content = `<untrusted>\n${content}\n</untrusted>`
+          }
           append('tool.result', { id: call.id, name: call.name, ok: true, output })
         } catch (err) {
           content = `error: ${(err as Error).message}`

@@ -7,6 +7,7 @@ import { FakeProvider } from '@jaryn/testing'
 import { Store, storePlugin } from '@jaryn/store-sqlite'
 import { startWebServer } from '../src/index.ts'
 import { memoryPlugin } from '@jaryn/memory'
+import { schedulerPlugin } from '@jaryn/scheduler'
 
 async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {}) {
   const ctx = new Context({ scope: 'root' })
@@ -30,6 +31,7 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
     async execute() { return 'ran' },
   })
   await ctx.mount(agentPlugin())
+  await ctx.mount(schedulerPlugin())
   store.createSession('web', 'default', '/tmp')
   const server = await startWebServer(ctx, { port: 0, ...opts })
   return { ctx, store, server }
@@ -85,6 +87,21 @@ test('approval allow path executes tool', async () => {
     await waitFor(async () => store.events('web').some((e: any) => e.type === 'tool.result'))
     const toolResult = store.events('web').find((e: any) => e.type === 'tool.result')
     assert.equal(toolResult.data.ok, true)
+  } finally {
+    await server.close()
+    await ctx.dispose()
+  }
+})
+
+test('health and metrics endpoints', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const health = await (await fetch(`${server.url}/healthz`)).json()
+    assert.equal(health.ok, true)
+    assert.equal(health.checks.store, true)
+    const metrics = await (await fetch(`${server.url}/metrics`)).text()
+    assert.match(metrics, /jaryn_sessions_total/)
+    assert.match(metrics, /jaryn_jobs_total/)
   } finally {
     await server.close()
     await ctx.dispose()

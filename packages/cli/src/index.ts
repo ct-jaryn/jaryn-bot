@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { Store as SqliteStore } from '@jaryn/store-sqlite'
 import { fileURLToPath } from 'node:url'
 import { Context, applyPatch, composeProfile, formatRows, loadComposition } from '@jaryn/kernel'
 import type { PatchOp, Plugin, Profile, Row } from '@jaryn/kernel'
@@ -15,9 +16,11 @@ import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
 import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
 import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
 import { schedulerPlugin } from '@jaryn/scheduler'
+import { dockerSandboxPlugin } from '@jaryn/sandbox-docker'
+import { mcpPlugin } from '@jaryn/mcp'
 import { fsPlugin } from '@jaryn/tools-fs'
 
-const VERSION = '0.0.1'
+const VERSION = '0.1.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -94,6 +97,8 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/tasks', tasksPlugin()],
     ['@jaryn/tasks/tools', taskToolsPlugin()],
     ['@jaryn/scheduler', schedulerPlugin()],
+    ['@jaryn/sandbox-docker', dockerSandboxPlugin()],
+    ['@jaryn/mcp', mcpPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
 }
@@ -127,8 +132,8 @@ async function createRuntime(flags: Record<string, string | boolean>) {
   return { ctx, rows, result }
 }
 
-async function main(): Promise<number> {
-  const { cmd, sub, flags, positional } = parseArgs(process.argv.slice(2))
+async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
+  const { cmd, sub, flags, positional } = parseArgs(argv)
   const home = homeDir(flags)
 
   if (cmd === 'version') {
@@ -266,6 +271,99 @@ async function main(): Promise<number> {
     }
   }
 
+  if (cmd === 'plugin') {
+    const home = homeDir(flags)
+    const profileFile = join(home, 'profile.json')
+    const rows = rowsFor(flags)
+    if (sub === 'list') {
+      for (const row of rows) console.log(`${row.disabled ? 'disabled' : 'enabled '} ${row.id}\t${row.name}`)
+      return 0
+    }
+    if (sub === 'doctor') {
+      const registry = allPlugins()
+      const provides = new Set<string>()
+      let bad = 0
+      for (const row of rows.filter((r) => !r.disabled)) {
+        const plugin = registry.get(row.name)
+        if (!plugin) { console.log(`MISSING ${row.id}: ${row.name}`); bad++; continue }
+        for (const key of plugin.provides ?? []) provides.add(key)
+      }
+      for (const row of rows.filter((r) => !r.disabled)) {
+        const plugin = registry.get(row.name)!
+        for (const key of plugin.inject ?? []) {
+          if (!provides.has(key)) { console.log(`MISSING DEP ${row.id}: needs ${key}`); bad++ }
+        }
+      }
+      console.log(bad ? `${bad} problem(s)` : 'ok: all plugins resolve')
+      return bad ? 1 : 0
+    }
+    if (sub === 'disable' || sub === 'enable') {
+      const id = positional[0]
+      if (!id) { console.error(`usage: jary plugin ${sub} <id>`); return 2 }
+      mkdirSync(home, { recursive: true })
+      if (!existsSync(profileFile)) await main([ 'init', '--home', home ])
+      const profile = existsSync(profileFile)
+        ? JSON.parse(readFileSync(profileFile, 'utf8'))
+        : { name: 'default', bundles: [], patches: [] }
+      profile.patches = profile.patches ?? []
+      profile.patches.push({ id, disabled: sub === 'disable' })
+      writeFileSync(profileFile, JSON.stringify(profile, null, 2))
+      console.log(`${sub}d ${id} (restart to apply)`)
+      return 0
+    }
+    if (sub === 'index') {
+      const file = join(home, 'plugin-index.json')
+      const data = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { sources: [] }
+      if (positional[0] === 'add' && positional[1]) {
+        data.sources.push(positional[1])
+        writeFileSync(file, JSON.stringify(data, null, 2))
+        console.log(`index source added: ${positional[1]}`)
+        return 0
+      }
+      console.log(JSON.stringify(data, null, 2))
+      return 0
+    }
+    console.error('usage: jary plugin list|doctor|enable|disable|index')
+    return 2
+  }
+
+  if (cmd === 'backup') {
+    const home = homeDir(flags)
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const out = typeof flags.out === 'string' ? resolve(flags.out) : join(home, 'backups', stamp)
+    mkdirSync(out, { recursive: true })
+    const rows = resolveHomePaths(rowsFor(flags), home)
+    const dbPath = String((rows.find((r) => r.id === 'store')?.config as any)?.path ?? join(home, 'data/jary.db'))
+    if (!existsSync(dbPath)) { console.error(`database not found: ${dbPath}`); return 1 }
+    const db = new SqliteStore(dbPath)
+    db.db.exec(`VACUUM INTO '${join(out, 'jary.db').replace(/'/g, "''")}'`)
+    db.close()
+    for (const dir of ['bots', 'artifacts', 'profiles', 'presets']) {
+      const src = join(home, dir)
+      if (existsSync(src)) cpSync(src, join(out, dir), { recursive: true })
+    }
+    writeFileSync(join(out, 'manifest.json'), JSON.stringify({ version: VERSION, createdAt: new Date().toISOString(), db: 'jary.db', note: 'Vault encrypted with master key; keep it separately' }, null, 2))
+    console.log(`backup: ${out}`)
+    return 0
+  }
+
+  if (cmd === 'restore') {
+    const home = homeDir(flags)
+    const from = typeof flags.from === 'string' ? resolve(flags.from) : ''
+    if (!from || !existsSync(join(from, 'jary.db'))) { console.error('usage: jary restore --from <backup-dir> --yes'); return 2 }
+    if (!flags.yes) { console.error('restore overwrites current data; re-run with --yes'); return 2 }
+    const rows = resolveHomePaths(rowsFor(flags), home)
+    const dbPath = String((rows.find((r) => r.id === 'store')?.config as any)?.path ?? join(home, 'data/jary.db'))
+    mkdirSync(dirname(dbPath), { recursive: true })
+    cpSync(join(from, 'jary.db'), dbPath)
+    for (const dir of ['bots', 'artifacts', 'profiles', 'presets']) {
+      const src = join(from, dir)
+      if (existsSync(src)) cpSync(src, join(home, dir), { recursive: true })
+    }
+    console.log(`restored to ${home} (restart services)`)
+    return 0
+  }
+
   if (cmd === 'job') {
     const { ctx } = await createRuntime(flags)
     const scheduler = ctx.get<any>('scheduler')
@@ -364,6 +462,9 @@ commands:
   bot add|list|remove
   job add|list|run|enable|disable|remove|runs
   stop-all                   pause scheduler and cancel turns
+  backup [--out <dir>]       backup sqlite + workspaces
+  restore --from <dir> --yes restore from backup
+  plugin list|doctor|enable|disable|index
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)

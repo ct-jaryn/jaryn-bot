@@ -84,7 +84,39 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     if (req.method === 'GET' && (path === '/' || path === '/index.html')) return sendFile(res, 'index.html', 'text/html')
     if (req.method === 'GET' && path === '/app.js') return sendFile(res, 'app.js', 'text/javascript')
     if (req.method === 'GET' && path === '/style.css') return sendFile(res, 'style.css', 'text/css')
-    if (req.method === 'GET' && path === '/healthz') return sendJson(res, 200, { ok: true })
+    if (req.method === 'GET' && path === '/healthz') {
+      const store = ctx.get<any>('store')
+      const checks = {
+        store: !!store,
+        agent: ctx.has('agent'),
+        memory: ctx.has('memory'),
+        scheduler: ctx.has('scheduler'),
+      }
+      const ok = Object.values(checks).every(Boolean)
+      return sendJson(res, ok ? 200 : 503, { ok, checks })
+    }
+    if (req.method === 'GET' && path === '/metrics') {
+      const store = ctx.get<any>('store')
+      const lines: string[] = []
+      if (store) {
+        const sessions = store.db.prepare('SELECT COUNT(*) AS c FROM sessions').get().c
+        lines.push(`jaryn_sessions_total ${sessions}`)
+        const events = store.db.prepare('SELECT type, COUNT(*) AS c FROM events GROUP BY type').all() as any[]
+        for (const e of events) lines.push(`jaryn_events_total{type="${e.type}"} ${e.c}`)
+      }
+      if (ctx.has('scheduler')) {
+        const scheduler = ctx.get<any>('scheduler')
+        lines.push(`jaryn_jobs_total ${scheduler.list().length}`)
+        lines.push(`jaryn_job_runs_total ${scheduler.runs().length}`)
+      }
+      if (ctx.has('memory')) {
+        const memory = ctx.get<any>('memory')
+        const stats = memory.stats('global')
+        lines.push(`jaryn_memory_total{ns="global"} ${stats.total}`)
+      }
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
+      return void res.end(lines.join('\n') + '\n')
+    }
 
     if (req.method === 'GET' && path === '/api/sessions') {
       const store = ctx.get<any>('store')

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.1.0 — 首个可用版本
+
+包含 P0–P5：
+- 运行时（插件内核/事件溯源/SQLite）、DeepSeek 流式与工具调用
+- Web UI（SSE、审批桥、附件、会话/文件 API）、`jary serve`
+- 记忆（FTS5、digest、目录检索、整理）、多 Bot 名册/任务板/消息总线
+- 主动任务（cron/every/webhook、预算、目标多轮、历史、stop-all）
+- 硬化：Docker 沙箱、MCP 客户端、插件管理、`/metrics`、备份/恢复、untrusted 包装
+- 47 个测试、Dockerfile/compose、发布说明 [RELEASE-v0.1.0.md](RELEASE-v0.1.0.md)
+
+
 ## Unreleased — P4 主动任务（已完成）
 
 ### Added

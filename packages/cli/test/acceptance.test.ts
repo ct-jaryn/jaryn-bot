@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { Context, applyPatch, composeProfile, loadComposition } from '@jaryn/kernel'
@@ -69,6 +69,31 @@ test('chat then session replay works', () => {
   assert.equal(replay.status, 0, replay.stderr)
   assert.match(replay.stdout, /input\.owner/)
   assert.match(replay.stdout, /turn\.ended/)
+})
+
+test('plugin disable persists into config print', () => {
+  const home = mkdtempSync(join(tmpdir(), 'jary-'))
+  const disable = spawnSync(process.execPath, [CLI, 'plugin', 'disable', 'shell', '--home', home], { encoding: 'utf8' })
+  assert.equal(disable.status, 0, disable.stderr)
+  const print = spawnSync(process.execPath, [CLI, 'config', 'print', '--home', home], { encoding: 'utf8' })
+  assert.match(print.stdout, /shell: @jaryn\/tools-shell \(disabled\)/)
+  const doctor = spawnSync(process.execPath, [CLI, 'plugin', 'doctor', '--home', home], { encoding: 'utf8' })
+  assert.equal(doctor.status, 0, doctor.stdout + doctor.stderr)
+})
+
+test('backup and restore roundtrip', () => {
+  const home = mkdtempSync(join(tmpdir(), 'jary-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'jary-w-'))
+  spawnSync(process.execPath, [CLI, 'chat', '--home', home, 'hello'], { cwd, encoding: 'utf8' })
+  const out = mkdtempSync(join(tmpdir(), 'jary-bak-'))
+  const backup = spawnSync(process.execPath, [CLI, 'backup', '--home', home, '--out', out], { encoding: 'utf8' })
+  assert.equal(backup.status, 0, backup.stderr)
+  assert.ok(existsSync(join(out, 'jary.db')))
+  const home2 = mkdtempSync(join(tmpdir(), 'jary-'))
+  const restore = spawnSync(process.execPath, [CLI, 'restore', '--home', home2, '--from', out, '--yes'], { encoding: 'utf8' })
+  assert.equal(restore.status, 0, restore.stderr)
+  const list = spawnSync(process.execPath, [CLI, 'session', 'list', '--home', home2], { cwd, encoding: 'utf8' })
+  assert.match(list.stdout, /cli\tdefault/)
 })
 
 test('doctor exits 0', () => {

@@ -20,6 +20,8 @@
     "@jaryn/memory": "workspace:*",
     "@jaryn/bots": "workspace:*",
     "@jaryn/tasks": "workspace:*",
-    "@jaryn/scheduler": "workspace:*"
+    "@jaryn/scheduler": "workspace:*",
+    "@jaryn/sandbox-docker": "workspace:*",
+    "@jaryn/mcp": "workspace:*"
   }
 }

@@ -2,7 +2,7 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-> **状态：v0.1 P4 完成（开发中）。** 已有调度器（cron/every/webhook + HMAC）、job 预算与目标多轮、运行历史、熔断；41 个测试通过；下一步 P5（硬化）。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
+> **状态：v0.1.0 已发布。** 运行时 + Web UI + 记忆 + 多 Bot + 主动任务 + 硬化（Docker 沙箱、MCP、插件管理、指标、备份）；47 个测试通过。见 [RELEASE-v0.1.0.md](RELEASE-v0.1.0.md)。目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。
 
 ---
 
@@ -67,8 +67,8 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 - ✅ **P1 真模型**：DeepSeek 流式 + 原生 tool-calling + 重试；`fs.list/glob/grep` 目录检索；上下文压缩；`cancelTurn` 取消；10 任务评测脚本（需 `DEEPSEEK_API_KEY`）
 - ✅ **P2 Web UI**：单页 UI（会话列表/流式聊天/工具步骤/审批卡/附件上传）、SSE 事件流、审批桥（允许/拒绝/超时）、会话与文件 API、`jary serve`
 - ✅ **P3 记忆 + 多 Bot**：SQLite+FTS5 记忆（bigram 分词、≤600 token digest、0 LLM 写入、目录检索、整理/遗忘）、记忆工具、Bot 名册、任务板（CAS）、Bot 消息总线（hop≤2）、CLI `memory`/`bot`
-- ✅ **P4 主动任务**：cron/every/webhook 触发、job 预算与目标多轮、运行历史、`stop-all` 熔断、`/hooks/:id` HMAC；41 个测试
-- ⬜ P5 硬化（容器沙箱、MCP、插件管理、指标、备份、安全用例、文档）
+- ✅ **P4 主动任务**：cron/every/webhook 触发、job 预算与目标多轮、运行历史、`stop-all` 熔断、`/hooks/:id` HMAC
+- ✅ **P5 硬化**：Docker 沙箱（可选）、MCP stdio 客户端、插件管理（list/doctor/enable/disable/index）、`/metrics`、备份/恢复、外部工具输出 untrusted 包装、Compose/Dockerfile、v0.1.0 发布；47 个测试
 
 ```bash
 node packages/cli/src/index.ts init
@@ -92,6 +92,11 @@ node packages/cli/src/index.ts job add --cron "0 8 * * *" --tz Asia/Shanghai --n
 node packages/cli/src/index.ts job list
 node packages/cli/src/index.ts job run <id>
 node packages/cli/src/index.ts stop-all
+
+# 运维
+node packages/cli/src/index.ts backup --out ./backups/now
+node packages/cli/src/index.ts plugin doctor
+node packages/cli/src/index.ts plugin disable shell
 ```
 
 开发计划见 [docs/03-roadmap.md](docs/03-roadmap.md)。
