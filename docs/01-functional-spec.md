@@ -105,12 +105,12 @@
 
 | 工具 | 行为 | 风险 | 默认 |
 |---|---|---|---|
-| `fs.read` / `list` / `search` | 读文件/列目录/正则搜索 | read | 允许 |
+| `fs.read` / `fs.list` / `fs.glob` / `fs.grep` | 读文件/列目录/路径匹配/内容检索（结果上限 200/200/50，忽略 `.git/node_modules`） | read | 允许 |
 | `fs.write` / `edit` | 写/改文件（限 workspace） | write | 允许（workspace 内） |
 | `shell.run` | 执行命令（argv 数组、cwd、超时、输出截断） | execute | **ask** |
 | `web.search` | 搜索，返回答案 + 来源 | network | 允许 |
 | `web.fetch` | 抓取页面为文本（SSRF 防护） | network | 允许 |
-| `memory.remember/search/forget/list` | 记忆读写（设计见 [13](13-memory-module.md)） | write | 允许 |
+| `memory.remember/search/forget/list/catalog/read` | 记忆读写 + 目录浏览（设计见 [13](13-memory-module.md)） | write | 允许 |
 | `skill.list/load` | 技能目录/加载 | read | 允许 |
 | `task.create/claim/complete/list` | 任务板 | write | 允许 |
 | `bot.send_message/list_agents/spawn_worker` | Bot 协作 | external | **ask** |
@@ -158,6 +158,7 @@
 | Digest | 每轮 ≤600 token；无命中则不注入 |
 | 写入 | 显式 `/remember`、`memory.remember`，或规则抽取进候选池（**0 LLM/轮**） |
 | 整理 | 每天 1 次，≤50 条候选、≤2K token（可关，纯规则去重） |
+| 目录浏览 | `memory.catalog`（≤200 token）→ `memory.list`（≤20 条）→ `memory.read`（单条）；按 kind/tag 过滤，0 LLM |
 | 查看/遗忘 | `/memory`、`/memory global`、`/forget <词>`、`/remember <文本>` |
 | 作用域 | `global` 与 `bot:<id>`，跨 Bot 不共享（单 owner，无 team） |
 

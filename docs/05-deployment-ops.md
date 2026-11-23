@@ -87,6 +87,8 @@ JARY_HOME=/data
 JARY_LOG_LEVEL=info
 ```
 
+镜像内置 **ripgrep**（目录内容检索用，约 2MB）；没有时回退到内置扫描（限制深度与文件数），不影响启动。
+
 **首次启动**：`docker compose up -d` → `docker compose exec jary jary doctor` → 浏览器打开反代地址进 Web UI，给 Bot 发第一条消息。
 
 ---

@@ -75,6 +75,7 @@
 - [ ] 上下文预算分配（system ≤ 15%、memory digest ≤600 token、history 动态）
 - [ ] 压缩：摘要写 `memory.consolidated`，保留最近 6 轮
 - [ ] 工具输出 >32KB 截断 + spill 文件路径
+- [ ] 目录检索：`fs.list/glob/grep` + ignore 规则 + 结果上限 + 单轮缓存
 - [ ] `/stop` 在 2s 内生效（provider/工具/子进程）
 - [ ] 成本记录到 `usage` 表
 - [ ] 评测集跑通 ≥7/10
@@ -121,6 +122,7 @@
 
 **任务清单**
 - [ ] 记忆模块：[13](13-memory-module.md) 的表/FTS/bigram 分词 + digest（≤600 token）
+- [ ] 记忆目录检索：catalog/list/read + tags
 - [ ] `/memory` `/forget` `/remember`；规则抽取（0 LLM/轮）
 - [ ] 整理任务（cron 03:00，≤1 次 LLM/天、≤2K token）与审计
 - [ ] 每 Bot 子 Context + isolate 服务

@@ -55,6 +55,26 @@
 
 ---
 
+### 3.1 目录检索（catalog：先看目录，再取条目）
+
+记忆除了"按内容找"（FTS），还支持**按目录浏览**——像文件树一样逐层下钻，避免把全库塞进上下文：
+
+```
+ns（global / bot:<id>）
+ └─ kind（fact / preference / rule / episode / skill）
+     └─ key 或 tag（project:jaryn / person:alice / topic:deploy）
+```
+
+| 工具 | 返回 | 预算 |
+|---|---|---|
+| `memory.catalog(ns?)` | 每个 kind 的条数 + 最近 3 条标题 | **≤200 token** |
+| `memory.list({ns, kind, key?, tag?, limit≤20})` | id + 80 字摘要 | ≤300 token |
+| `memory.read(id)` | 单条全文（≤500 字） | ≤200 token |
+
+- 用法：用户问"你记得我什么？" → `catalog` → 选类别 → `list` → 需要时 `read`；模型不用把全库放进 prompt。
+- 纯 SQL 查询，**0 LLM**；`key`/`tag` 有索引，列表查询 <2ms。
+- 与 FTS 互补：**目录用于浏览/导航，FTS 用于按内容命中**；digest 仍只放 pinned + top-k，不因目录变大。
+
 ## 4. 数据模型（SQLite）
 
 ```sql
@@ -101,6 +121,13 @@ CREATE TABLE memory_runs (
 
 -- 可选：同义词/别名（手工维护，提升召回，避免 embedding）
 CREATE TABLE memory_aliases (term TEXT PRIMARY KEY, alias TEXT NOT NULL);
+
+-- 目录检索：标签（key 放 memories.key；tag 多对多）
+CREATE TABLE memory_tags (
+  memory_id TEXT NOT NULL, tag TEXT NOT NULL,
+  PRIMARY KEY (memory_id, tag)
+);
+CREATE INDEX memory_tags_tag ON memory_tags(tag);
 ```
 
 **容量上限**：`memories` ≤ 5000 行、总文本 ≤ 8MB；超限按 §7 的得分淘汰（先归档，再删）。
@@ -168,6 +195,8 @@ L1 pinned（≤200 token，稳定排序）
 + 未完成目标/待办一行（若有）
 = digest（≤600 token）→ 拼进 system 段
 ```
+
+**目录检索路径**（浏览而非搜索）：`memory.catalog` → `memory.list` → `memory.read`；每次调用独立预算，结果不自动拼进 digest，只有模型主动调用才占 token。
 
 **排序细节**
 
@@ -256,6 +285,8 @@ interface EmbeddingProvider { embed(texts: string[]): Promise<Float32Array[]> }
 - [ ] 每日整理：≤1 次 LLM、≤2K token；失败不阻塞对话
 - [ ] 密钥/卡号被拒绝写入
 - [ ] 跨 Bot 查不到彼此记忆
+- [ ] 目录检索：catalog ≤200 token、list ≤300、read 单条；按 kind/tag 过滤正确
+- [ ] `你记得我什么？` 走 catalog → list，而不是注入全库
 - [ ] 极简模式（关 LLM）仍可去重入库
 - [ ] DB 增长符合预估（30 天实测 <0.1MB）
 
@@ -267,7 +298,7 @@ interface EmbeddingProvider { embed(texts: string[]): Promise<Float32Array[]> }
 |---|---|
 | D1 | 分词器 + 表/FTS + 读写仓库（单测） |
 | D2 | 写入：显式/规则抽取/候选池；`/remember` `/forget` `/memory` |
-| D3 | 读取：digest 组装 + 排序 + 去重 + 预算截断 |
+| D3 | 读取：digest 组装 + 排序 + 去重 + 预算截断；目录检索 catalog/list/read |
 | D4 | 整理任务：去重/合并/同键覆盖/衰减；memory_runs |
 | D5 | 压测（1 万条）、指标、边界（无命中/中文/长文本） |
 | D6 | 与上下文装配/压缩集成；Gate 验收 |

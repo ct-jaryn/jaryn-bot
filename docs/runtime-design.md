@@ -433,10 +433,10 @@ export interface ToolContext {
 
 | 命名空间 | 工具 | 风险 |
 |---|---|---|
-| `fs` | `read` `write` `edit` `list` `search`（ripgrep） | read/write |
+| `fs` | `read` `write` `edit` `list` `glob` `grep`（ripgrep；忽略规则与结果上限） | read/write |
 | `shell` | `run`（可配 timeout、输出截断、进程组杀） | execute |
 | `web` | `search` `fetch`（SSRF 防护、大小/时间限制） | network |
-| `memory` | `remember` `search` `forget` `list` | write |
+| `memory` | `remember` `search` `forget` `list` `catalog` `read` | write |
 | `skill` | `list` `load` | read |
 | `task` | `create` `claim` `complete` `list` | write |
 | `bot` | `send_message` `list_agents` `spawn_worker`（子 agent） | external |

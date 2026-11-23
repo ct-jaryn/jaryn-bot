@@ -58,6 +58,7 @@
 | 私有化 | 单租户自托管；数据与密钥本地；出网仅模型（IM/连接器暂不做） |
 | 许可 | AGPL-3.0 + 商业双许可（网络使用须公开源码；闭源商业需授权） |
 | 记忆 | 每轮 digest ≤600 token；整理 ≤1 次 LLM/天（≤2K token）；默认无向量库/embedding；DB <1MB/年 |
+| 目录检索 | 文件：`fs.list/glob/grep`（上限 200/200/50，忽略 .git/node_modules）；记忆：`memory.catalog` ≤200 token |
 
 ## 四、维护约定
 
