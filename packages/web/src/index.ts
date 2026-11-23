@@ -181,7 +181,10 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const body = await readBody(req)
       const store = ctx.get<any>('store')
       const id = body.id ?? `s_${Date.now().toString(36)}`
-      const session = store.createSession(id, body.botId ?? 'default', body.cwd ?? process.cwd())
+      const botId = body.botId ?? 'default'
+      const bots = ctx.get<any>('bots')
+      const cwd = body.cwd ?? bots?.workspaceFor?.(botId, process.cwd()) ?? process.cwd()
+      const session = store.createSession(id, botId, cwd)
       return sendJson(res, 201, { session })
     }
     if (req.method === 'POST' && path.startsWith('/hooks/')) {
@@ -569,6 +572,30 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const cancelled = agent?.cancel?.(sessionId) ?? false
       return sendJson(res, 200, { cancelled })
     }
+    if (req.method === 'GET' && path === '/api/usage') {
+      const store = ctx.get<any>('store')
+      if (!store?.usageTotal) return sendJson(res, 404, { error: 'usage unavailable' })
+      return sendJson(res, 200, store.usageTotal(url.searchParams.get('sessionId') ?? undefined))
+    }
+    if (req.method === 'GET' && path === '/api/audit') {
+      const store = ctx.get<any>('store')
+      if (!store?.auditLog) return sendJson(res, 404, { error: 'audit unavailable' })
+      return sendJson(res, 200, { entries: store.auditLog(Number(url.searchParams.get('limit') ?? 50)) })
+    }
+    if (req.method === 'GET' && path === '/api/rules') {
+      const rules = ctx.get<any>('approvalRules')
+      return sendJson(res, 200, { rules: rules?.rules?.list?.() ?? [] })
+    }
+    if (req.method === 'POST' && path === '/api/rules') {
+      const rules = ctx.get<any>('approvalRules')
+      if (!rules?.rules) return sendJson(res, 404, { error: 'rules unavailable' })
+      const body = await readBody(req)
+      if (!body.effect || !['allow', 'ask', 'deny'].includes(body.effect)) return sendJson(res, 400, { error: 'effect must be allow|ask|deny' })
+      rules.rules.addRule(body)
+      const store = ctx.get<any>('store')
+      store?.audit?.('rule.added', body.tool ?? body.risk?.join(',') ?? '*', body)
+      return sendJson(res, 201, { rules: rules.rules.list() })
+    }
     if (req.method === 'GET' && path === '/api/questions') {
       return sendJson(res, 200, { pending: [...pendingQuestions.keys()] })
     }
@@ -586,7 +613,11 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       if (!text) return sendJson(res, 400, { error: 'text required' })
       const store = ctx.get<any>('store')
       const sessionId = String(body.sessionId ?? 'web')
-      if (!store.getSession(sessionId)) store.createSession(sessionId, 'default', body.cwd ?? process.cwd())
+      if (!store.getSession(sessionId)) {
+        const bots = ctx.get<any>('bots')
+        const botId = String(body.botId ?? 'default')
+        store.createSession(sessionId, botId, body.cwd ?? bots?.workspaceFor?.(botId, process.cwd()) ?? process.cwd())
+      }
       const agent = ctx.get<any>('agent')
       res.writeHead(202, { 'content-type': 'application/json' })
       res.end(JSON.stringify({ accepted: true, sessionId }))

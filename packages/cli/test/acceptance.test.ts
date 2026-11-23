@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { Context, applyPatch, composeProfile, loadComposition } from '@jaryn/kernel'
-import { agentPlugin, questionsPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
+import { agentPlugin, approvalPlugin, pricingPlugin, questionsPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
 import { storePlugin } from '@jaryn/store-sqlite'
 import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
@@ -48,6 +48,8 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/store-sqlite', storePlugin()],
     ['@jaryn/testing/echo', echoProviderPlugin()],
     ['@jaryn/agent-core/tools', toolRegistryPlugin()],
+    ['@jaryn/agent-core/approvals', approvalPlugin()],
+    ['@jaryn/agent-core/pricing', pricingPlugin()],
     ['@jaryn/agent-core/questions', questionsPlugin()],
     ['@jaryn/tools-web', webPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],

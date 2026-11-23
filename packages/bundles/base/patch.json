@@ -161,6 +161,18 @@
         "id": "scheduler-tools",
         "name": "@jaryn/scheduler/tools",
         "config": {}
+      },
+      {
+        "id": "approvals",
+        "name": "@jaryn/agent-core/approvals",
+        "config": {
+          "rules": []
+        }
+      },
+      {
+        "id": "pricing",
+        "name": "@jaryn/agent-core/pricing",
+        "config": {}
       }
     ]
   }

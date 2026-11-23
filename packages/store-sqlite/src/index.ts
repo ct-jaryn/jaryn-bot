@@ -50,6 +50,39 @@ CREATE TABLE IF NOT EXISTS events (
   data TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS events_session ON events(session_id, seq);
+CREATE TABLE IF NOT EXISTS usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL,
+  turn_id TEXT,
+  provider TEXT,
+  model TEXT,
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+  cost_usd REAL NOT NULL DEFAULT 0,
+  ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS usage_session ON usage(session_id, ts);
+CREATE TABLE IF NOT EXISTS approvals (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  turn_id TEXT,
+  tool TEXT NOT NULL,
+  risk TEXT NOT NULL,
+  args_json TEXT NOT NULL,
+  status TEXT NOT NULL,
+  resolver TEXT,
+  requested_at INTEGER NOT NULL,
+  resolved_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts INTEGER NOT NULL,
+  actor TEXT,
+  action TEXT NOT NULL,
+  target TEXT,
+  detail_json TEXT
+);
 `
 
 export interface EventInput {
@@ -149,6 +182,44 @@ export class Store {
   /** Rebuild the session by replaying its event log. */
   replay(sessionId: string): StoredEvent[] {
     return this.events(sessionId)
+  }
+
+  recordUsage(input: {
+    sessionId: string; turnId?: string; provider?: string; model?: string;
+    inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; costUsd?: number
+  }): void {
+    this.db.prepare(
+      `INSERT INTO usage(session_id, turn_id, provider, model, input_tokens, output_tokens, cache_read_tokens, cost_usd, ts)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(input.sessionId, input.turnId ?? null, input.provider ?? null, input.model ?? null,
+      input.inputTokens ?? 0, input.outputTokens ?? 0, input.cacheReadTokens ?? 0, input.costUsd ?? 0, Date.now())
+  }
+
+  usageTotal(sessionId?: string): { inputTokens: number; outputTokens: number; cacheReadTokens: number; costUsd: number } {
+    const row = (sessionId
+      ? this.db.prepare('SELECT SUM(input_tokens) i, SUM(output_tokens) o, SUM(cache_read_tokens) c, SUM(cost_usd) d FROM usage WHERE session_id = ?').get(sessionId)
+      : this.db.prepare('SELECT SUM(input_tokens) i, SUM(output_tokens) o, SUM(cache_read_tokens) c, SUM(cost_usd) d FROM usage').get()) as any
+    return { inputTokens: row?.i ?? 0, outputTokens: row?.o ?? 0, cacheReadTokens: row?.c ?? 0, costUsd: row?.d ?? 0 }
+  }
+
+  recordApproval(input: {
+    id: string; sessionId: string; turnId?: string; tool: string; risk: string;
+    args: unknown; status: string; resolver?: string; requestedAt: number
+  }): void {
+    this.db.prepare(
+      `INSERT OR REPLACE INTO approvals(id, session_id, turn_id, tool, risk, args_json, status, resolver, requested_at, resolved_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(input.id, input.sessionId, input.turnId ?? null, input.tool, input.risk, JSON.stringify(input.args ?? null),
+      input.status, input.resolver ?? null, input.requestedAt, input.status === 'pending' ? null : Date.now())
+  }
+
+  audit(action: string, target?: string, detail?: unknown, actor?: string): void {
+    this.db.prepare('INSERT INTO audit(ts, actor, action, target, detail_json) VALUES (?, ?, ?, ?, ?)')
+      .run(Date.now(), actor ?? null, action, target ?? null, detail ? JSON.stringify(detail) : null)
+  }
+
+  auditLog(limit = 50): any[] {
+    return this.db.prepare('SELECT * FROM audit ORDER BY id DESC LIMIT ?').all(limit)
   }
 
   setSessionStatus(id: string, status: string): void {

@@ -12,7 +12,7 @@ import type {
   TurnResult,
 } from './types.ts'
 import type { ToolRegistry } from './tools.ts'
-import type { MemoryService } from './types.ts'
+import type { MemoryService, Pricing } from './types.ts'
 import { newApprovalId } from './approvals.ts'
 import type { ApprovalService } from './approvals.ts'
 
@@ -40,6 +40,8 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
   const llm = ctx.get<Provider>('llm')
   const approvals = ctx.get<ApprovalService>('approvals')
   const memory = ctx.get<MemoryService>('memory')
+  const pricing = ctx.get<Pricing>('pricing')
+  const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, costUsd: 0 }
   if (!store) throw new Error('runTurn needs a store service')
   if (!tools) throw new Error('runTurn needs a tools service')
   if (!llm) throw new Error('runTurn needs an llm service')
@@ -94,7 +96,9 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
 
     while (true) {
       if (controller.signal.aborted) { finishReason = 'aborted'; break }
+      if (limits.maxCostUsd !== undefined && usage.costUsd > limits.maxCostUsd) { finishReason = 'budget'; break }
       if (++steps > limits.maxSteps) { finishReason = 'max-steps'; break }
+      if (limits.maxCostUsd !== undefined && usage.costUsd > limits.maxCostUsd) { finishReason = 'budget'; break }
       if (calledTools.length > limits.maxToolCalls) { finishReason = 'max-tool-calls'; break }
 
       const digest = memory && memoryNs ? memory.digest({ ns: memoryNs, query: input.text, budgetTokens: 600 }) : ''
@@ -112,6 +116,15 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
         input.onDelta?.(delta)
         if (delta.type === 'text') stepText += delta.text
         if (delta.type === 'tool_call') calls.push(delta.call)
+        if (delta.type === 'usage') {
+          usage.inputTokens += delta.usage.inputTokens ?? 0
+          usage.outputTokens += delta.usage.outputTokens ?? 0
+          usage.cacheReadTokens += delta.usage.cacheReadTokens ?? 0
+          if (pricing) {
+            const inTok = Math.max(0, (delta.usage.inputTokens ?? 0) - (delta.usage.cacheReadTokens ?? 0))
+            usage.costUsd += (inTok * (pricing.inputPer1M ?? 0) + (delta.usage.cacheReadTokens ?? 0) * (pricing.cacheReadPer1M ?? 0) + (delta.usage.outputTokens ?? 0) * (pricing.outputPer1M ?? 0)) / 1_000_000
+          }
+        }
       }
       append('model.response', { text: stepText, calls, provider: llm.name })
 
@@ -143,8 +156,16 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
               args: call.args,
             }
             append('approval.requested', req)
+            store.recordApproval?.({
+              id: req.id, sessionId: input.sessionId, turnId, tool: req.toolName, risk: req.risk,
+              args: req.args, status: 'pending', requestedAt: Date.now(),
+            })
             const decision = await approvals.request(req, controller.signal)
             append('approval.resolved', { id: req.id, decision })
+            store.recordApproval?.({
+              id: req.id, sessionId: input.sessionId, turnId, tool: req.toolName, risk: req.risk,
+              args: req.args, status: decision, resolver: 'web', requestedAt: Date.now(),
+            })
             if (decision !== 'allowed') throw new Error('not-approved')
           }
           const output = await tool.execute(call.args, {
@@ -172,6 +193,12 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
     active.delete(input.sessionId)
     input.signal?.removeEventListener('abort', onAbort)
     store.setSessionStatus(input.sessionId, 'idle')
+    store.recordUsage?.({
+      sessionId: input.sessionId, turnId, provider: llm.name,
+      inputTokens: usage.inputTokens, outputTokens: usage.outputTokens,
+      cacheReadTokens: usage.cacheReadTokens, costUsd: usage.costUsd,
+    })
+    store.audit?.('turn.ended', input.sessionId, { turnId, reason: finishReason, costUsd: usage.costUsd, steps })
     append('turn.ended', { turnId, reason: finishReason, steps, toolCalls: calledTools.length, ms: Date.now() - started })
   }
 

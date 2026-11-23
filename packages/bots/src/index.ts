@@ -69,6 +69,20 @@ export class BotsService {
     return (this.db.prepare('SELECT * FROM bots ORDER BY created_at').all() as any[]).map(toBot)
   }
 
+  edit(id: string, patch: { name?: string; persona?: string; workspace?: string; budget?: Record<string, number> }): BotRecord {
+    const bot = this.get(id)
+    if (!bot) throw new Error(`bot not found: ${id}`)
+    this.db.prepare('UPDATE bots SET name = ?, persona = ?, workspace = ?, budget_json = ? WHERE id = ?')
+      .run(patch.name ?? bot.name, patch.persona ?? bot.persona, patch.workspace ?? bot.workspace,
+        JSON.stringify(patch.budget ?? bot.budget), id)
+    return this.get(id)!
+  }
+
+  /** Session cwd for a bot: its workspace, or the given fallback. */
+  workspaceFor(id: string, fallback = process.cwd()): string {
+    return this.get(id)?.workspace ?? fallback
+  }
+
   remove(id: string): boolean {
     return this.db.prepare('DELETE FROM bots WHERE id = ?').run(id).changes > 0
   }
@@ -136,6 +150,46 @@ export function botToolsPlugin(): Plugin {
           schema: { type: 'object', properties: {} },
           async execute() {
             return bots.list().map((b) => ({ id: b.id, name: b.name, workspace: b.workspace }))
+          },
+        },
+        {
+          name: 'spawn_worker',
+          description: 'Delegate a task to another bot (child session, its own workspace) and return its result.',
+          risk: 'external',
+          schema: {
+            type: 'object',
+            properties: { botId: { type: 'string' }, task: { type: 'string' }, maxSteps: { type: 'number' } },
+            required: ['botId', 'task'],
+          },
+          async execute(args, runCtx) {
+            const botId = String(args.botId ?? '')
+            const bot = bots.get(botId)
+            if (!bot) throw new Error(`unknown bot: ${botId}`)
+            const agent = ctx.get<any>('agent')
+            if (!agent) throw new Error('agent not mounted; cannot spawn worker')
+            const sessionId = `sub_${botId}_${Date.now().toString(36)}`
+            const store = ctx.get<any>('store')
+            store.createSession(sessionId, bot.id, bot.workspace)
+            ctx.emit('worker/spawned', { botId, sessionId, parent: runCtx.sessionId })
+            const result = await agent.runTurn({
+              sessionId,
+              text: String(args.task ?? ''),
+              provenance: 'bot',
+              limits: { maxSteps: args.maxSteps ? Number(args.maxSteps) : 12 },
+            })
+            ctx.emit('worker/finished', { botId, sessionId, reason: result.finishReason })
+            return { botId, sessionId, finishReason: result.finishReason, text: result.text.slice(0, 4000) }
+          },
+        },
+        {
+          name: 'bot.inbox',
+          description: 'Read queued messages sent to a bot.',
+          risk: 'read',
+          schema: { type: 'object', properties: { botId: { type: 'string' } }, required: ['botId'] },
+          async execute(args) {
+            const items = bots.inbox(String(args.botId ?? ''))
+            bots.markDelivered(items.map((i: any) => i.id))
+            return items.map((i: any) => ({ from: i.from_bot, content: i.content, thread: i.thread_id }))
           },
         },
         {

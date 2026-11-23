@@ -6,7 +6,7 @@ import { Store as SqliteStore } from '@jaryn/store-sqlite'
 import { fileURLToPath } from 'node:url'
 import { Context, applyPatch, composeProfile, formatRows, loadComposition } from '@jaryn/kernel'
 import type { PatchOp, Plugin, Profile, Row } from '@jaryn/kernel'
-import { agentPlugin, questionsPlugin, runTurn, toolRegistryPlugin } from '@jaryn/agent-core'
+import { agentPlugin, approvalPlugin, pricingPlugin, questionsPlugin, runTurn, toolRegistryPlugin } from '@jaryn/agent-core'
 import { Store, storePlugin } from '@jaryn/store-sqlite'
 import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
@@ -99,6 +99,8 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/llm-deepseek', deepseekPlugin()],
     ['@jaryn/tools-fs', fsPlugin()],
     ['@jaryn/agent-core/tools', toolRegistryPlugin()],
+    ['@jaryn/agent-core/approvals', approvalPlugin()],
+    ['@jaryn/agent-core/pricing', pricingPlugin()],
     ['@jaryn/agent-core/questions', questionsPlugin()],
     ['@jaryn/tools-web', webPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
@@ -291,6 +293,16 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
         return 0
       }
       if (sub === 'list') { console.log(JSON.stringify(bots.list(), null, 2)); return 0 }
+      if (sub === 'edit') {
+        const id = String(positional[0] ?? '')
+        if (!id) { console.error('usage: jary bot edit <id> [--name] [--persona] [--workspace]'); return 2 }
+        console.log(JSON.stringify(bots.edit(id, {
+          name: flags.name as string | undefined,
+          persona: flags.persona as string | undefined,
+          workspace: flags.workspace as string | undefined,
+        }), null, 2))
+        return 0
+      }
       if (sub === 'remove') { console.log(JSON.stringify({ removed: bots.remove(String(positional[0])) })); return 0 }
       console.error('usage: jary bot add|list|remove')
       return 2
@@ -311,6 +323,28 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
       process.once('SIGTERM', stop)
     })
     return 0
+  }
+
+  if (cmd === 'usage') {
+    const home = homeDir(flags)
+    const rows = resolveHomePaths(rowsFor(flags), home)
+    const dbPath = String((rows.find((r) => r.id === 'store')?.config as any)?.path ?? join(home, 'data/jary.db'))
+    const store = new SqliteStore(dbPath)
+    try {
+      console.log(JSON.stringify(store.usageTotal(typeof flags.session === 'string' ? flags.session : undefined), null, 2))
+      return 0
+    } finally { store.close() }
+  }
+
+  if (cmd === 'audit') {
+    const home = homeDir(flags)
+    const rows = resolveHomePaths(rowsFor(flags), home)
+    const dbPath = String((rows.find((r) => r.id === 'store')?.config as any)?.path ?? join(home, 'data/jary.db'))
+    const store = new SqliteStore(dbPath)
+    try {
+      console.log(JSON.stringify(store.auditLog(Number(flags.limit ?? 50)), null, 2))
+      return 0
+    } finally { store.close() }
   }
 
   if (cmd === 'device') {
@@ -559,7 +593,7 @@ commands:
   chat --bot <id> "text"     run one turn (echo provider by default)
   serve [--port 8787]        start Web UI + API
   memory add|list|search|catalog|digest|forget|consolidate
-  bot add|list|remove
+  bot add|list|edit|remove
   job add|list|run|enable|disable|remove|runs
   stop-all                   pause scheduler and cancel turns
   backup [--out <dir>]       backup sqlite + workspaces
@@ -569,6 +603,8 @@ commands:
   vault add|list|remove|rotate|events
   tunnel --url ws://<server>/tunnel   client-side egress tunnel
   device pair-code|list|revoke        multi-device pairing
+  usage [--session id]                token/cost totals
+  audit [--limit n]                   audit log
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)

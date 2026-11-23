@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { Context } from '@jaryn/kernel'
-import { agentPlugin, questionsPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
+import { agentPlugin, approvalPlugin, questionsPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
 import type { Tool } from '@jaryn/agent-core'
 import { FakeProvider } from '@jaryn/testing'
 import { Store, storePlugin } from '@jaryn/store-sqlite'
@@ -38,6 +38,7 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
   })
   await ctx.mount(agentPlugin())
   await ctx.mount(questionsPlugin())
+  await ctx.mount(approvalPlugin({ askRisks: ['execute', 'external', 'destructive'] }))
   await ctx.mount(schedulerPlugin())
   await ctx.mount(computerPlugin())
   await ctx.mount(vaultPlugin())
@@ -71,6 +72,7 @@ test('API token auth and inbound email webhook', async () => {
   ctx.provide('llm', new FakeProvider([]))
   await ctx.mount(agentPlugin())
   await ctx.mount(questionsPlugin())
+  await ctx.mount(approvalPlugin({ askRisks: ['execute', 'external', 'destructive'] }))
   const server = await startWebServer(ctx, { port: 0, apiToken: 'tok-1' })
   try {
     const denied = await fetch(`${server.url}/api/sessions`)
@@ -143,6 +145,24 @@ test('approval allow path executes tool', async () => {
     await server.close()
     await ctx.dispose()
   }
+})
+
+test('usage, audit and rules endpoints', async () => {
+  const { ctx, store, server } = await setup([])
+  try {
+    store.recordUsage({ sessionId: 'web', inputTokens: 100, outputTokens: 50, costUsd: 0.01 })
+    const usage = await (await fetch(`${server.url}/api/usage`)).json()
+    assert.equal(usage.inputTokens, 100)
+    const audit = await (await fetch(`${server.url}/api/audit`)).json()
+    assert.ok(Array.isArray(audit.entries))
+    const added = await (await fetch(`${server.url}/api/rules`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tool: 'shell.*', effect: 'deny' }),
+    })).json()
+    assert.equal(added.rules.length, 1)
+    const list = await (await fetch(`${server.url}/api/rules`)).json()
+    assert.equal(list.rules[0].effect, 'deny')
+  } finally { await server.close(); await ctx.dispose() }
 })
 
 test('cancel endpoint reports no active turn', async () => {

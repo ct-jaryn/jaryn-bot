@@ -76,6 +76,15 @@ export interface EventStore {
   }): { seq: number }
   events(sessionId: string, fromSeq?: number): { type: string; data: unknown; seq: number }[]
   setSessionStatus(id: string, status: string): void
+  recordUsage?(input: {
+    sessionId: string; turnId?: string; provider?: string; model?: string;
+    inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; costUsd?: number
+  }): void
+  recordApproval?(input: {
+    id: string; sessionId: string; turnId?: string; tool: string; risk: string;
+    args: unknown; status: string; resolver?: string; requestedAt: number
+  }): void
+  audit?(action: string, target?: string, detail?: unknown, actor?: string): void
 }
 
 export interface MemoryService {
@@ -88,6 +97,13 @@ export interface BudgetLimits {
   maxToolCalls: number
   maxWallMs: number
   maxOutputTokens?: number
+  maxCostUsd?: number
+}
+
+export interface Pricing {
+  inputPer1M?: number
+  outputPer1M?: number
+  cacheReadPer1M?: number
 }
 
 export interface TurnInput {
