@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.7.0 — Android 客户端
+
+### Added
+
+- `mobile/android/`：Kotlin WebView 瘦客户端（服务器地址保存、返回键后退、JS/DOM storage）
+- `.github/workflows/mobile-android.yml`：JDK 17 + Gradle 8.7 `assembleDebug` → APK 上传/tag 附 Release
+- Actions 实测产出：`app-debug.apk` 3.1 MB（426 项，含 classes.dex/resources.arsc/AndroidManifest.xml）
+- Web：启动时从 Vault 恢复 OAuth access_token 到连接器
+- 文档 `16-mobile-client.md`
+
+
 ## v1.6.0 — 桌面客户端（GitHub Actions 打包）
 
 ### Added
