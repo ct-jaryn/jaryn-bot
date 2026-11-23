@@ -309,13 +309,11 @@ const screenImg = $('screen-img')
 
 $('screen-toggle').onclick = () => {
   screenPanel.hidden = !screenPanel.hidden
-  if (screenPanel.hidden) { screenSource?.close(); screenSource = null; return }
+  if (screenPanel.hidden) { screenSource?.close(); screenSource = null; screenImg.src = ''; return }
   if (!screenSource) {
-    screenSource = new EventSource('/api/computer/screen?mode=screencast&botId=' + encodeURIComponent(state.sessionId))
-    screenSource.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data)
-      if (msg.type === 'frame') screenImg.src = `data:image/png;base64,${msg.image}`
-    }
+    // MJPEG renders natively in <img> and is lower latency than SSE + data URLs.
+    screenImg.src = `/api/computer/mjpeg?botId=${encodeURIComponent(state.sessionId)}&quality=55&t=${Date.now()}`
+    screenSource = { close() { screenImg.src = '' } }
   }
 }
 screenImg.onclick = (ev) => {

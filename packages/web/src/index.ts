@@ -462,6 +462,41 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       req.on('close', () => clearInterval(timer))
       return
     }
+    if (req.method === 'GET' && path === '/api/computer/mjpeg') {
+      const computer = ctx.get<any>('computer')
+      if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
+      const botId = url.searchParams.get('botId') ?? 'default'
+      const quality = Number(url.searchParams.get('quality') ?? 55)
+      res.writeHead(200, {
+        'content-type': 'multipart/x-mixed-replace; boundary=frame',
+        'cache-control': 'no-cache',
+        connection: 'close',
+        pragma: 'no-cache',
+      })
+      res.flushHeaders?.()
+      let closed = false
+      let stop: (() => void) | undefined
+      req.on('close', () => { closed = true; stop?.() })
+      const writeFrame = (image: string) => {
+        if (closed) return
+        const data = Buffer.from(image, 'base64')
+        res.write(`--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${data.length}\r\n\r\n`)
+        res.write(data)
+        res.write('\r\n')
+      }
+      try {
+        // Send one immediate frame so clients have something to render right away.
+        const first = await computer.frame(botId)
+        writeFrame(first.image)
+        stop = await computer.streamFrames(botId, (frame: { image: string }) => {
+          writeFrame(frame.image)
+        }, { quality })
+      } catch (err) {
+        if (!res.headersSent) return sendJson(res, 500, { error: (err as Error).message })
+        res.end()
+      }
+      return
+    }
     if (req.method === 'POST' && path === '/api/computer/takeover') {
       const computer = ctx.get<any>('computer')
       if (!computer) return sendJson(res, 404, { error: 'computer not mounted' })
@@ -773,6 +808,7 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       }
       pendingQuestions.clear()
       await new Promise<void>((resolve) => server.close(() => resolve()))
+      ;(server as any).closeAllConnections?.()
     },
   }
 }

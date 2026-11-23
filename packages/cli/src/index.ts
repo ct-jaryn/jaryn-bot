@@ -35,7 +35,7 @@ import { bitwardenPlugin, onePasswordPlugin } from '@jaryn/secrets'
 import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { notificationsPlugin } from '@jaryn/notifications'
 
-const VERSION = '1.5.0'
+const VERSION = '1.5.1'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 

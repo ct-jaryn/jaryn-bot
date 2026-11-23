@@ -30,7 +30,7 @@
 | FR-12 | 运维 | ✅ | doctor、config print、replay、plugin（list/doctor/permissions/enable/disable/index）、backup/restore、stop-all、usage/audit | — |
 | FR-13 | 插件 | ✅ | 组合/patch、拓扑排序、fail-loud、诊断、索引源、权限声明扫描、**进程外插件宿主**（JSON-RPC 工具代理 + 示例插件） | 索引签名校验 |
 | FR-14 | 客户端 | 🟡 | Web UI、PWA、SSE（支持设备令牌鉴权）、设备配对/令牌/吊销、多面板 | 桌面壳/原生 App（设计暂缓） |
-| FR-15 | 云电脑 | 🟡 | 本地 Chrome/Docker、browser.*、截图、快照/恢复、看屏（截图轮询 + **CDP screencast** 更高帧率）、接管、输入、`computer.exec`、空闲自动停机、容器网络策略、镜像含 Xvfb/x11vnc/noVNC | 真 WebRTC 串流；桌面镜像未在真机验证 |
+| FR-15 | 云电脑 | 🟡 | 本地 Chrome/Docker、browser.*、截图、快照/恢复、看屏（截图轮询 / CDP screencast / **MJPEG 原生流**）、接管、输入、`computer.exec`、空闲自动停机、容器网络策略、镜像含 Xvfb/x11vnc/noVNC | 真 WebRTC；桌面镜像未在真机验证（需 docker） |
 | FR-16 | Vault | ✅ | AES-GCM write-only、盲填、Secure Form、审计、轮换、grant/revoke、1Password、Bitwarden、TOTP、**卡填充（默认关 + destructive 审批）** | —（真实支付网关明确不做） |
 | FR-17 | 连接器/邮箱 | ✅ | 通用 HTTP、Bearer/APIKey、OAuth 授权 URL + 回调换 token（存 Vault）、SMTP、IMAP 轮询、HTML→文本、附件→artifact、发件人 allowlist | 官方 Gmail/Calendar 应用（需自注册+审核，配置已支持） |
 | FR-18 | Pages/产物 | ✅ | create/update/list/share、CSP 渲染、`/pages/:id`、`/p/:token`、office 产物 | 交互脚本（设计为禁用） |
@@ -48,7 +48,7 @@
 ## 总量
 
 - 31 个包、约 **10.6k 行 TS**（`packages/*/src`）、前端约 350 行
-- **127 个测试**（40 个测试文件，含真实 Chrome/screencast、假 IMAP/SMTP/MCP/HTTP 服务、office 包结构校验）
+- **128 个测试**（40 个测试文件，含真实 Chrome/screencast、假 IMAP/SMTP/MCP/HTTP 服务、office 包结构校验）
 - **65 个工具注册点**（含 MCP/插件宿主动态注册）、55 条 HTTP 路由、20+ CLI 子命令
 - 文档：27 份 markdown（约 5.4k 行）+ 11 份发布说明
 - 自动化校验：`check-docs`（结构/链接）、`check-deploy`（镜像/注册表）、`evals --dry`（10 任务结构）
@@ -74,7 +74,7 @@
 | 桌面壳 / 原生 App | 未做 | PWA 可用；原生需另立项目（设计上暂缓） |
 | 真实支付网关 | ⛔ | 仅做卡信息填表，不做支付结算 |
 | 官方 Gmail/Calendar OAuth 应用 | 🚧 | 需自建 OAuth 应用（示例与回调已就绪） |
-| 实时低延迟串流（WebRTC） | 未做 | 已用 CDP screencast 提升帧率；真 WebRTC 未做 |
+| 实时低延迟串流（WebRTC） | 未做 | 已提供 CDP screencast + MJPEG（浏览器原生渲染，延迟低于 SSE）；真 WebRTC 未做 |
 | 进程外插件宿主 | ✅ | `@jaryn/plugin-host` + 示例插件 |
 | IM 投递 | 未做 | 按决策不做 IM；通知中心已实现（含安静时段） |
 | 团队协作 / 会议 / 企业管控 / 语音 / 多租户 | ⛔ | 决策明确不做 |

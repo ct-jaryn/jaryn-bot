@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.5.1 — MJPEG 看屏
+
+### Added
+
+- `GET /api/computer/mjpeg`：`multipart/x-mixed-replace` 原生视频流（首帧立即发送），Web UI 看屏改用 MJPEG（SSE 作为回退保留）
+- 128 个测试
+
+
 ## v1.5.0 — 录屏教学 / 设备令牌与 SSE
 
 ### Added
