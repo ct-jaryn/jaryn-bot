@@ -132,7 +132,7 @@ export function fsPlugin(cfg: { root?: string } = {}): Plugin<{ root?: string }>
   return definePlugin({
     name: '@jaryn/tools-fs',
     inject: ['tools'],
-    apply(ctx, config) {
+    apply(ctx, config = {}) {
       const tools = ctx.get<{ register(t: Tool): () => void }>('tools')!
       const root = config.root ?? cfg.root
       for (const tool of fsTools()) {

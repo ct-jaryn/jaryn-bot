@@ -12,6 +12,7 @@ import type {
   TurnResult,
 } from './types.ts'
 import type { ToolRegistry } from './tools.ts'
+import type { MemoryService } from './types.ts'
 import { newApprovalId } from './approvals.ts'
 import type { ApprovalService } from './approvals.ts'
 
@@ -38,11 +39,13 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
   const tools = ctx.get<ToolRegistry>('tools')
   const llm = ctx.get<Provider>('llm')
   const approvals = ctx.get<ApprovalService>('approvals')
+  const memory = ctx.get<MemoryService>('memory')
   if (!store) throw new Error('runTurn needs a store service')
   if (!tools) throw new Error('runTurn needs a tools service')
   if (!llm) throw new Error('runTurn needs an llm service')
 
   const session = store.getSession(input.sessionId) ?? store.createSession(input.sessionId, 'default', process.cwd())
+  const memoryNs = memory ? `bot:${session.botId ?? 'default'}` : undefined
   const limits = { ...DEFAULT_BUDGET, ...(ctx.get<Partial<BudgetLimits>>('budget') ?? {}) }
   const contextCfg = ctx.get<{ windowTokens?: number; compactAt?: number }>('context') ?? {}
   const windowTokens = contextCfg.windowTokens ?? 128_000
@@ -72,6 +75,7 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
       provenance: input.provenance ?? 'owner',
     })
 
+  if (memory && memoryNs) memory.observe?.(memoryNs, input.text)
   const historyMessages = buildHistory(store, input.sessionId)
   append('input.owner', { text: input.text, provenance: input.provenance ?? 'owner' })
   append('turn.started', { turnId })
@@ -93,8 +97,10 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
       if (++steps > limits.maxSteps) { finishReason = 'max-steps'; break }
       if (calledTools.length > limits.maxToolCalls) { finishReason = 'max-tool-calls'; break }
 
+      const digest = memory && memoryNs ? memory.digest({ ns: memoryNs, query: input.text, budgetTokens: 600 }) : ''
+      const system = [ctx.get<string>('systemPrompt') ?? DEFAULT_SYSTEM, digest].filter(Boolean).join('\n\n')
       const req: ModelRequest = {
-        messages,
+        messages: [{ role: 'system', content: system }, ...messages.filter((m) => m.role !== 'system')],
         tools: tools.list().map((t) => ({ name: t.name, description: t.description, schema: t.schema })),
       }
       append('step.started', { step: steps })

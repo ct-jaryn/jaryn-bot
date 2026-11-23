@@ -11,6 +11,9 @@ import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
 import { deepseekPlugin } from '@jaryn/llm-deepseek'
 import { startWebServer } from '@jaryn/web'
+import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
+import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
+import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
 import { fsPlugin } from '@jaryn/tools-fs'
 
 const VERSION = '0.0.1'
@@ -83,6 +86,12 @@ function allPlugins(): Map<string, Plugin<any>> {
     ['@jaryn/tools-fs', fsPlugin()],
     ['@jaryn/agent-core/tools', toolRegistryPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
+    ['@jaryn/memory', memoryPlugin()],
+    ['@jaryn/memory/tools', memoryToolsPlugin()],
+    ['@jaryn/bots', botsPlugin()],
+    ['@jaryn/bots/tools', botToolsPlugin()],
+    ['@jaryn/tasks', tasksPlugin()],
+    ['@jaryn/tasks/tools', taskToolsPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
 }
@@ -94,8 +103,23 @@ function rowsFor(flags: Record<string, string | boolean>): Row[] {
   return rows
 }
 
+function resolveHomePaths(rows: Row[], home: string): Row[] {
+  for (const row of rows) {
+    if (row.id === 'store' && row.config && typeof (row.config as any).path === 'string') {
+      const path = (row.config as any).path
+      if (!path.startsWith('/')) (row.config as any).path = resolve(home, path)
+    }
+    if (row.id === 'bots') {
+      row.config = { ...(row.config as any), home }
+    }
+  }
+  return rows
+}
+
 async function createRuntime(flags: Record<string, string | boolean>) {
-  const rows = rowsFor(flags)
+  const home = homeDir(flags)
+  process.env.JARY_HOME = home
+  const rows = resolveHomePaths(rowsFor(flags), home)
   const ctx = new Context({ scope: 'root', id: 'root' })
   const result = await loadComposition(ctx, rows, allPlugins())
   return { ctx, rows, result }
@@ -135,9 +159,10 @@ async function main(): Promise<number> {
   }
 
   if (cmd === 'session') {
-    const rows = rowsFor(flags)
+    const home = homeDir(flags)
+    const rows = resolveHomePaths(rowsFor(flags), home)
     const storeRow = rows.find((r) => r.id === 'store')
-    const dbPath = resolve(String((storeRow?.config as any)?.path ?? 'data/jary.db'))
+    const dbPath = resolve(String((storeRow?.config as any)?.path ?? join(home, 'data/jary.db')))
     const store = new Store(dbPath)
     try {
       if (sub === 'list') {
@@ -173,6 +198,70 @@ async function main(): Promise<number> {
       console.log(`${pass ? 'ok  ' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`)
     }
     return ok ? 0 : 1
+  }
+
+  if (cmd === 'memory') {
+    const { ctx } = await createRuntime(flags)
+    const memory = ctx.get<any>('memory')
+    const ns = typeof flags.ns === 'string' ? flags.ns : 'global'
+    try {
+      if (sub === 'add') {
+        const text = positional.join(' ').trim()
+        if (!text) { console.error('usage: jary memory add "text" [--kind fact] [--pinned]'); return 2 }
+        const m = memory.remember({ ns, text, kind: (flags.kind as any) ?? 'fact', pinned: !!flags.pinned })
+        console.log(JSON.stringify(m, null, 2))
+        return 0
+      }
+      if (sub === 'search') {
+        const q = positional.join(' ').trim()
+        console.log(JSON.stringify(memory.search({ ns, query: q, limit: Number(flags.limit ?? 5) }), null, 2))
+        return 0
+      }
+      if (sub === 'catalog' || sub === 'stats') {
+        console.log(JSON.stringify({ ns, categories: memory.catalog(ns), stats: memory.stats(ns) }, null, 2))
+        return 0
+      }
+      if (sub === 'list') {
+        console.log(JSON.stringify(memory.list({ ns, kind: flags.kind ? String(flags.kind) : undefined, limit: Number(flags.limit ?? 20) }), null, 2))
+        return 0
+      }
+      if (sub === 'digest') {
+        console.log(memory.digest({ ns, query: positional.join(' ').trim() || undefined }))
+        return 0
+      }
+      if (sub === 'forget') {
+        const q = positional.join(' ').trim()
+        console.log(JSON.stringify({ deleted: memory.forget({ ns, query: q }) }))
+        return 0
+      }
+      if (sub === 'consolidate') {
+        console.log(JSON.stringify(memory.consolidate(ns)))
+        return 0
+      }
+      console.error('usage: jary memory add|list|search|catalog|digest|forget|consolidate')
+      return 2
+    } finally {
+      await ctx.dispose()
+    }
+  }
+
+  if (cmd === 'bot') {
+    const { ctx } = await createRuntime(flags)
+    const bots = ctx.get<any>('bots')
+    try {
+      if (sub === 'add') {
+        const id = positional[0]
+        if (!id) { console.error('usage: jary bot add <id> [--name] [--persona]'); return 2 }
+        console.log(JSON.stringify(bots.add({ id, name: flags.name as string | undefined, persona: flags.persona as string | undefined }), null, 2))
+        return 0
+      }
+      if (sub === 'list') { console.log(JSON.stringify(bots.list(), null, 2)); return 0 }
+      if (sub === 'remove') { console.log(JSON.stringify({ removed: bots.remove(String(positional[0])) })); return 0 }
+      console.error('usage: jary bot add|list|remove')
+      return 2
+    } finally {
+      await ctx.dispose()
+    }
   }
 
   if (cmd === 'serve') {
@@ -220,6 +309,8 @@ commands:
   config print [--patch f]   print composed plugin rows
   chat --bot <id> "text"     run one turn (echo provider by default)
   serve [--port 8787]        start Web UI + API
+  memory add|list|search|catalog|digest|forget|consolidate
+  bot add|list|remove
   session list|replay <id>   inspect persisted sessions
   doctor                     environment checks
   version                    print version`)

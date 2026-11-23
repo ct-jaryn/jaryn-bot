@@ -1,6 +1,6 @@
 # 13 · 记忆模块（轻量、高效、低消耗）
 
-> 状态：**现行（v0.1 / P3 实现）**。目标：在 **4C4G** 机器上，用 **SQLite 单文件** 做到"记得住、查得快、几乎不花钱"。
+> 状态：**现行（v0.1 · P3 已实现）**。目标：在 **4C4G** 机器上，用 **SQLite 单文件** 做到"记得住、查得快、几乎不花钱"。
 > 关联：[01 FR-7](01-functional-spec.md) · [12 运行时 §10](runtime-design.md) · [02 接口](02-interfaces.md) · [04 测试](04-testing-acceptance.md)
 > 本文取代 [runtime-design.md](runtime-design.md) §10 的粗略描述；以本文为准。
 

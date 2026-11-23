@@ -67,6 +67,14 @@ test('runTurn executes a tool then continues', async () => {
   assert.match(toolMessage?.content, /echo:x/)
 })
 
+test('memory digest is injected into the system prompt', async () => {
+  const { ctx } = build([[{ type: 'text', text: 'ok' }, { type: 'finish', reason: 'stop' }]])
+  ctx.provide('memory', { digest: () => 'MEMORY DIGEST: prefers Chinese', observe: () => 1 })
+  await runTurn(ctx, { sessionId: 's-mem', text: 'hi' })
+  const req = (ctx.get<any>('llm') as any).requests[0]
+  assert.match(req.messages[0].content, /MEMORY DIGEST/)
+})
+
 test('compacts long history before the first step', async () => {
   const { ctx, events } = build([
     [{ type: 'text', text: 'SUMMARY OF OLD TURNS' }, { type: 'finish', reason: 'stop' }],

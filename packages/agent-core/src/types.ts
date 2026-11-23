@@ -63,7 +63,7 @@ export interface ToolResult {
 }
 
 export interface EventStore {
-  getSession(id: string): { id: string; cwd: string } | undefined
+  getSession(id: string): { id: string; cwd: string; botId?: string } | undefined
   createSession(id: string, botId: string, cwd: string): unknown
   append(input: {
     sessionId: string
@@ -76,6 +76,11 @@ export interface EventStore {
   }): { seq: number }
   events(sessionId: string, fromSeq?: number): { type: string; data: unknown; seq: number }[]
   setSessionStatus(id: string, status: string): void
+}
+
+export interface MemoryService {
+  digest(opts: { ns: string; query?: string; budgetTokens?: number }): string
+  observe?(ns: string, text: string): number
 }
 
 export interface BudgetLimits {

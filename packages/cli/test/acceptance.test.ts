@@ -10,6 +10,9 @@ import { storePlugin } from '@jaryn/store-sqlite'
 import { shellPlugin } from '@jaryn/tools-shell'
 import { echoProviderPlugin } from '@jaryn/testing'
 import { fsPlugin } from '@jaryn/tools-fs'
+import { memoryPlugin, memoryToolsPlugin } from '@jaryn/memory'
+import { botsPlugin, botToolsPlugin } from '@jaryn/bots'
+import { tasksPlugin, taskToolsPlugin } from '@jaryn/tasks'
 
 const ROOT = resolve(import.meta.dirname, '../../..')
 const CLI = join(ROOT, 'packages/cli/src/index.ts')
@@ -37,6 +40,12 @@ test('disabled shell is not mounted', async () => {
     ['@jaryn/agent-core/tools', toolRegistryPlugin()],
     ['@jaryn/tools-shell', shellPlugin()],
     ['@jaryn/tools-fs', fsPlugin()],
+    ['@jaryn/memory', memoryPlugin()],
+    ['@jaryn/memory/tools', memoryToolsPlugin()],
+    ['@jaryn/bots', botsPlugin()],
+    ['@jaryn/bots/tools', botToolsPlugin()],
+    ['@jaryn/tasks', tasksPlugin()],
+    ['@jaryn/tasks/tools', taskToolsPlugin()],
     ['@jaryn/agent-core', agentPlugin()],
   ])
   const result = await loadComposition(ctx, rows, registry)

@@ -6,6 +6,7 @@ import type { Tool } from '@jaryn/agent-core'
 import { FakeProvider } from '@jaryn/testing'
 import { Store, storePlugin } from '@jaryn/store-sqlite'
 import { startWebServer } from '../src/index.ts'
+import { memoryPlugin } from '@jaryn/memory'
 
 async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {}) {
   const ctx = new Context({ scope: 'root' })
@@ -19,6 +20,7 @@ async function setup(script: any[][], opts: { approvalTimeoutMs?: number } = {})
     execute: async (n: string, a: any) => tools.get(n)!.execute(a, { signal: new AbortController().signal, sessionId: 's', cwd: '/tmp' }),
   })
   ctx.provide('llm', new FakeProvider(script))
+  await ctx.mount(memoryPlugin())
   tools.set('echo', {
     name: 'echo', description: 'echo', schema: { type: 'object' }, risk: 'read',
     async execute(args) { return `echo:${args.text}` },
@@ -83,6 +85,24 @@ test('approval allow path executes tool', async () => {
     await waitFor(async () => store.events('web').some((e: any) => e.type === 'tool.result'))
     const toolResult = store.events('web').find((e: any) => e.type === 'tool.result')
     assert.equal(toolResult.data.ok, true)
+  } finally {
+    await server.close()
+    await ctx.dispose()
+  }
+})
+
+test('memory API remembers and searches', async () => {
+  const { ctx, server } = await setup([])
+  try {
+    const created = await fetch(`${server.url}/api/memory`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: '以后周报都用中文', kind: 'rule', pinned: true }),
+    })
+    assert.equal(created.status, 201)
+    const found = await (await fetch(`${server.url}/api/memory?query=${encodeURIComponent('周报')}`)).json()
+    assert.equal(found.memories.length, 1)
+    const catalog = await (await fetch(`${server.url}/api/memory`)).json()
+    assert.ok(catalog.categories.length >= 1)
   } finally {
     await server.close()
     await ctx.dispose()

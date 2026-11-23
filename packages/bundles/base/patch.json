@@ -32,6 +32,36 @@
         "id": "fs",
         "name": "@jaryn/tools-fs",
         "config": {}
+      },
+      {
+        "id": "memory",
+        "name": "@jaryn/memory",
+        "config": {}
+      },
+      {
+        "id": "memory-tools",
+        "name": "@jaryn/memory/tools",
+        "config": {}
+      },
+      {
+        "id": "bots",
+        "name": "@jaryn/bots",
+        "config": {}
+      },
+      {
+        "id": "bots-tools",
+        "name": "@jaryn/bots/tools",
+        "config": {}
+      },
+      {
+        "id": "tasks",
+        "name": "@jaryn/tasks",
+        "config": {}
+      },
+      {
+        "id": "tasks-tools",
+        "name": "@jaryn/tasks/tools",
+        "config": {}
       }
     ]
   }

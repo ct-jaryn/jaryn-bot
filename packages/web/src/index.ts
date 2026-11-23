@@ -97,6 +97,47 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const session = store.createSession(id, body.botId ?? 'default', body.cwd ?? process.cwd())
       return sendJson(res, 201, { session })
     }
+    if (req.method === 'GET' && path === '/api/memory') {
+      const memory = ctx.get<any>('memory')
+      if (!memory) return sendJson(res, 404, { error: 'memory not mounted' })
+      const ns = url.searchParams.get('ns') ?? 'global'
+      const query = url.searchParams.get('query')
+      const kind = url.searchParams.get('kind')
+      if (query) return sendJson(res, 200, { memories: memory.search({ ns, query, limit: 10 }) })
+      if (kind) return sendJson(res, 200, { memories: memory.list({ ns, kind, limit: 50 }) })
+      return sendJson(res, 200, { categories: memory.catalog(ns), stats: memory.stats(ns) })
+    }
+    if (req.method === 'POST' && path === '/api/memory') {
+      const memory = ctx.get<any>('memory')
+      if (!memory) return sendJson(res, 404, { error: 'memory not mounted' })
+      const body = await readBody(req)
+      if (!body.text) return sendJson(res, 400, { error: 'text required' })
+      const item = memory.remember({ ns: body.ns ?? 'global', text: String(body.text), kind: body.kind ?? 'fact', pinned: !!body.pinned })
+      return sendJson(res, 201, { item })
+    }
+    if (req.method === 'DELETE' && path.startsWith('/api/memory/')) {
+      const memory = ctx.get<any>('memory')
+      if (!memory) return sendJson(res, 404, { error: 'memory not mounted' })
+      const id = path.slice('/api/memory/'.length)
+      return sendJson(res, 200, { removed: memory.forget({ id, ns: url.searchParams.get('ns') ?? 'global' }) })
+    }
+    if (req.method === 'GET' && path === '/api/bots') {
+      const bots = ctx.get<any>('bots')
+      if (!bots) return sendJson(res, 404, { error: 'bots not mounted' })
+      return sendJson(res, 200, { bots: bots.list() })
+    }
+    if (req.method === 'POST' && path === '/api/bots') {
+      const bots = ctx.get<any>('bots')
+      if (!bots) return sendJson(res, 404, { error: 'bots not mounted' })
+      const body = await readBody(req)
+      if (!body.id) return sendJson(res, 400, { error: 'id required' })
+      return sendJson(res, 201, { bot: bots.add({ id: String(body.id), name: body.name, persona: body.persona }) })
+    }
+    if (req.method === 'GET' && path === '/api/tasks') {
+      const tasks = ctx.get<any>('tasks')
+      if (!tasks) return sendJson(res, 404, { error: 'tasks not mounted' })
+      return sendJson(res, 200, { tasks: tasks.list() })
+    }
     if (req.method === 'GET' && path === '/api/events') {
       const store = ctx.get<any>('store')
       const sessionId = url.searchParams.get('sessionId') ?? ''

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — P3 记忆 + 多 Bot（已完成）
+
+### Added
+
+- `@jaryn/memory`：SQLite + FTS5 记忆（bigram 分词、pinned、digest ≤600 token、目录检索 catalog/list/read、候选池 + 规则抽取 + 整理、遗忘）
+- 记忆工具：`memory.remember/search/list/catalog/read/forget`
+- agent loop：自动注入 digest、每轮规则抽取候选（0 LLM）
+- `@jaryn/bots`：Bot 名册（独立 workspace/memory ns）、Bot 消息总线（hop≤2）、`bot.list_agents/send_message`
+- `@jaryn/tasks`：任务板（create/claim/complete/list，CAS 版本）
+- CLI：`memory add|list|search|catalog|digest|forget|consolidate`、`bot add|list|remove`
+- Web API：`/api/memory`、`/api/bots`、`/api/tasks`
+- 测试：tokenizer/FTS/digest/整理、bot 名册与 hop、任务板协作、记忆 API、digest 注入，共 36 个
+
 ## Unreleased — P2 Web UI（已完成）
 
 ### Added
