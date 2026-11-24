@@ -166,16 +166,72 @@ interface RuntimeEvent<T = unknown> {
 
 ## 6. HTTP 端点
 
+> 完整自动生成清单见 [18 代码清单](18-code-inventory.md)（`npm run inventory`）。下表是**按用途分组**的现行端点。
+
 | 方法/路径 | 用途 | 鉴权 |
 |---|---|---|
-| `GET /healthz` | 存活/依赖检查（DB、通道、worker 数） | 无（仅 bind 地址可达） |
-| `GET /metrics` | Prometheus 文本指标 | 可选 token |
-| `POST /hooks/:jobId` | 外部事件触发 job；`X-Jary-Signature: hmac-sha256` | HMAC |
-| `POST /webhook/telegram` | **不做**（IM 通道 Won't） | — |
-| `POST /webhook/feishu` | 飞书事件回调 | 签名校验 |
-| `POST /approvals/:id` | 可选：外部审批（IM 按钮之外） | owner token |
+| `页面/静态` | Web UI 首页/静态资源 | 无 |
+| `健康` | 存活检查（store/agent/memory/scheduler） | 无 |
+| `指标` | Prometheus 文本指标 | token |
+| `页面渲染` | 渲染页面（CSP 禁脚本） | token |
+| `公开分享` | 页面分享链接（可设过期） | 无（token） |
+| `安全表单` | 一次性 Secure Form | 无（token） |
+| `邮件入站` | 邮件 webhook | HMAC 或 token |
+| `Hook` | 触发例程 | HMAC |
+| `会话` | 列出/新建会话；`?archived=1` | token |
+| `会话` | 标题/归档、删除 | token |
+| `会话` | 分叉会话 | token |
+| `会话` | 停止当前 turn | token |
+| `会话` | `/status /compact /new /stop /memory /remember /forget /artifacts /jobs /bots /approvals /help` | token |
+| `对话` | 发消息并运行一个 turn | token |
+| `事件` | 会话事件回放 | token |
+| `流` | SSE 事件流（支持 `?token=`） | token |
+| `RPC` | JSON-RPC（session/turn/approval/usage + 事件推送） | token |
+| `审批` | 待审批列表 | token |
+| `审批` | 允许/拒绝 | token |
+| `规则` | 审批规则管理 | token |
+| `问题` | 待回答问题 | token |
+| `问题` | 回答 | token |
+| `记忆` | 目录/搜索/新增 | token |
+| `记忆` | 遗忘 | token |
+| `任务` | 任务板 | token |
+| `Bot` | 名册 | token |
+| `产物` | 产物列表/上传 | token |
+| `文件` | 工作区文件读写 | token |
+| `页面` | 页面列表/新建 | token |
+| `页面` | 生成/撤销分享链接（可设 TTL） | token |
+| `页面` | 版本历史 | token |
+| `页面` | 回滚版本 | token |
+| `页面` | 导出 HTML | token |
+| `例程` | 例程列表/新建 | token |
+| `例程` | 立即运行 | token |
+| `提议` | 提议列表 | token |
+| `提议` | 扫描信号 | token |
+| `提议` | 接受（会执行）/忽略 | token |
+| `教学` | 技能目录/保存 | token |
+| `云电脑` | 状态 | token |
+| `云电脑` | 单帧截图 | token |
+| `云电脑` | SSE 看屏（截图/screencast 模式） | token |
+| `云电脑` | MJPEG 原生流 | token |
+| `云电脑` | 点击/输入/按键 | token |
+| `云电脑` | 接管/交还 | token |
+| `Vault` | 元数据/新增；`POST /api/vault/secure-form` | token |
+| `Vault` | 删除凭据 | token |
+| `连接器` | OAuth 授权码回调（校验 state） | 无（state） |
+| `连接器` | 刷新 access token | token |
+| `设备` | 生成配对码 | 无（rate limit） |
+| `设备` | 配对换令牌 | 无（限次） |
+| `设备` | 设备列表 | token |
+| `通知` | 通知列表+未读数 | token |
+| `通知` | 标记已读 | token |
+| `通知` | 全部已读 | token |
+| `用量` | token/费用汇总 | token |
+| `审计` | 审计日志 | token |
+| `隧道` | 出网隧道状态 | token |
 
-**约定**：所有 POST 幂等键 `X-Idempotency-Key`（可选）；错误返回 `{ code, message }` 且 HTTP 状态与语义一致。
+> 自动统计：共 **63** 条路由注册点（含静态资源）。
+
+**约定**：POST 幂等键 `X-Idempotency-Key`（可选）；错误返回 `{ error }` 且 HTTP 状态与语义一致。
 
 ---
 

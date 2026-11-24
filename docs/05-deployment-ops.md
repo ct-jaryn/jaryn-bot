@@ -1,6 +1,6 @@
 # 05 · 部署与运维（Deployment & Ops）
 
-> 状态：**现行**（v0.1）。配置字段见 [02-interfaces.md](02-interfaces.md) §2，阶段见 [03-roadmap.md](03-roadmap.md)。
+> 状态：**现行**（v1.10.0）。配置字段见 [02-interfaces.md](02-interfaces.md) §2，实际部署文件见 `deploy/`，部署校验 `npm run check:deploy`。
 > 目标：一台常开机器 + Docker，10 分钟跑起来；单机失败可恢复、可备份、可升级。
 
 ---
@@ -8,26 +8,29 @@
 ## 1. 部署拓扑
 
 ```
-            ┌──────────── 反代（Caddy/Nginx，TLS）────────────┐
-  IM ──────►│  /webhook/*  /healthz  /metrics                 │
-            └──────────────────┬──────────────────────────────┘
-                               ▼
-                    ┌──────────────────────┐
-                    │ jary gateway (容器)   │
-                    │ 通道/调度/审批/记忆服务 │
-                    └──────┬───────┬───────┘
-                           │ stdio │（同容器内 spawn）
-                    ┌──────▼───┐ ┌─▼────────┐
-                    │ worker A │ │ worker B │  每 Bot 一个
-                    └──────┬───┘ └────┬─────┘
-                           └────┬─────┘
-                     /data（SQLite + workspace + artifacts）
+                 ┌──────── 反代（Caddy/Nginx，TLS）────────┐
+                 │  /  /api/*  /healthz  /metrics          │
+                 └──────────────────┬──────────────────────┘
+                                    ▼
+                         ┌──────────────────────┐
+                         │ jary serve（单进程）    │
+                         │ 插件组合 / Web / 调度 /  │
+                         │ 审批 / 记忆 / 事件流     │
+                         └───┬───────────┬───────┘
+                             │           │
+             /data（SQLite + workspace + artifacts + vault.key）
+                             │
+                    ┌────────▼─────────┐
+                    │ 云电脑（可选）     │  每 Bot 一个 Chrome 或容器
+                    │ CDP :9222        │  截图/输入/快照，空闲自动停
+                    └──────────────────┘
 ```
 
-- **v0.1 只支持单实例**：SQLite 单写者 + 本地 worker；不要横向扩 gateway。
-- 反代负责 TLS 与公网；gateway 只绑 `127.0.0.1:8787`。
-- worker 与 gateway 同容器（v0.1），P5 可选容器外置（每 Bot 一容器）。
-- **取客户端/执行端包后**：主动出站 WSS 接入（无需端口映射），服务端不反向拨号；见 [06-clients-and-topology.md](06-clients-and-topology.md)。
+- **单进程、单实例**：插件全部同进程加载（内核组合），没有独立 worker/gateway；同一份 SQLite 单写者，不要横向扩容。
+- 反代负责 TLS 与公网；`jary serve` 默认只绑 `127.0.0.1:8787`。
+- **云电脑**是本机 Chrome（开发）或 Docker 容器（生产），每 Bot 一台；`deploy/computer/Dockerfile` 提供带 Xvfb/x11vnc/noVNC 的镜像。
+- **客户端**（Electron/Android/PWA）连同一服务端，走 HTTP + `/ws/client`；不需要公网端口映射到客户端。
+- 出网隧道（`jary tunnel`）用客户端主动出站，服务端不反向拨号。
 
 ### 1.1 私有化与数据边界
 
@@ -38,8 +41,8 @@
 | 会话 / 事件 / 记忆 / 审批 / 审计 / 用量 | 本地 SQLite（`/data/jary.db`） | 否 |
 | 代码 / 文件 / 产物 | 本地 `/data/bots/*/workspace`、`/data/artifacts` | 否（除非你主动外发） |
 | 模型请求内容（prompt/上下文） | 发往模型端点 | **是**（默认 DeepSeek 云；可替换，见下） |
-| IM 消息 | —（暂不做通知通道） | 否 |
-| Web 搜索/抓取 | 发往搜索服务与目标站点 | **是**（可换自建 SearXNG，取连接器包后） |
+| 通知 | 本地 SQLite（Web 通知中心；IM 通道 Won't） | 否 |
+| Web 搜索/抓取 | 发往搜索服务与目标站点 | **是**（可换自建 SearXNG：`search.baseUrl`） |
 | MCP 工具调用 | 发往对应 MCP 服务 | 视配置 |
 | 客户端缓存 | 设备本地（最近消息/未读） | 否（可清空） |
 
@@ -48,62 +51,68 @@
 | 档位 | 形态 | 缺口 |
 |---|---|---|
 | **L1 默认自托管** | 数据/密钥本地；模型、IM、搜索出网 | 无（v0.1 就是这个） |
-| **L2 内网模型** | 模型端点换成 vLLM / Ollama / 私有云 OpenAI 兼容端点 | 需补 `base_url` 配置与离线模型；v0.1 的 `llm` 适配器已预留 |
+| **L2 内网模型** | 模型端点换成 vLLM / Ollama / 私有云 OpenAI 兼容端点 | 需支持 `baseUrl` 的 provider 插件（`llm-deepseek` 可配 `baseUrl`） |
 | **L3 全内网离线** | 模型、IM、搜索、插件全部内网 | 内网 IM 适配器、离线插件包、本地搜索——v0.1 不承诺，以后评估 |
 
 **为私有化做的设计选择**：SQLite 单文件（无外部 DB）、事件溯源本地、密钥只从 env/文件读、模型适配器可插拔、插件支持 `file:`/内网 git 安装、反代 TLS + allowlist、备份/恢复有演练脚本。
 
-**不包含的企业私有化能力**（暂不做）：多租户隔离、SSO/SCIM、HA/集群、审计导出与保留策略、离线安装包签名、合规认证。
+**不包含的企业私有化能力**（Won't）：多租户隔离、SSO/SCIM、HA/集群、审计导出与保留策略、离线安装包签名、合规认证。
 
 ---
 
-## 2. docker compose
+## 2. docker compose（实际文件）
+
+```bash
+cp .env.example .env        # 至少填 JARY_API_TOKEN（公网必需）；DEEPSEEK_API_KEY 可选
+docker compose -f deploy/docker-compose.yml up -d --build
+# → http://127.0.0.1:8787
+```
+
+`deploy/docker-compose.yml` 的实质内容：
 
 ```yaml
 services:
   jary:
-    image: ghcr.io/<you>/jary:0.1.0
+    build: { context: .., dockerfile: deploy/Dockerfile }
     restart: unless-stopped
-    env_file: .env
+    env_file: ../.env
     ports: ["127.0.0.1:8787:8787"]
-    volumes:
-      - ./data:/data
-      - ./jary.toml:/data/jary.toml:ro
-    healthcheck:
-      test: ["CMD", "jary", "doctor"]
-      interval: 60s
-      timeout: 20s
-      retries: 3
+    volumes: ["../data:/data"]
     security_opt: ["no-new-privileges:true"]
-    # 需要 shell 工具时保留；如需更强隔离，P5 起用 worker 侧容器
 ```
+
+镜像（`deploy/Dockerfile`）：
+
+- `node:24-bookworm-slim`，**无 npm install / 无编译步骤**（Node 直接跑 TS，运行时不依赖第三方包）
+- 构建时把 `packages/*` 全部链到 `node_modules/@jaryn/*`（动态生成，新增包不会漏）
+- `/data` 卷：`jary.db`、`bots/*/workspace`、`artifacts`、`computers`、`vault.key`、`skills`
+- 内置 `HEALTHCHECK`（`jary doctor`）
 
 `.env`（权限 600）：
 
 ```
-DEEPSEEK_API_KEY=sk-...
-# TELEGRAM_TOKEN=...   # 暂不需要（IM 通知通道暂不做）
 JARY_HOME=/data
-JARY_LOG_LEVEL=info
+DEEPSEEK_API_KEY=sk-...        # 可选；缺省用 echo provider
+JARY_API_TOKEN=<随机串>        # 公网暴露时强烈建议
+# 邮件/OAuth 等按需：
+# JARY_EMAIL_SECRET=...
+# JARY_OAUTH_CLIENT_ID_GMAIL=...
 ```
 
-镜像内置 **ripgrep**（目录内容检索用，约 2MB）；没有时回退到内置扫描（限制深度与文件数），不影响启动。
-
-**首次启动**：`docker compose up -d` → `docker compose exec jary jary doctor` → 浏览器打开反代地址进 Web UI，给 Bot 发第一条消息。
-
----
+**首次启动**：`docker compose -f deploy/docker-compose.yml up -d` → `docker compose exec jary node packages/cli/src/index.ts doctor` → 浏览器打开反代地址。
 
 ## 3. 数据目录与备份
 
 ```
 /data/
-├─ jary.toml
+├─ profile.json       # 插件组合（bundle/patch 行）
 ├─ jary.db            # SQLite（WAL）
 ├─ bots/<id>/workspace/
 ├─ artifacts/
-├─ computers/        # 云电脑卷与快照（v0.2）
-├─ profiles/          # 插件组合
-└─ presets/
+├─ computers/        # 云电脑 profile/workspace 与快照
+├─ skills/            # 教学技能 SKILL.md
+├─ exports/           # 会话导出
+└─ vault.key          # Vault 主密钥（0600）
 ```
 
 **备份（每日）**

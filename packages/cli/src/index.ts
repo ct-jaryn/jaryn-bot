@@ -1,9 +1,9 @@
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { Store as SqliteStore } from '@jaryn/store-sqlite'
-import { fileURLToPath } from 'node:url'
 import { Context, applyPatch, composeProfile, formatRows, loadComposition } from '@jaryn/kernel'
 import type { PatchOp, Plugin, Profile, Row } from '@jaryn/kernel'
 import { agentPlugin, approvalPlugin, pricingPlugin, questionsPlugin, runTurn, toolRegistryPlugin } from '@jaryn/agent-core'
@@ -36,7 +36,7 @@ import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { notificationsPlugin } from '@jaryn/notifications'
 import { maintenancePlugin } from '@jaryn/maintenance'
 
-const VERSION = '1.9.1'
+const VERSION = '1.10.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -45,6 +45,11 @@ interface Args {
   sub?: string
   flags: Record<string, string | boolean>
   positional: string[]
+}
+
+/** Best-effort admin audit row (CLI mutations should be visible in `jary audit`). */
+function auditAction(ctx: { get?: (name: string) => any } | undefined, action: string, target?: string, detail?: unknown): void {
+  try { ctx?.get?.('store')?.audit?.(action, target, detail, 'cli') } catch { /* best effort */ }
 }
 
 function readInstalledName(profileDir: string, spec: string): string | undefined {
@@ -211,7 +216,7 @@ async function createRuntime(flags: Record<string, string | boolean>) {
   return { ctx, rows, result }
 }
 
-async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
+export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   const { cmd, sub, flags, positional } = parseArgs(argv)
   const home = homeDir(flags)
 
@@ -358,22 +363,32 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
       if (sub === 'add') {
         const id = positional[0]
         if (!id) { console.error('usage: jary bot add <id> [--name] [--persona]'); return 2 }
-        console.log(JSON.stringify(bots.add({ id, name: flags.name as string | undefined, persona: flags.persona as string | undefined }), null, 2))
+        const created = bots.add({ id, name: flags.name as string | undefined, persona: flags.persona as string | undefined })
+        auditAction(ctx, 'bot.added', id, { name: created.name })
+        console.log(JSON.stringify(created, null, 2))
         return 0
       }
       if (sub === 'list') { console.log(JSON.stringify(bots.list(), null, 2)); return 0 }
       if (sub === 'edit') {
         const id = String(positional[0] ?? '')
         if (!id) { console.error('usage: jary bot edit <id> [--name] [--persona] [--workspace]'); return 2 }
-        console.log(JSON.stringify(bots.edit(id, {
+        const edited = bots.edit(id, {
           name: flags.name as string | undefined,
           persona: flags.persona as string | undefined,
           workspace: flags.workspace as string | undefined,
-        }), null, 2))
+        })
+        auditAction(ctx, 'bot.edited', id)
+        console.log(JSON.stringify(edited, null, 2))
         return 0
       }
-      if (sub === 'remove') { console.log(JSON.stringify({ removed: bots.remove(String(positional[0]), !!flags.purge) })); return 0 }
-      console.error('usage: jary bot add|list|remove')
+      if (sub === 'remove') {
+        const id = String(positional[0])
+        const removed = bots.remove(id, !!flags.purge)
+        auditAction(ctx, 'bot.removed', id, { purge: !!flags.purge })
+        console.log(JSON.stringify({ removed }))
+        return 0
+      }
+      console.error('usage: jary bot add|list|edit|remove')
       return 2
     } finally {
       await ctx.dispose()
@@ -420,6 +435,19 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
       }
       console.error('usage: jary goal set|list|run|pause|clear')
       return 2
+    } finally { await ctx.dispose() }
+  }
+
+  if (cmd === 'tools') {
+    const { ctx } = await createRuntime(flags)
+    try {
+      const registry = ctx.get<any>('tools')
+      const list = (registry?.list?.() ?? []).map((tool: any) => ({ name: tool.name, risk: tool.risk ?? 'read', description: String(tool.description ?? '').split('\n')[0] }))
+      list.sort((a: any, b: any) => a.name.localeCompare(b.name))
+      if (flags.json) { console.log(JSON.stringify(list, null, 2)); return 0 }
+      for (const tool of list) console.log(`${tool.risk.padEnd(12)} ${tool.name}`)
+      console.log(`\n${list.length} tools`)
+      return 0
     } finally { await ctx.dispose() }
   }
 
@@ -670,6 +698,7 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
             maxSteps: flags['max-steps'] ? Number(flags['max-steps']) : undefined,
           },
         })
+        auditAction(ctx, 'job.added', job.id, { name: job.name })
         console.log(JSON.stringify(job, null, 2))
         return 0
       }
@@ -754,6 +783,7 @@ commands:
   tunnel --url ws://<server>/tunnel   client-side egress tunnel
   device pair-code|list|revoke        multi-device pairing
   goal set|list|run|pause|clear       persistent multi-round goals
+  tools [--json]                      list registered tools with risk
   usage [--session id]                token/cost totals
   audit [--limit n]                   audit log
   session list|replay|export|delete <id>
@@ -766,9 +796,13 @@ commands:
   return 2
 }
 
-main()
-  .then((code) => process.exitCode = code)
-  .catch((err) => {
-    console.error(`jary: ${err.message}`)
-    process.exitCode = 1
-  })
+// Only auto-run when invoked as a script (tests import main()).
+const invokedDirectly = process.argv[1] ? resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url)) : false
+if (invokedDirectly) {
+  main()
+    .then((code) => process.exitCode = code)
+    .catch((err) => {
+      console.error(`jary: ${err.message}`)
+      process.exitCode = 1
+    })
+}

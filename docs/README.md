@@ -46,6 +46,7 @@
 | 21 | [15-desktop-client.md](15-desktop-client.md) | **桌面客户端**：Electron 结构、GitHub Actions 打包矩阵、已构建产物校验、签名说明 | 现行 |
 | 22 | [16-mobile-client.md](16-mobile-client.md) | **移动客户端**：Android WebView 壳、APK 构建与产物、iOS 未做原因 | 现行 |
 | 23 | [17-scope-and-wont.md](17-scope-and-wont.md) | **不做清单（Won't）**：永久不做 / 待外部条件 / 可选增强 + 变更规则 | 现行 |
+| 24 | [18-code-inventory.md](18-code-inventory.md) | **代码清单（自动生成）**：包/插件/工具/路由/表/CLI/测试文件全量统计 | 自动生成 |
 
 ## 三、关键数字（所有文档必须一致）
 
@@ -65,7 +66,7 @@
 | 许可 | AGPL-3.0 + 商业双许可（网络使用须公开源码；闭源商业需授权） |
 | 记忆 | 每轮 digest ≤600 token；整理 ≤1 次 LLM/天（≤2K token）；默认无向量库/embedding；DB <1MB/年 |
 | 目录检索 | 文件：`fs.list/glob/grep`（上限 200/200/50，忽略 .git/node_modules）；记忆：`memory.catalog` ≤200 token |
-| 实现进度 | **v1.9.0 已发布**（162 测试 + 桌面/Android 客户端产物）；逐 FR 审计见 [14 完成度审计](14-completion-audit.md)，边界见 [17 不做清单](17-scope-and-wont.md) |
+| 实现进度 | **v1.10.0 已发布**（178 测试 + 桌面/Android 客户端产物）；逐 FR 审计见 [14](14-completion-audit.md)，边界见 [17](17-scope-and-wont.md)，规模见 [18](18-code-inventory.md) |
 
 ## 四、维护约定
 

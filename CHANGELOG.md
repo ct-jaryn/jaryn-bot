@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.10.0 — 全量代码与文档梳理
+
+### Fixed（审计中发现的真实缺陷）
+
+- **OAuth 回调不可用**：`/api/oauth/callback/:id` 被 API token 中间件拦住（浏览器重定向没有 Bearer）。现在按 public 处理并校验 `state`
+- **邮件入站只能用 token**：支持 `JARY_EMAIL_SECRET`（`x-jary-email-secret`）作为替代鉴权
+- **Vault 授权语义错误**：`grant`/`revoke` 传 `undefined` 给 SQLite 会崩；且撤销最后一个授权后回到"人人可用"。新增 `grants_only` 标记：一旦授权即锁定，撤销后仍锁定
+- **Docker 镜像漏链包**：`deploy/Dockerfile` 手写只链了 15 个包，新增的 16 个包（office/goals/notifications/secrets/plugin-host…）在镜像里会 `ERR_MODULE_NOT_FOUND`。改为动态链接全部 `packages/*`，并加校验与回归测试
+
+### Added
+
+- `jary tools [--json]`：列出运行中组合的全部工具与风险等级
+- CLI 管理动作写入审计：`bot.added/edited/removed`、`job.added`、`plugin.enabled/disabled`
+- `npm run smoke`：CLI 端到端冒烟（init/doctor/tools/memory/bot/job/vault/goal/backup/restore/stop-all）
+- `npm run inventory` + [docs/18-code-inventory.md](docs/18-code-inventory.md)：从运行时自动导出包/插件/工具/路由/表/CLI/测试清单
+- 测试：OAuth/邮件鉴权、Vault 授权（含撤销）、记忆维护、任务板 CAS、会话导出脱敏、WS 审批桥、部署链接、CLI 冒烟；共 **178 个**
+
+### Docs
+
+- `docs/02` HTTP 端点表按实际路由重写；`docs/04` 测试层与命令改为 Node 原生（去掉 pnpm/tsx）；`docs/05` 拓扑改为单进程 + 云电脑真实形态、compose 与数据目录与 `deploy/` 一致
+- `docs/14` 数字更新（74 工具 / 63 路由 / 23 CLI / 178 测试）；`docs/README` 索引加入 18
+
+
 ## v1.9.1 — 文档边界澄清（支付网关永久不做）
 
 ### Docs

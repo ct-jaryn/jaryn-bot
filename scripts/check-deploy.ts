@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
@@ -8,9 +8,16 @@ const dockerfile = readFileSync(join(ROOT, 'deploy/Dockerfile'), 'utf8')
 const compose = readFileSync(join(ROOT, 'deploy/docker-compose.yml'), 'utf8')
 
 if (!/FROM node:24/.test(dockerfile)) problems.push('Dockerfile should use node:24 image')
-if (!/node_modules\/@jaryn/.test(dockerfile)) problems.push('Dockerfile must wire @jaryn workspace links')
-for (const pkg of ['kernel', 'agent-core', 'store-sqlite', 'cli', 'web']) {
-  if (!dockerfile.includes(pkg)) problems.push(`Dockerfile missing package link: ${pkg}`)
+if (!/node_modules/.test(dockerfile) || !/@jaryn\//.test(dockerfile)) problems.push('Dockerfile must wire @jaryn workspace links')
+// The image links workspaces dynamically; make sure that loop is still there and that
+// every package on disk would resolve to an @jaryn/* name.
+if (!/readdirSync\("packages"\)/.test(dockerfile)) problems.push('Dockerfile must link all packages dynamically (readdirSync("packages"))')
+const packageDirs = readdirSync(join(ROOT, 'packages'))
+for (const dir of packageDirs) {
+  const manifest = join(ROOT, 'packages', dir, 'package.json')
+  if (!existsSync(manifest)) continue
+  const name = JSON.parse(readFileSync(manifest, 'utf8')).name as string
+  if (!name.startsWith('@jaryn/')) problems.push(`package ${dir} must be named @jaryn/* (got ${name})`)
 }
 if (!/packages\/cli\/src\/index\.ts/.test(dockerfile)) problems.push('Dockerfile must run the CLI entry')
 if (!/context:\s*\.\./.test(compose)) problems.push('compose build context should be repo root')

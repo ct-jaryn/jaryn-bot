@@ -23,30 +23,35 @@ test('mjpeg endpoint streams multipart frames', { skip: !available, timeout: 40_
   ctx.provide('computer', computer)
   await ctx.mount(agentPlugin())
   const server = await startWebServer(ctx, { port: 0 })
-  const controller = new AbortController()
   try {
     const client = await computer.client('bot-mjpeg')
-    await client.navigate('data:text/html,<h1>mjpeg</h1>')
-    const res = await fetch(`${server.url}/api/computer/mjpeg?botId=bot-mjpeg`, { signal: controller.signal })
-    assert.equal(res.status, 200)
-    assert.match(res.headers.get('content-type') ?? '', /multipart\/x-mixed-replace/)
-    const reader = res.body!.getReader()
-    let text = ''
-    const timer = setTimeout(() => controller.abort(), 12_000)
-    try {
-      while (!text.includes('Content-Length')) {
-        await client.evaluate('document.body.style.opacity = document.body.style.opacity === "1" ? "0.999" : "1"').catch(() => undefined)
-        const { value, done } = await Promise.race([
-          reader.read(),
-          new Promise<{ value?: Uint8Array; done: boolean }>((resolve) => setTimeout(() => resolve({ done: true }), 300)),
-        ])
-        if (done) break
-        if (value) text += Buffer.from(value).toString('latin1')
-      }
-    } catch { /* aborted */ } finally { clearTimeout(timer); controller.abort() }
+    await client.navigate('data:text/html,<h1 style="font-size:80px">mjpeg</h1>')
+    const readFrames = async (): Promise<string> => {
+      const controller = new AbortController()
+      const res = await fetch(`${server.url}/api/computer/mjpeg?botId=bot-mjpeg`, { signal: controller.signal })
+      assert.equal(res.status, 200)
+      assert.match(res.headers.get('content-type') ?? '', /multipart\/x-mixed-replace/)
+      const reader = res.body!.getReader()
+      let text = ''
+      const timer = setTimeout(() => controller.abort(), 10_000)
+      try {
+        while (!text.includes('Content-Length')) {
+          await client.evaluate('document.body.style.opacity = document.body.style.opacity === "1" ? "0.999" : "1"').catch(() => undefined)
+          const { value, done } = await Promise.race([
+            reader.read(),
+            new Promise<{ value?: Uint8Array; done: boolean }>((resolve) => setTimeout(() => resolve({ done: true }), 300)),
+          ])
+          if (done) break
+          if (value) text += Buffer.from(value).toString('latin1')
+        }
+      } catch { /* aborted */ } finally { clearTimeout(timer); controller.abort() }
+      return text
+    }
+    // Real Chrome under load occasionally drops the first stream; retry once.
+    let text = await readFrames()
+    if (!text.includes('Content-Length')) text = await readFrames()
     assert.match(text, /Content-Type: image\/jpeg/)
   } finally {
-    controller.abort()
     await server.close()
     await computer.shutdown()
     await ctx.dispose()

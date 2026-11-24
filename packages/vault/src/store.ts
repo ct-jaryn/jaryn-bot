@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS vault_items (
   username TEXT,
   secret_enc TEXT NOT NULL,
   scope TEXT NOT NULL DEFAULT 'global',
+  grants_only INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   last_used_at INTEGER
@@ -66,6 +67,7 @@ export class VaultService {
     this.db = db
     this.key = loadOrCreateMasterKey(opts.keyPath ?? join(process.env.JARY_HOME ?? join(process.cwd(), 'data'), 'vault.key'))
     this.db.exec(SCHEMA)
+    try { this.db.exec('ALTER TABLE vault_items ADD COLUMN grants_only INTEGER NOT NULL DEFAULT 0') } catch { /* already migrated */ }
   }
 
   add(input: {
@@ -102,11 +104,16 @@ export class VaultService {
     return { ...toMeta(row), secret: decrypt(row.secret_enc, this.key) as Record<string, unknown> }
   }
 
-  /** True when the bot may use this item: explicit grant, or no grants configured for the item. */
+  /**
+   * True when the bot may use this item. Items start unrestricted (any bot), and become
+   * restricted the first time a grant is added; revoking the last grant keeps them locked.
+   */
   canUse(itemId: string, botId?: string): boolean {
-    const grants = this.db.prepare('SELECT bot_id FROM vault_grants WHERE item_id = ?').all(itemId) as any[]
-    if (grants.length === 0) return true
+    const row = this.db.prepare('SELECT grants_only FROM vault_items WHERE id = ?').get(itemId) as any
+    if (!row) return false
+    if (!row.grants_only) return true
     if (!botId) return false
+    const grants = this.db.prepare('SELECT bot_id FROM vault_grants WHERE item_id = ?').all(itemId) as any[]
     return grants.some((grant) => grant.bot_id === botId || grant.bot_id === '*')
   }
 
@@ -169,7 +176,10 @@ export class VaultService {
   }
 
   grant(itemId: string, botId: string): void {
+    if (!this.meta(itemId)) throw new Error(`vault item not found: ${itemId}`)
     this.db.prepare('INSERT OR REPLACE INTO vault_grants(item_id, bot_id) VALUES (?, ?)').run(itemId, botId)
+    // Adding any grant marks the item as restricted from now on.
+    this.db.prepare('UPDATE vault_items SET grants_only = 1 WHERE id = ?').run(itemId)
     this.audit(undefined, botId, itemId, 'grant')
   }
 
@@ -208,7 +218,7 @@ export class VaultService {
   private audit(scope: string | undefined, botId: string | undefined, itemId: string, action: string, origin?: string, result = 'ok'): void {
     this.db.prepare(
       'INSERT INTO vault_events(ts, actor, bot_id, item_id, action, origin, result) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    ).run(Date.now(), scope, botId ?? null, itemId, action, origin ?? null, result)
+    ).run(Date.now(), scope ?? null, botId ?? null, itemId, action, origin ?? null, result)
   }
 }
 

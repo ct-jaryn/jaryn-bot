@@ -1,7 +1,7 @@
 # 14 · 完成度审计（设计 vs 代码）
 
-> 状态：**现行**（v1.9.0 后）。方法：逐条对照 `01-functional-spec.md` 的 FR-1…FR-19 与 `00-prd.md` 需求池，检查代码里**实际注册的工具、HTTP 路由、CLI 命令、DB 表**，而不是看提交信息。
-> 复算命令：`npm test`（串行执行）、`npm run check`、`node scripts/check-docs.ts`、`node scripts/check-deploy.ts`、`node packages/cli/src/index.ts doctor`。
+> 状态：**现行**（v1.10.0 后）。数字与工具/路由清单见 [18 代码清单](18-code-inventory.md)（自动生成）。方法：逐条对照 `01-functional-spec.md` 的 FR-1…FR-19 与 `00-prd.md` 需求池，检查代码里**实际注册的工具、HTTP 路由、CLI 命令、DB 表**，而不是看提交信息。
+> 复算命令：`npm test`（串行）、`npm run check`、`npm run smoke`（CLI 端到端）、`npm run inventory`（刷新 [18](18-code-inventory.md)）、`node scripts/check-docs.ts`、`node scripts/check-deploy.ts`、`node packages/cli/src/index.ts doctor`。
 
 ## 口径
 
@@ -20,7 +20,7 @@
 | FR-2 | 会话 | ✅ | 建/列/标题/归档/删除/fork/回放、选会话续聊、**30 天自动归档（maintenance）**、导出 JSONL | 自动标题（LLM） |
 | FR-3 | IM 通知 | ⛔ | 按决策不做（Web 单入口） | — |
 | FR-4 | Agent 运行 | ✅ | 流式、工具循环、重试、压缩、预算（步数/工具/墙钟/费用）、`/stop`、usage 记账、**并行安全工具并发执行** | 无 |
-| FR-5 | 工具集 | ✅ | 51 个工具：fs.read/write/edit/list/glob/grep、shell、web.search/fetch(SSRF)、memory.*、task.*、bot.*（含 spawn_worker/inbox）、browser.*、computer.*（含 exec）、vault.*（含 rotate/grant）、pages.*、artifact.*、email.send、office.docx/xlsx/pptx、initiative.*、teach.*、schedule.*、ask_user、goal.* | 无（含输出 >32KB 自动落盘 artifact） |
+| FR-5 | 工具集 | ✅ | **74 个工具**：fs.read/write/edit/list/glob/grep、shell、web.search/fetch(SSRF)、memory.*、task.*、bot.*（含 spawn_worker/inbox）、browser.*、computer.*（含 exec/restart/usage）、vault.*（含 rotate/grant/fill_card）、pages.*（含 versions/rollback/export）、artifact.*、email.send、office.docx/xlsx/pptx、initiative.*、teach.*（含录制）、schedule.*、ask_user、goal.* | 无（含输出 >32KB 自动落盘 artifact） |
 | FR-6 | 审批 | ✅ | 风险分级、规则引擎、once/session/always 授权、超时默认拒绝、approvals+audit 表、**后台任务 0 容忍（立即拒绝，可用 allow 规则预批）** | thread 作用域（无 IM 场景等价于 session） |
 | FR-7 | 记忆 | ✅ | FTS5+bigram、pinned、≤600 token digest、catalog/list/read、整理、遗忘、tags、**容量上限/衰减归档/TTL/定时维护** | 语义检索（可选，未做） |
 | FR-8 | 多 Bot | ✅ | 名册、workspace 隔离、spawn_worker 子会话、任务板 CAS、消息总线 hop≤2、inbox | 对等群聊（设计不做） |
@@ -48,9 +48,9 @@
 ## 总量
 
 - 31 个包、约 **10.6k 行 TS**（`packages/*/src`）、前端约 350 行
-- **162 个测试**（40 个测试文件，含真实 Chrome/screencast、假 IMAP/SMTP/MCP/HTTP 服务、office 包结构校验）
-- **65 个工具注册点**（含 MCP/插件宿主动态注册）、55 条 HTTP 路由、20+ CLI 子命令
-- 文档：27 份 markdown（约 5.4k 行）+ 11 份发布说明
+- **178 个测试**（64 个测试文件：真实 Chrome/screencast/MJPEG、假 IMAP/SMTP/TLS/MCP/HTTP 服务、office 包结构、CLI 冒烟与导出脱敏）
+- **74 个工具**、**63 条 HTTP 路由**、**23 个 CLI 命令**（自动统计见 [18](18-code-inventory.md)）
+- 文档：**24 份设计文档 + 23 份发布说明**（README/CHANGELOG/NOTICE 等另计）
 - 自动化校验：`check-docs`（结构/链接）、`check-deploy`（镜像/注册表）、`evals --dry`（10 任务结构）
 
 ## 里程碑对应

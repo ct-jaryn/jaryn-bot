@@ -1,6 +1,6 @@
 {
   "name": "jaryn-bot",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "private": true,
   "type": "module",
   "description": "Self-hosted personal AI teammate runtime",
@@ -16,11 +16,14 @@
     "jary": "node packages/cli/src/index.ts",
     "check:docs": "node scripts/check-docs.ts",
     "check:deploy": "node scripts/check-deploy.ts",
-    "check": "node scripts/check-docs.ts && node scripts/check-deploy.ts && node scripts/check-desktop.ts && node evals/run.ts --dry",
+    "check": "node scripts/check-docs.ts && node scripts/check-deploy.ts && node scripts/check-desktop.ts && node scripts/check-inventory.ts && node evals/run.ts --dry",
     "eval": "node evals/run.ts",
     "serve": "node packages/cli/src/index.ts serve --port 8787",
     "desktop": "cd desktop && npm start",
     "check:desktop": "node scripts/check-desktop.ts",
-    "setup": "node scripts/link-workspaces.mjs"
+    "setup": "node scripts/link-workspaces.mjs",
+    "inventory": "node scripts/inventory.ts --write-docs",
+    "smoke": "node scripts/smoke.ts",
+    "check:inventory": "node scripts/check-inventory.ts"
   }
 }

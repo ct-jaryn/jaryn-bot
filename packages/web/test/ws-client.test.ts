@@ -152,3 +152,26 @@ test('ws/client rejects unauthorized connections when a token is set', async () 
     await ctx.dispose()
   }
 })
+
+test('ws/client can list and resolve pending approvals', async () => {
+  const { ctx, server } = await setup()
+  const port = Number(new URL(server.url).port)
+  const ws = wsConnect(port, '/ws/client')
+  try {
+    await ws.ready
+    await waitFor(ws.messages, (m) => m.event === 'ready')
+    // Register a fake pending approval through the bridge the web server provides.
+    const bridge = ctx.get<any>('pendingApprovals')
+    assert.ok(bridge, 'approval bridge should be mounted')
+    ws.send({ id: 1, method: 'approval.list' })
+    const list = await waitFor(ws.messages, (m) => m.id === 1)
+    assert.deepEqual(list.result.approvals, [])
+    ws.send({ id: 2, method: 'approval.respond', params: { id: 'missing', decision: 'allowed' } })
+    const responded = await waitFor(ws.messages, (m) => m.id === 2)
+    assert.equal(responded.result.resolved, false)
+  } finally {
+    ws.close()
+    await server.close()
+    await ctx.dispose()
+  }
+})

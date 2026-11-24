@@ -112,8 +112,13 @@ export class WsClientServer {
       }
       case 'approval.respond': {
         const pending = this.ctx.get<any>('pendingApprovals')
-        if (pending?.resolve) return { resolved: pending.resolve(String(params.id ?? ''), String(params.decision ?? 'denied') === 'allowed' ? 'allowed' : 'denied') }
-        throw new Error('approval bridge not mounted')
+        if (!pending?.resolve) throw new Error('approval bridge not mounted')
+        const decision = String(params.decision ?? 'denied') === 'allowed' ? 'allowed' : 'denied'
+        return { resolved: pending.resolve(String(params.id ?? ''), decision) }
+      }
+      case 'approval.list': {
+        const pending = this.ctx.get<any>('pendingApprovals')
+        return { approvals: pending?.list?.() ?? [] }
       }
       case 'usage.total': {
         return store?.usageTotal?.(params.sessionId ? String(params.sessionId) : undefined) ?? {}
@@ -151,5 +156,5 @@ export class WsClientServer {
 
 const METHODS = [
   'ping', 'session.list', 'session.create', 'session.subscribe',
-  'turn.send', 'turn.cancel', 'approval.respond', 'usage.total',
+  'turn.send', 'turn.cancel', 'approval.list', 'approval.respond', 'usage.total',
 ]

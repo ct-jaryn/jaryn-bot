@@ -1,23 +1,29 @@
 # 04 · 测试与验收（Testing & Acceptance）
 
-> 状态：**现行**。阶段划分见 [03-roadmap.md](03-roadmap.md)，功能验收见 [01-functional-spec.md](01-functional-spec.md)。
-> 原则：**每个阶段有 Gate，Gate 不过不进入下一阶段**；测试以 Fake 为主，真实外部依赖只在 nightly 跑。
+> 状态：**现行**（v1.10.0）。阶段划分见 [03](03-roadmap.md)，功能验收见 [01](01-functional-spec.md)，规模统计见 [18](18-code-inventory.md)。
+> 原则：**每个阶段有 Gate，Gate 不过不进入下一阶段**；测试以 Fake 为主，真实外部依赖（Chrome、SMTP/TLS）尽量本地假服务，云 API 只在有 key 时跑。
 
 ---
 
 ## 1. 测试金字塔
 
-| 层 | 占比 | 内容 | 何时跑 |
-|---|---|---|---|
-| 单元 | 50% | kernel、store、预算、策略、解析、工具纯逻辑 | 每次提交 |
-| 契约 | 15% | Worker JSON-RPC、通道适配器、插件 manifest/loader | 每次提交 |
-| 集成 | 20% | gateway + worker（FakeProvider/FakeChannel）+ SQLite | 每次提交 |
-| 端到端 | 10% | 真实浏览器 + 真实 DeepSeek（夜间） | nightly |
-| 混沌 | 3% | kill -9、断网、磁盘满、DB 锁、预算超限 | nightly |
-| 安全 | 2% | 注入、路径逃逸、SSRF、密钥、越权 | 每周 + 发布前 |
-| 评测 | — | 20 个真实任务的质量回归 | 每周 |
+| 层 | 内容 | 现状 |
+|---|---|---|
+| 单元 | kernel、store、预算、策略、解析、工具纯逻辑 | ✅ 多数包 |
+| 集成 | 组合加载 + FakeProvider + SQLite + 服务间联动 | ✅ agent/web/scheduler/initiative… |
+| 端到端 | 真实 Chrome（导航/截图/screencast/MJPEG）、真实 TLS 握手（自签证书） | ✅ 本机可跑 |
+| CLI 冒烟 | `npm run smoke`：init/doctor/tools/memory/bot/job/vault/goal/backup/restore/stop-all | ✅ 每次提交 |
+| 安全 | 路径逃逸、SSRF、Vault 授权、审批规则、配对限次、导出脱敏 | ✅ 已覆盖 |
+| 评测 | 10 个真实任务（`evals/`） | 🚧 需 `DEEPSEEK_API_KEY` |
 
-**工具**：`node:test`（或 vitest）+ `tsx`；契约用 JSON Schema 校验；e2e 用测试 Bot 账号。
+**工具**：`node:test`（Node 24 原生跑 TS，无编译、无 tsx/ts-node）；HTTP/WS/TLS 用 node 内置模块搭假服务。
+
+```bash
+npm test          # 178 tests（串行：--test-concurrency=1，避免真实 Chrome 抖动）
+npm run check     # docs + deploy + desktop + eval 结构校验
+npm run smoke     # CLI 端到端冒烟
+npm run inventory # 刷新 docs/18-code-inventory.md
+```
 
 ---
 
@@ -97,14 +103,14 @@
 2. 错误路径有明确错误码与用户文案；
 3. 文档/接口变更已同步（配置、事件、CLI）；
 4. 有审计/日志关键点；
-5. `pnpm typecheck && pnpm test` 全绿；
+5. `npm test && npm run check` 全绿（本项目无 tsc 编译步骤，Node 直接运行 TS）；
 6. 涉及模型行为的变化，跑一次评测基线。
 
 ---
 
 ## 5. 评测集设计
 
-- **规模**：20 个任务，覆盖 5 类（研究 6 / 编码 5 / 文档 4 / 运维 3 / 主动 2）。
+- **规模**：10 个任务（`evals/tasks.json`），覆盖研究/编码/文档/运维/主动；`--dry` 只做结构校验。
 - **判分**：自动断言（文件存在/命令成功/字段匹配）70% + 人工 30%（有用性 1–5 分）。
 - **通过线**：单任务 ≥4/5 且整体 ≥75%；每次改 prompt/工具描述后跑，记录趋势。
 - **防过拟合**：保留 5 个"未见过"任务，只在发布前跑。

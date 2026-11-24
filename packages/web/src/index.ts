@@ -96,6 +96,16 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       })
     },
   }
+  // Lets other transports (e.g. /ws/client JSON-RPC) resolve pending approvals.
+  ctx.provide('pendingApprovals', {
+    list: () => [...pending.values()].map((entry) => entry.req),
+    resolve: (id: string, decision: ApprovalDecision) => {
+      const entry = pending.get(id)
+      if (!entry) return false
+      entry.resolve(decision)
+      return true
+    },
+  })
   if (!ctx.has('questionChannel')) ctx.provide('questionChannel', questionChannel)
   if (!ctx.has('questions')) ctx.provide('questions', questionChannel)
 
@@ -130,8 +140,17 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     const path = url.pathname
 
     const publicPaths = new Set(['/healthz', '/', '/index.html', '/app.js', '/style.css', '/manifest.json', '/sw.js', '/icon.svg'])
-    const publicApi = path === '/api/devices/pair-code' || path === '/api/devices/pair'
-    const needsAuth = (path.startsWith('/api/') && !publicApi) || path === '/metrics'
+    const publicApi =
+      path === '/api/devices/pair-code' ||
+      path === '/api/devices/pair' ||
+      // OAuth providers redirect the browser here without our bearer token; the
+      // handler validates `state` instead.
+      path.startsWith('/api/oauth/callback/')
+    // Inbound mail may authenticate with its own shared secret instead of the API token.
+    const emailSecret = process.env.JARY_EMAIL_SECRET
+    const emailSecretAuth = path === '/api/email/inbound' && !!emailSecret &&
+      String(req.headers['x-jary-email-secret'] ?? '') === emailSecret
+    const needsAuth = (path.startsWith('/api/') && !publicApi && !emailSecretAuth) || path === '/metrics'
     if (needsAuth && !authorized(req, url)) return sendJson(res, 401, { error: 'unauthorized' })
     void publicPaths
 

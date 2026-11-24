@@ -2,7 +2,7 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-**状态：v1.9.1 已发布。** 运行时、Web UI、记忆、多 Bot（含 spawn_worker）、主动任务、云电脑（看屏/接管/出网/容器内终端）、Vault、连接器（OAuth 回调）/邮箱（SMTP+IMAP+附件）、Pages、office（docx/xlsx/pptx）、Initiative/teach、goals、usage/审计、审批规则、多设备配对、鉴权、SMTP TLS/附件、`/ws/client` JSON-RPC、6 类主动信号、云电脑配额与域名白名单、Pages 版本回滚、通知中心、**Electron 桌面客户端 + Android 客户端（GitHub Actions 打包）**；**162 个测试；Actions 产出 win/linux 安装包与 Android APK**。逐 FR 完成度见 [docs/14-completion-audit.md](docs/14-completion-audit.md)。
+**状态：v1.10.0 已发布。** 运行时、Web UI、记忆、多 Bot（含 spawn_worker）、主动任务、云电脑（看屏/接管/出网/容器内终端）、Vault、连接器（OAuth 回调）/邮箱（SMTP+IMAP+附件）、Pages、office（docx/xlsx/pptx）、Initiative/teach、goals、usage/审计、审批规则、多设备配对、鉴权、SMTP TLS/附件、`/ws/client` JSON-RPC、6 类主动信号、云电脑配额与域名白名单、Pages 版本回滚、通知中心、**Electron 桌面客户端 + Android 客户端（GitHub Actions 打包）**；**178 个测试；Actions 产出 win/linux 安装包与 Android APK**。逐 FR 完成度见 [docs/14-completion-audit.md](docs/14-completion-audit.md)，规模统计见 [docs/18-code-inventory.md](docs/18-code-inventory.md)。
 
 > 目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。最新发布说明见 [RELEASE-v1.9.0.md](RELEASE-v1.9.0.md)。
 
@@ -78,8 +78,10 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 node packages/cli/src/index.ts init --home ./data-home
 node packages/cli/src/index.ts doctor
 node packages/cli/src/index.ts serve --home ./data-home --port 8787
-npm test          # 162 tests（串行，含真实 Chrome）
-npm run check     # docs + deploy + eval 结构校验
+npm test          # 178 tests（串行，含真实 Chrome）
+npm run check     # docs + deploy + desktop + eval 结构校验
+npm run smoke     # CLI 端到端冒烟（init/doctor/tools/memory/bot/job/vault/goal/backup…）
+npm run inventory # 重新生成 docs/18-code-inventory.md（工具/路由/表/CLI 全量）
 npm run eval      # 真实模型评测（需 DEEPSEEK_API_KEY）
 ```
 
@@ -101,12 +103,14 @@ npm run eval      # 真实模型评测（需 DEEPSEEK_API_KEY）
 - ✅ **v0.9 IMAP 收信**：IMAP 轮询（SEARCH UNSEEN → FETCH → 标已读）→ `input.email` 事件
 - ✅ **v1.0 收尾**：文档/部署/评测自动校验脚本、Docker 说明、发布说明
 - ✅ **v1.1–v1.9**：审计缺口全面补齐（详见 [docs/14-completion-audit.md](docs/14-completion-audit.md) 与 [CHANGELOG.md](CHANGELOG.md)）；**162 个测试**
+- ✅ **v1.10 全量梳理**：修 OAuth 回调鉴权/邮件 secret、Vault 授权撤销语义、Docker 镜像漏链包；新增 `jary tools`、CLI 管理审计、CLI 冒烟、代码清单自动生成；**178 个测试**
 
 ```bash
 node packages/cli/src/index.ts init
 node packages/cli/src/index.ts config print
 node packages/cli/src/index.ts chat --bot jaryn "hello"
 node packages/cli/src/index.ts doctor
+node packages/cli/src/index.ts tools          # 列出全部工具与风险等级
 # 真实模型（需 DEEPSEEK_API_KEY）
 node packages/cli/src/index.ts chat --home ~/.jary --patch packages/bundles/deepseek/patch.json "hello"
 # Web UI
@@ -169,4 +173,4 @@ It is **inspired by Grok Bot (xAI), but is an original, independent implementati
 
 **License:** AGPL-3.0 (OSI-approved, strong copyleft) with a commercial dual license. Network use requires publishing your corresponding source under AGPL; for closed/commercial use contact the author for a commercial license — see [COMMERCIAL.md](COMMERCIAL.md).
 
-**Status:** v1.9.0 released — runtime, Web UI, memory, multi-bot, proactive jobs, cloud computer, vault, connectors/email/Pages, notifications, desktop (Electron) and Android clients, `/ws/client` JSON-RPC. 162 tests. A real payment gateway is explicitly out of scope (card *filling* only, disabled by default). Design docs: [docs/README.md](docs/README.md).
+**Status:** v1.10.0 released — runtime, Web UI, memory, multi-bot, proactive jobs, cloud computer, vault, connectors/email/Pages, notifications, desktop (Electron) and Android clients, `/ws/client` JSON-RPC. 178 tests; full code inventory in [docs/18-code-inventory.md](docs/18-code-inventory.md). A real payment gateway is explicitly out of scope (card *filling* only, disabled by default). Design docs: [docs/README.md](docs/README.md).
