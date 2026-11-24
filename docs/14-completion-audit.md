@@ -76,7 +76,7 @@
 | iOS 客户端 | ⛔ | 需 macOS 构建与 Apple 签名；PWA 可加主屏 |
 | 真实支付网关 | ⛔ | 仅做卡信息填表，不做支付结算 |
 | 官方 Gmail/Calendar OAuth 应用 | 🚧 | 需自建 OAuth 应用（示例与回调已就绪） |
-| 实时低延迟串流（WebRTC） | 未做 | 已提供 CDP screencast + MJPEG；真 WebRTC 未做 |
+| 实时低延迟串流（WebRTC） | 未做 | CDP screencast + MJPEG 已满足日常看屏；WebRTC 需媒体栈，收益低 |
 | 进程外插件宿主 | ✅ | `@jaryn/plugin-host` + 示例插件 |
 | IM 投递 | 未做 | 按决策不做 IM；通知中心已实现（含安静时段） |
 | 团队协作 / 会议 / 企业管控 / 语音 / 多租户 | ⛔ | 决策明确不做 |
