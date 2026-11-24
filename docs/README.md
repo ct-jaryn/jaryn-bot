@@ -39,7 +39,7 @@
 
 ## 运维
 
-[部署](operations/deployment.md) · [安全](operations/security.md) · [测试](operations/testing.md) · [排错](operations/troubleshooting.md)
+[部署](operations/deployment.md) · [自动打包](operations/release.md) · [安全](operations/security.md) · [测试](operations/testing.md) · [排错](operations/troubleshooting.md)
 
 ## 设计
 

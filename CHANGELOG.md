@@ -1,8 +1,18 @@
 # 更新记录
 
-> 适用版本：v1.11.0 · 状态：现行
+> 适用版本：v1.12.0 · 状态：现行
 
 按版本倒序。每一条只写"用户可见的变化"；设计取舍见 [决策与边界](docs/design/decisions.md)，能力现状见 [能力审计](docs/design/audit.md)。
+
+## v1.12.0 — 自动打包流水线
+
+- 统一 `release.yml`：tag / 手动 / 每周一定时三入口，一次产出 **Windows / Linux / macOS / Android** 客户端。
+- macOS 恢复自动构建：改用可用的 `macos-15` runner（`macos-13` 已下线、`macos-14` 在本账号返回 configuration not supported），一次构建 x64 + arm64 两个 dmg。
+- tag 构建自动创建/更新 GitHub Release：版本从 tag 注入（桌面 `package.json`、Android `versionName`/`versionCode`），Release notes 从 CHANGELOG 抽取，附 `SHA256SUMS.txt`。
+- 定时/手动构建产出 `0.0.0-main.<sha>` 快照 artifacts，不创建 Release，用于发现打包链路断裂。
+- 缓存 electron/electron-builder 下载，缩短重复构建时间。
+- 新增 [自动打包](docs/operations/release.md) 文档（触发方式、产物、免费 runner、签名、排错）；`check:desktop` 改为校验统一工作流与旧工作流不再存在。
+- 桌面/Android 版本号 1.12.0。
 
 ## v1.11.0 — 文档重构
 

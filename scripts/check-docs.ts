@@ -80,7 +80,7 @@ for (const required of [
   'deploy/Dockerfile', 'deploy/docker-compose.yml',
   'docs/README.md', 'docs/getting-started.md', 'docs/concepts.md',
   'docs/reference/inventory.md', 'docs/reference/tools.md',
-  'desktop/package.json', 'desktop/main.cjs', '.github/workflows/desktop.yml',
+  'desktop/package.json', 'desktop/main.cjs', '.github/workflows/release.yml', '.github/workflows/ci.yml', 'scripts/release-notes.ts', 'docs/operations/release.md',
 ]) {
   if (!existsSync(join(ROOT, required))) problems.push(`missing required file: ${required}`)
 }

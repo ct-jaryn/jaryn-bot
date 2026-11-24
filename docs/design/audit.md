@@ -41,7 +41,7 @@
 | 运维与部署 | 🟡 | doctor、backup/restore、stop-all、`/healthz`、`/metrics`、Dockerfile + compose、反代 TLS 文档 | Docker 镜像未在真机构建/运行实测 |
 | 测试与自动校验 | ✅ | 64 个测试文件 / 178 个用例（真实 Chrome、假 IMAP/SMTP/TLS/MCP 服务、office 包结构、CLI 冒烟）、check-docs / check-deploy / check-inventory / evals --dry | 真实模型评测需 API key |
 | 真实模型端到端评测 | 🟡 | 10 任务评测脚本与结构校验就绪（`node evals/run.ts --dry`） | 需 `DEEPSEEK_API_KEY` 才能跑真实分 |
-| 桌面安装包 | 🟡 | GitHub Actions 产出 win/linux 安装包 | macOS `.dmg` 需可用的 macOS runner（`desktop-macos.yml` 已就绪） |
+| 客户端打包 | ✅ | 单一 `release.yml`：Windows `.exe`、Linux `.AppImage`/`.deb`、macOS `.dmg`（x64+arm64）、Android `.apk`；tag 自动发布 + `SHA256SUMS.txt` | 未做代码签名/公证（需证书） |
 
 ## 总量（v1.10.0）
 
@@ -65,7 +65,7 @@
 | 真实模型评测（10 任务） | 🟡 | 需要 `DEEPSEEK_API_KEY`；`npm run eval` |
 | Docker 镜像构建/运行实测 | 🟡 | 需要一台有 Docker 的机器；步骤见 `deploy/README.md` |
 | 云电脑桌面镜像真机验证（Xvfb / VNC / noVNC） | 🟡 | 同上，需要 Docker |
-| macOS 安装包（`.dmg`） | 🟡 | 需要可用的 macOS runner；`desktop-macos.yml` 已就绪 |
+
 
 ## 结论与边界
 

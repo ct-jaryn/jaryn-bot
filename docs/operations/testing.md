@@ -99,9 +99,10 @@ npm run eval -- --json   # 附带结构化结果
 | 工作流 | 触发 | 运行环境 | 内容 |
 |---|---|---|---|
 | `ci.yml` | push main、PR | ubuntu-latest，Node 24 | link → `npm test` → `npm run check` → 桌面单元测试 |
-| `desktop.yml` | 手动、tag `v*` | ubuntu-latest、windows-latest | 桌面依赖安装、单测、electron-builder 打包，tag 时附到 Release |
-| `desktop-macos.yml` | 手动 | macos-14、macos-13 | 构建 dmg，`continue-on-error`，不阻塞主流水线 |
-| `mobile-android.yml` | 手动、tag `v*` | ubuntu-latest，Java 17 | `gradle assembleDebug`，上传 APK，tag 时附到 Release |
+| `release.yml` | tag `v*`、手动、每周一 | ubuntu-latest、windows-latest、macos-15，Java 17 | 测试/校验 → 桌面三平台打包 → Android APK → 汇总校验和；tag 时创建 GitHub Release |
+| `ci.yml` | push/PR | ubuntu-latest，Node 24 | `npm test` + `npm run check` |
+
+打包细节与签名、排错见 [自动打包](release.md)。
 
 CI 不跑真实模型评测；需要 `DEEPSEEK_API_KEY` 的评测与 Docker/Chrome 相关验证属于发布前人工验收。
 

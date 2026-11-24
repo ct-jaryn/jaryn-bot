@@ -128,9 +128,11 @@ ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: "ping" }))
 
 | 工作流 | 触发 | 产物 | 说明 |
 |---|---|---|---|
-| `.github/workflows/desktop.yml` | `v*` tag / 手动 | Windows NSIS `.exe`、Linux `.AppImage` + `.deb` | tag 时自动附到 Release |
-| `.github/workflows/desktop-macos.yml` | 仅手动 | macOS `.dmg`（x64/arm64） | `continue-on-error`，不进主发布流水线；本账号无可用 macOS runner |
-| `.github/workflows/mobile-android.yml` | `v*` tag / 手动 | `app-debug.apk` | JDK 17 + Gradle，`assembleDebug`；tag 时附 Release |
+| `.github/workflows/release.yml` | tag `v*` / 手动 / 每周一 | 全部客户端 + `SHA256SUMS.txt` | 一次构建全平台：Windows `.exe`、Linux `.AppImage`/`.deb`、macOS `.dmg`（x64+arm64）、Android `.apk`；tag 时自动创建/更新 GitHub Release |
+
+**免费 runner 说明**：公开仓库使用 GitHub 托管的标准 runner 不扣分钟。本流水线使用的标签：`ubuntu-latest`、`windows-latest`、`macos-15`（arm64，交叉构建 x64/arm64 dmg）。
+不要用 `macos-13`（已下线）或 `macos-14`（本账号返回 “configuration not supported”），这两者会让任务直接取消。
+更完整的打包/签名/排错说明见 [自动打包](../operations/release.md)。
 
 打包全部在 GitHub Actions 完成，本地只需跑单测：`node --test desktop/test/*.test.cjs`（已包含在 `npm test`）。
 

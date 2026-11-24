@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0%20%2B%20commercial-blue)](LICENSE)
 [![Node](https://img.shields.io/badge/node-24-brightgreen)](https://nodejs.org)
 [![Tests](https://img.shields.io/badge/tests-178%20passing-brightgreen)](docs/operations/testing.md)
-[![Version](https://img.shields.io/badge/version-v1.11.0-informational)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.12.0-informational)](CHANGELOG.md)
 
 设计目标是一台 **4C4G** 云服务器、单 owner、Web 优先、默认云模型 API。不依赖外部数据库，不依赖第三方运行时包，`node` 直接跑 TypeScript。
 
@@ -92,7 +92,7 @@ docker compose -f deploy/docker-compose.yml up -d --build
 | [核心概念](docs/concepts.md) | 会话/事件、工具、审批、Bot、云电脑、Vault 的心智模型 |
 | [使用指南](docs/README.md#使用指南) | Web UI、客户端、记忆、主动任务、云电脑、Vault、连接器/邮箱、Pages/产物、插件 |
 | [参考](docs/reference/cli.md) | [CLI](docs/reference/cli.md) · [HTTP/WS API](docs/reference/http-api.md) · [工具清单](docs/reference/tools.md) · [配置](docs/reference/configuration.md) · [事件](docs/reference/events.md) |
-| [运维](docs/operations/deployment.md) | [部署](docs/operations/deployment.md) · [安全](docs/operations/security.md) · [测试](docs/operations/testing.md) · [排错](docs/operations/troubleshooting.md) |
+| [运维](docs/operations/deployment.md) | [部署](docs/operations/deployment.md) · [自动打包](docs/operations/release.md) · [安全](docs/operations/security.md) · [测试](docs/operations/testing.md) · [排错](docs/operations/troubleshooting.md) |
 | [设计](docs/design/architecture.md) | [架构](docs/design/architecture.md) · [决策与边界](docs/design/decisions.md) · [能力审计](docs/design/audit.md) |
 | [更新记录](CHANGELOG.md) | 各版本变更 |
 
@@ -131,6 +131,6 @@ npm run eval      # 真实模型评测（需 DEEPSEEK_API_KEY）
 
 **jaryn-bot** is a self-hosted personal AI teammate runtime. It runs on your own server with its own workspace and cloud computer: files, terminal, browser, email, Office documents, web pages, scheduled and proactive work — with human approval for risky actions, an append-only event log for replay/audit, and credentials that never enter the model context.
 
-Single owner, Web-first, 4C4G-friendly, no external database, no runtime npm dependencies: Node 24 executes TypeScript directly. 178 tests; CI builds Windows/Linux desktop clients and an Android APK.
+Single owner, Web-first, 4C4G-friendly, no external database, no runtime npm dependencies: Node 24 executes TypeScript directly. 178 tests; CI packages Windows/Linux/macOS desktop installers and an Android APK, with SHA256 checksums, on every version tag.
 
 Docs start at [docs/README.md](docs/README.md). License: AGPL-3.0 with a commercial dual license ([COMMERCIAL.md](COMMERCIAL.md)). An original implementation inspired by Grok Bot — no affiliation.
