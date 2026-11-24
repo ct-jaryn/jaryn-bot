@@ -31,7 +31,7 @@
 - 审批：风险分级 + IM 审批卡 + 审计。
 - 记忆：工作记忆（会话+压缩）、长期事实（文件+DB）、情节（搜索）、技能（文件）。
 - 主动：cron / webhook 触发 + goal 多轮 + 预算护栏。
-- 多 Bot：v0.1 做任务板 + `send_message`（同进程子 bot）；对等消息总线放入待定包（P3 后可取）。
+- 多 Bot：任务板 + `send_message` + `spawn_worker` 子会话；消息总线（hop≤2、去重）已实现。
 - 部署：Docker Compose、SQLite、单机即可。
 
 ### 不做（v0.1 明确不碰）
@@ -690,7 +690,7 @@ jaryn-bot/
 
 **v0.1 发版条件**：P0–P5 全部 Gate 通过（见 [03](03-roadmap.md) §3 与 [04](04-testing-acceptance.md) §3）；**不设工期承诺**。
 
-> 本表只覆盖 **v0.1**；v0.2 云电脑与待定包见 [03](03-roadmap.md) §2/§4。
+> 本表覆盖 **v0.1**；v0.2–v1.9 的进展见 [14 完成度审计](14-completion-audit.md) 与 [03](03-roadmap.md)。
 
 ---
 

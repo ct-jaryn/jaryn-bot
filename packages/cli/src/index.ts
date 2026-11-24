@@ -36,7 +36,7 @@ import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { notificationsPlugin } from '@jaryn/notifications'
 import { maintenancePlugin } from '@jaryn/maintenance'
 
-const VERSION = '1.9.0'
+const VERSION = '1.9.1'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 

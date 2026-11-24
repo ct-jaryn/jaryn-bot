@@ -28,11 +28,11 @@
 | 03 | [03-roadmap.md](03-roadmap.md) | 规划：P0–P5 任务/验收/依赖、发布节奏、后续版本阶梯 | 现行 |
 | 04 | [04-testing-acceptance.md](04-testing-acceptance.md) | 测试与验收：测试金字塔、阶段 Gate、DoD、评测、混沌、安全、CI | 现行 |
 | 05 | [05-deployment-ops.md](05-deployment-ops.md) | 部署运维：拓扑、compose、私有化边界、备份、升级、监控、runbook | 现行 |
-| 06 | [06-clients-and-topology.md](06-clients-and-topology.md) | 服务端 + 多客户端：控制端/执行端、配对鉴权、WS 协议、多端同步 | 现行（待定包） |
+| 06 | [06-clients-and-topology.md](06-clients-and-topology.md) | 服务端 + 多客户端：配对鉴权、`/ws/client` 协议、多端（Web/PWA/桌面/Android） | 现行（已实现） |
 | 07 | [07-cloud-computer.md](07-cloud-computer.md) | 云电脑：容器/VM、浏览器/终端、看屏接管、任务级快照、网络与成本 | 现行（v0.2） |
-| 08 | [08-vault-and-credentials.md](08-vault-and-credentials.md) | Vault：write-only、填充代理、Secure Form、1Password、支付与审计 | 现行（待定包） |
-| 09 | [09-connectors-and-artifacts.md](09-connectors-and-artifacts.md) | 连接器、个人邮箱、Pages、产物管线 | 现行（待定包） |
-| 10 | [10-proactive-and-initiative.md](10-proactive-and-initiative.md) | Routine、Initiative 信号与提议、Teach-a-task、通知与预算 | 现行（待定包） |
+| 08 | [08-vault-and-credentials.md](08-vault-and-credentials.md) | Vault：write-only、填充代理、Secure Form、1Password/Bitwarden/TOTP、卡填表（不接网关）与审计 | 现行 |
+| 09 | [09-connectors-and-artifacts.md](09-connectors-and-artifacts.md) | 连接器、个人邮箱、Pages、产物管线 | 现行（已实现） |
+| 10 | [10-proactive-and-initiative.md](10-proactive-and-initiative.md) | Routine、Initiative 信号与提议、Teach-a-task、通知与预算 | 现行（已实现） |
 | 11 | [11-parity-and-beyond.md](11-parity-and-beyond.md) | 对标矩阵、6 个超越点、明确不做清单、版本阶梯、风险 | 现行 |
 | 12 | [runtime-design.md](runtime-design.md) | 运行时主设计：进程/事件/SQLite/循环/工具/审批/多 Bot/调度/ADR | 设计（v0.1 冻结） |
 | 13 | [13-memory-module.md](13-memory-module.md) | **记忆模块**：四层存储、bigram 分词、FTS5、0 LLM 写入、≤600 token digest | 现行（P3） |
@@ -45,6 +45,7 @@
 | 20 | [14-completion-audit.md](14-completion-audit.md) | **完成度审计**：FR-1…FR-19 逐条状态、仍缺项、外部条件与不做项 | 现行 |
 | 21 | [15-desktop-client.md](15-desktop-client.md) | **桌面客户端**：Electron 结构、GitHub Actions 打包矩阵、已构建产物校验、签名说明 | 现行 |
 | 22 | [16-mobile-client.md](16-mobile-client.md) | **移动客户端**：Android WebView 壳、APK 构建与产物、iOS 未做原因 | 现行 |
+| 23 | [17-scope-and-wont.md](17-scope-and-wont.md) | **不做清单（Won't）**：永久不做 / 待外部条件 / 可选增强 + 变更规则 | 现行 |
 
 ## 三、关键数字（所有文档必须一致）
 
@@ -57,13 +58,14 @@
 | **v0.1（P0–P5）** | 运行时 + Web UI + 记忆 + 例程 + 多 Bot + 插件；**按 Gate 发版，不设日期** |
 | 下一阶段 | **云电脑（容器）+ 本机出网**；v0.1 Gate 全过后启动 |
 | 已完成 | 运行时/Web/记忆/多Bot(spawn)/主动/硬化/云电脑(看屏/接管/出网/exec)/Vault/连接器(OAuth 回调)/邮箱(SMTP+IMAP+附件)/Pages/office(docx/xlsx/pptx)/Initiative/teach/多设备/鉴权/goals/usage/审计/审批规则 |
-| 未完成 | 桌面壳/原生 App、1Password/卡支付/TOTP、官方 Gmail/Calendar 应用、实时低延迟串流、进程外插件宿主、RSS/安静时段/IM 投递、真实模型评测与 Docker 实测（需外部条件） |
+| 明确不做 | 真实支付网关/结算、团队/会议/企业管控/语音/多租户、IM 通道、原生 iOS、真 WebRTC（见 [17](17-scope-and-wont.md)） |
+| 待外部条件 | 真实模型评测（需 key）、Docker/桌面镜像实测（需 docker）、macOS 安装包（需 macOS runner） |
 | 明确不做 | 团队协作 / 会议 / 企业管控（SSO·SCIM·网络策略·组织 API·审计导出）/ 语音 / SaaS 计费 |
 | 私有化 | 单租户自托管；数据与密钥本地；出网仅模型（IM/连接器暂不做） |
 | 许可 | AGPL-3.0 + 商业双许可（网络使用须公开源码；闭源商业需授权） |
 | 记忆 | 每轮 digest ≤600 token；整理 ≤1 次 LLM/天（≤2K token）；默认无向量库/embedding；DB <1MB/年 |
 | 目录检索 | 文件：`fs.list/glob/grep`（上限 200/200/50，忽略 .git/node_modules）；记忆：`memory.catalog` ≤200 token |
-| 实现进度 | **v1.7.0 已发布**（132 测试 + 桌面/Android 客户端产物）；逐 FR 审计见 [14 完成度审计](14-completion-audit.md) |
+| 实现进度 | **v1.9.0 已发布**（162 测试 + 桌面/Android 客户端产物）；逐 FR 审计见 [14 完成度审计](14-completion-audit.md)，边界见 [17 不做清单](17-scope-and-wont.md) |
 
 ## 四、维护约定
 

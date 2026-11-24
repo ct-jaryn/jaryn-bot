@@ -49,13 +49,12 @@
 
 ---
 
-## FR-3 IM 通知通道（暂不做，Won't v0.1）
+## FR-3 IM 通知通道（**Won't，明确不做**）
 
-**目的（暂缓）**：原计划把结果与审批提醒推到手机。**当前决定：通知通道暂不做**，主界面只有 Web UI（FR-20）；本节保留作未来设计。
+**决定**：通知只走 Web（通知中心 + 安静时段 + 浏览器 PWA 提醒），**不接 IM 通道**；本节仅保留作历史设计参考，见 [17 不做清单](17-scope-and-wont.md)。
 
 | 项 | 规格 |
-|---|---|
-| 通道 | **暂不做**（v0.1 只有 Web UI）；未来插件化，每通道一个包 |
+| 项 | **不做**（Web 单入口，通知中心已实现） |
 | 绑定 | `jary channel add telegram --token env:TELEGRAM_TOKEN`；`bind <chat> <bot>` |
 | 身份 | 只接受 allowlist 用户；未知用户 → 礼貌拒绝并记 audit |
 | 私聊 | 所有文本 → 当前 Bot 会话 |
@@ -137,10 +136,10 @@
 | 规则 | 按工具/风险/来源/Bot/路径匹配；`deny > ask > allow`；用户规则优先 |
 | 授权范围 | once（一次）/ thread（本 thread）/ session（本会话）/ always（仅 owner 可建） |
 | 审批卡 | 显示工具名、参数摘要（敏感值脱敏）、影响路径、[同意一次][本会话允许][拒绝] |
-| 超时 | 前台 30 分钟；后台任务 0 容忍（超时=拒绝） |
+| 超时 | 前台 30 分钟；**后台任务 0 容忍（立即拒绝，可用 allow 规则预批）** |
 | 信任边界 | 只有 `owner` 来源的输入能授权 external/execute/destructive；bot/web 来源只能触发 read/write |
 | 审计 | 每次请求与决定写 `approvals` + `audit`，`/approvals` 可查 |
-| 自动审查（待定包） | 独立审查模型在工具执行前评估；拒绝转人工；审查模型不能放宽规则 |
+| 自动审查（未做） | 独立审查模型在工具执行前评估；拒绝转人工；审查模型不能放宽规则。当前用规则引擎 + 风险分级替代 |
 
 **验收**：`bot.send_message` 触发审批，拒绝后动作不执行；后台任务里的 shell 直接 deny 并记录原因。
 
@@ -172,12 +171,12 @@
 
 **目的**：一个 Bot 能带几个专才；多个 Bot 能像同事一样递活（分阶段）。
 
-| 能力 | v0.1（L1） | 待定包（L2） |
+| 能力 | v0.1（L1） | v1.0+（L2，已实现） |
 |---|---|---|
 | 子 Bot | `spawn_worker(role, task)`：子会话独立、工具子集、继承预算 | 同 |
 | 任务板 | `task.create/claim/complete/list`，CAS 认领 | 同 |
 | 消息 | `send_message(agent, text)` 给子 Bot | 跨 Bot 总线：`ask/inform/handoff` |
-| 防环路 | — | hop≤2、同 thread≤20 条、pair≤6 条/分钟、内容哈希去重、唤醒预算 |
+| 防环路 | — | ✅ hop≤2、同 thread≤20 条、pair≤6 条/分钟、内容哈希去重、唤醒预算 |
 | 信任 | bot 消息视为**数据**，不能授权 external 类动作 | 同 |
 
 **验收（v0.1）**：让它"研究三家竞品并写对比"，root 拆 3 个子任务，worker 并行搜集，root 汇总成文件；全程任务板可见。
@@ -274,13 +273,13 @@
 
 ---
 
-## FR-14 客户端接入（v0.1 Web；桌面/手机 = 待定包）
+## FR-14 客户端接入（Web + 桌面 + Android，已交付）
 
-**目的**：一处私有化服务端，多处客户端连上来用。**v0.1 交付 Web UI**（服务端自带静态资源 + WS）；桌面/手机客户端**暂缓**（待定包，未排期）。
+**目的**：一处私有化服务端，多处客户端连上来用。**已交付**：Web UI（静态资源 + SSE + `/ws/client` JSON-RPC）、Electron 桌面客户端、Android WebView 客户端、PWA；原生 iOS 明确不做。
 
 | 项 | 规格 |
 |---|---|
-| 配对 | owner 生成一次性配对码（10 分钟、限 3 次）→ 客户端 `POST /api/pair` 换设备令牌 |
+| 配对 | owner 生成一次性配对码（10 分钟、失败限次）→ 客户端 `POST /api/pair` 换设备令牌 |
 | 会话 | 客户端列出可见 Bot/会话；订阅事件流；发消息带 `clientMsgId` 幂等 |
 | 流式 | 通过 WS 接收 `stream` 增量；断线重连后取当前 turn 快照，不重放 delta |
 | 审批 | 客户端审批卡与 IM 按钮等价；先响应者生效，重复响应幂等 |
@@ -290,7 +289,7 @@
 | 撤销 | owner 可列出/踢出设备；撤销后令牌立即失效 |
 
 **边界与错误**：配对码错误/过期 → `E_AUTH`；令牌撤销 → `E_AUTH`；协议版本不匹配 → `E_PROTOCOL`（拒绝并提示升级）。
-**验收（v0.1）**：浏览器打开 Web UI，能对话/审批/下载产物；刷新后会话与流式状态不丢。**验收（待定包）**：桌面 + 手机 + Web 三端同一会话；断线补齐。
+**验收**：浏览器打开 Web UI，能对话/审批/下载产物；刷新后会话与流式状态不丢。桌面端与 Android 端连同一服务端看同一会话，断线重连补齐。
 详细协议见 [06-clients-and-topology.md](06-clients-and-topology.md)。
 
 ---
@@ -312,7 +311,7 @@
 
 **验收**：见 [07](07-cloud-computer.md) §10。
 
-## FR-16 Vault 与凭据（待定包）
+## FR-16 Vault 与凭据（已交付）
 
 **目的**：模型永远看不到密码，但能"用"密码登录/填表。
 
@@ -322,12 +321,12 @@
 | 填充 | `vault.fill(itemId)` → 服务端校验 origin/授权/审批 → 浏览器内代理直接填 DOM；模型只见"已填写" |
 | 安全表单 | 无凭据时发一次性表单，用户输入 → 直传 Vault → 自动填充 |
 | 1Password | 通过官方 CLI 实时取，需用户在 1Password 批准 |
-| 支付 | 默认关闭；开启后每次支付审批；默认不存 CVV |
+| 卡填表 | 默认关闭（`vault.allowCardPayments`）；每次填写需 `destructive` 审批；**不存 CVV、不接支付网关、不发起扣款** |
 | 审计 | 记录 view/fill/payment/rotate/revoke（不含值） |
 
 **验收**：见 [08](08-vault-and-credentials.md) §10。
 
-## FR-17 连接器与邮箱（待定包）
+## FR-17 连接器与邮箱（已交付）
 
 | 项 | 规格 |
 |---|---|
@@ -339,7 +338,7 @@
 
 **验收**：见 [09](09-connectors-and-artifacts.md) §6。
 
-## FR-18 Pages 与产物增强（待定包）
+## FR-18 Pages 与产物增强（已交付）
 
 | 项 | 规格 |
 |---|---|
@@ -349,7 +348,7 @@
 
 **验收**：生成看板并打开；恶意 HTML 被拦；导出可离线看。
 
-## FR-19 Initiative 与 Teach-a-task（待定包）
+## FR-19 Initiative 与 Teach-a-task（已交付）
 
 | 项 | 规格 |
 |---|---|
@@ -401,6 +400,6 @@ Job:      scheduled ─► due ─► running ─► done | failed | skipped | b
 
 ## 范围外
 
-- **v0.1 不做**：云电脑、Vault、连接器、Pages、桌面/手机客户端、Initiative（v0.1 只含 Web UI）。
-- **暂缓（未排期）**：IM 通知、桌面/手机客户端、Vault、连接器/邮箱/Pages、Initiative、卡支付；到对应阶段再定。
+- **已完成**：云电脑、Vault、连接器/邮箱/Pages、桌面/Android 客户端、Initiative（见 [14 完成度审计](14-completion-audit.md)）。
+- **明确不做**：真实支付网关/结算、IM 通道、原生 iOS、真 WebRTC（见 [17 不做清单](17-scope-and-wont.md)）。
 - **全版本不做**：团队协作（多人/共享 Bot/群聊）、会议、企业管控（SSO/SCIM/网络策略/组织 API）、语音、SaaS/多租户/计费。见 [11](11-parity-and-beyond.md) §4。

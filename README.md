@@ -2,9 +2,9 @@
 
 **自托管的个人 AI 同事。** 跑在你自己的云服务器上：它查资料、写文档、跑命令（云电脑在下一阶段）；你通过浏览器派活，流式汇报、危险动作审批；不在线时按计划主动干活。
 
-**状态：v1.9.0 已发布。** 运行时、Web UI、记忆、多 Bot（含 spawn_worker）、主动任务、云电脑（看屏/接管/出网/容器内终端）、Vault、连接器（OAuth 回调）/邮箱（SMTP+IMAP+附件）、Pages、office（docx/xlsx/pptx）、Initiative/teach、goals、usage/审计、审批规则、多设备配对、鉴权、SMTP TLS/附件、`/ws/client` JSON-RPC、6 类主动信号、云电脑配额与域名白名单、Pages 版本回滚、通知中心、**Electron 桌面客户端 + Android 客户端（GitHub Actions 打包）**；**162 个测试；Actions 产出 win/linux 安装包与 Android APK**。逐 FR 完成度见 [docs/14-completion-audit.md](docs/14-completion-audit.md)。
+**状态：v1.9.1 已发布。** 运行时、Web UI、记忆、多 Bot（含 spawn_worker）、主动任务、云电脑（看屏/接管/出网/容器内终端）、Vault、连接器（OAuth 回调）/邮箱（SMTP+IMAP+附件）、Pages、office（docx/xlsx/pptx）、Initiative/teach、goals、usage/审计、审批规则、多设备配对、鉴权、SMTP TLS/附件、`/ws/client` JSON-RPC、6 类主动信号、云电脑配额与域名白名单、Pages 版本回滚、通知中心、**Electron 桌面客户端 + Android 客户端（GitHub Actions 打包）**；**162 个测试；Actions 产出 win/linux 安装包与 Android APK**。逐 FR 完成度见 [docs/14-completion-audit.md](docs/14-completion-audit.md)。
 
-> 目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。见 [RELEASE-v1.0.0.md](RELEASE-v1.0.0.md)。
+> 目标机器是 **4C4G** 的云服务器，默认容器化、无外部数据库。最新发布说明见 [RELEASE-v1.9.0.md](RELEASE-v1.9.0.md)。
 
 ---
 
@@ -29,35 +29,46 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 
 详见 [NOTICE.md](NOTICE.md)。
 
-## 规划中的能力
+## 已交付能力
 
-| 能力 | 说明 | 版本 |
+| 能力 | 状态 | 说明 |
 |---|---|---|
-| Web UI（主入口） | 会话、流式、审批卡、产物、多会话 | v0.1 |
-| Bot 名册 | 每个 Bot 独立人格/工具/工作区/记忆/预算 | v0.1 |
-| 记忆 | SQLite+FTS5；digest ≤600 token、0 LLM 写入、每晚整理；可查看/遗忘 | v0.1 |
-| 例程与主动 | cron/webhook/邮件触发、目标多轮、预算护栏 | v0.1 |
-| 云电脑（容器） | 浏览器/终端、看屏接管、任务级快照、本机出网；Bot 可自建测试容器 | 下一阶段 |
-| Vault | write-only 凭据、模型盲填、Secure Form | 暂缓 |
-| 连接器 / 邮箱 / Pages | Gmail/Calendar/GitHub、个人邮箱、可交互产物 | 暂缓 |
-| 桌面/手机客户端 | 设备配对、多端同步 | 暂缓 |
+| Web UI（主入口） | ✅ | 会话、流式、工具步骤、审批卡、问题卡、看屏、面板（记忆/任务/页面/产物/例程/提议/用量/审计/通知） |
+| Bot 名册 | ✅ | 每个 Bot 独立人格/工具/工作区/记忆/预算；`spawn_worker` 派子任务 |
+| 记忆 | ✅ | SQLite+FTS5；digest ≤600 token、0 LLM 写入；容量上限/衰减归档/TTL/定时维护 |
+| 例程与主动 | ✅ | cron/every/webhook(HMAC)/RSS、目标多轮、预算护栏、运行历史、通知中心（安静时段） |
+| 云电脑（容器） | ✅ | 浏览器/终端、看屏接管（MJPEG/screencast）、任务级快照、本机出网、单次 4h/每日 8h 配额、域名白名单 |
+| Vault | ✅ | AES-GCM write-only、模型盲填、Secure Form、授权强制、1Password/Bitwarden/TOTP；**卡信息填表**（默认关、每次审批、值不回传） |
+| 连接器 / 邮箱 / Pages | ✅ | Gmail/Calendar/GitHub 示例、OAuth 授权/回调/刷新、SMTP（TLS/STARTTLS/附件）、IMAP 收信、Pages（版本/回滚/分享 TTL） |
+| 桌面 / 手机客户端 | ✅ | Electron（Actions 产出 win/linux 安装包）、Android WebView APK；PWA 可用 |
+| 协议与扩展 | ✅ | REST + SSE + `/ws/client` JSON-RPC + 出网隧道；组合式插件内核、进程外插件宿主 |
 
-**明确不做**：团队协作、会议、企业管控（SSO/SCIM/网络策略/组织 API）、语音、SaaS 计费。
-**暂不启动**：IM 通知通道、桌面/手机客户端、Vault、连接器、卡支付、Pages、Initiative（设计保留，等对应阶段再定）。
+**明确不做（Won't，不再评估）**：团队协作、会议、企业管控（SSO/SCIM/网络策略/组织 API）、语音、SaaS 计费/多租户、**真实支付网关/结算**、IM 通知通道、原生 iOS 客户端。
 
-## 版本节奏（不设开发周期/日期）
+> 卡能力只做"把已存卡号填进结账页"（默认关闭、每次审批、值不进模型），**不接支付网关、不做扣款/结算、不存 CVV**。完整清单见 [docs/17-scope-and-wont.md](docs/17-scope-and-wont.md)。
 
-| 版本 | 内容 | 状态 |
-|---|---|---|
-| v0.1 | 运行时 + Web UI + 记忆 + 例程 + 多 Bot + 插件 | **进行中**（按能力包 + Gate 发版） |
-| v0.2 | 云电脑（容器）+ 看屏接管 + 任务级快照 + 本机出网 | 下一阶段（v0.1 Gate 全过后启动） |
-| 待定包 | 桌面/手机客户端、Vault、连接器/邮箱/Pages、Initiative、卡支付 | 不排期，需要时再取 |
+## 版本历史（不设开发周期/日期）
 
-> **不承诺开发周期或发布日期。** 一个版本 = 一组能力 + 退出 Gate；Gate 全过即发，不过就减范围（见 [docs/03-roadmap.md](docs/03-roadmap.md)）。
+| 版本 | 内容 |
+|---|---|
+| v0.1 | 运行时 + Web UI + 记忆 + 例程 + 多 Bot + 插件 |
+| v0.2 | 云电脑（容器）+ 看屏接管 + 任务级快照 + 本机出网 |
+| v0.3 | Vault（write-only、盲填、Secure Form、审计/轮换/授权） |
+| v0.4 | 连接器 / 邮箱 / Pages / 产物库 |
+| v0.5 | Initiative + teach-a-task + PWA |
+| v0.6 | 实时看屏/接管/输入 + `jary tunnel` 出网 |
+| v0.7 | 多设备配对/令牌/吊销 + 连接器示例 |
+| v0.8–v0.9 | 鉴权、入站邮件 webhook、IMAP 收信 |
+| v1.0 | 文档/部署/评测自动校验 + 发布说明 |
+| v1.1–v1.5 | 审计缺口补齐：fs.write/web.search/ask_user/spawn_worker/用量费用/审批规则/office/goals/通知/1Password/RSS/插件宿主/MJPEG/录屏教学 |
+| v1.6–v1.7 | Electron 桌面客户端 + Android 客户端（GitHub Actions 打包） |
+| v1.8–v1.9 | 功能缺口收尾：Vault 授权强制、记忆维护、并行工具、plugin add、会话导出、SMTP TLS/附件、后台审批 0 容忍、`/ws/client` RPC、6 类主动信号、云电脑配额、Pages 版本 |
+
+> **不承诺开发周期或发布日期。** 一个版本 = 一组能力 + 退出 Gate；Gate 全过即发（见 [docs/03-roadmap.md](docs/03-roadmap.md)）。
 
 ## 文档
 
-设计文档在 [docs/](docs/README.md)：需求、功能规格、接口、架构、插件体系、云电脑、Vault、连接器、主动任务、对标矩阵、路线图、测试与运维。
+设计文档在 [docs/](docs/README.md)：需求、功能规格、接口、架构、插件体系、云电脑、Vault、连接器、主动任务、对标矩阵、路线图、测试与运维、完成度审计、客户端、**不做清单**。
 
 ## 开发
 
@@ -67,7 +78,7 @@ jaryn-bot 用**原创实现**把同样的能力做在**你自己的服务器**�
 node packages/cli/src/index.ts init --home ./data-home
 node packages/cli/src/index.ts doctor
 node packages/cli/src/index.ts serve --home ./data-home --port 8787
-npm test          # 76 tests
+npm test          # 162 tests（串行，含真实 Chrome）
 npm run check     # docs + deploy + eval 结构校验
 npm run eval      # 真实模型评测（需 DEEPSEEK_API_KEY）
 ```
@@ -88,7 +99,8 @@ npm run eval      # 真实模型评测（需 DEEPSEEK_API_KEY）
 - ✅ **v0.7 多设备 + 示例**：设备配对码/令牌/吊销（phone/desktop/web）、`/api/devices`、`jary device`、GitHub/HTTP 连接器示例
 - ✅ **v0.8 鉴权 + 入站邮件**：`JARY_API_TOKEN`（Bearer/设备令牌）保护 `/api/*`；`/api/email/inbound` 入站邮件 webhook
 - ✅ **v0.9 IMAP 收信**：IMAP 轮询（SEARCH UNSEEN → FETCH → 标已读）→ `input.email` 事件
-- ✅ **v1.0 收尾**：文档/部署/评测自动校验脚本、Docker 说明、发布说明；**76 个测试**
+- ✅ **v1.0 收尾**：文档/部署/评测自动校验脚本、Docker 说明、发布说明
+- ✅ **v1.1–v1.9**：审计缺口全面补齐（详见 [docs/14-completion-audit.md](docs/14-completion-audit.md) 与 [CHANGELOG.md](CHANGELOG.md)）；**162 个测试**
 
 ```bash
 node packages/cli/src/index.ts init
@@ -157,4 +169,4 @@ It is **inspired by Grok Bot (xAI), but is an original, independent implementati
 
 **License:** AGPL-3.0 (OSI-approved, strong copyleft) with a commercial dual license. Network use requires publishing your corresponding source under AGPL; for closed/commercial use contact the author for a commercial license — see [COMMERCIAL.md](COMMERCIAL.md).
 
-**Status:** design phase; v0.1 is not implemented yet. Design docs start at [docs/README.md](docs/README.md).
+**Status:** v1.9.0 released — runtime, Web UI, memory, multi-bot, proactive jobs, cloud computer, vault, connectors/email/Pages, notifications, desktop (Electron) and Android clients, `/ws/client` JSON-RPC. 162 tests. A real payment gateway is explicitly out of scope (card *filling* only, disabled by default). Design docs: [docs/README.md](docs/README.md).

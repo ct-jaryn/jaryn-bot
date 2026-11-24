@@ -147,4 +147,4 @@ interface ConnectorRegistry {
 - 企业连接器与团队共享授权
 - 公共 Page 托管/建站（仅私有分享链接）
 - 浏览器插件/邮件客户端（我们只做 Bot 侧）
-- 支付/财务类连接器（Stripe 等；Vault 填卡除外，见 08）
+- 支付/财务类连接器（Stripe 等）——**明确不做**；Vault 只做卡信息填表，不接网关（见 [17](17-scope-and-wont.md)）

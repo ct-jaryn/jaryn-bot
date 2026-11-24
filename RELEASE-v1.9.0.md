@@ -20,6 +20,7 @@
 
 ## 仍未做
 
-- iOS 客户端、真 WebRTC、真实支付网关（明确不做或平台限制）
+- iOS 客户端、真 WebRTC（平台限制/收益低）
+- **真实支付网关/结算（永久不做，只做卡信息填表）**
 - 官方 Gmail/Calendar OAuth 应用（需自建应用；授权/回调/刷新链路已完整）
 - 真实模型评测、Docker 镜像实测（需 `DEEPSEEK_API_KEY` / docker）

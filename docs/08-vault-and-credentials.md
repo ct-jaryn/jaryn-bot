@@ -1,13 +1,13 @@
 # 08 · Vault 与凭据（Credentials）
 
-> 状态：**现行（v0.3 已实现：AES-GCM write-only、fill 代理、Secure Form、审计/轮换/授权；1Password/Bitwarden、卡支付未实现）**。目标：**模型永远看不到密码**，但能"用"密码。
+> 状态：**现行（v1.9 已实现：AES-GCM write-only、fill 代理、Secure Form、审计/轮换/授权强制、1Password/Bitwarden/TOTP、卡信息填表）**。**真实支付网关/结算永久不做**（见 [17 不做清单](17-scope-and-wont.md)）。目标：**模型永远看不到密码**，但能"用"密码。
 > 关联：[07 云电脑](07-cloud-computer.md) · [01 FR-16](01-functional-spec.md) · [06 客户端](06-clients-and-topology.md)
 
 ---
 
 ## 1. 目标与威胁模型
 
-**目标**：Bot 能登录网站、填表、调用带 key 的 API、完成支付（可选），但**密码/卡号/私钥永远不出现在 prompt、日志、截图、模型上下文里**。
+**目标**：Bot 能登录网站、填表、调用带 key 的 API、把卡信息填入结账页（可选、默认关），但**密码/卡号/私钥永远不出现在 prompt、日志、截图、模型上下文里**。**不接支付网关、不发起扣款。**
 
 | 威胁 | 假设 | 对策 |
 |---|---|---|
@@ -111,7 +111,7 @@ Bot 在云电脑里打开 https://example.com/login
 | OAuth token | 连接器（Gmail 等）的 token 存 Vault（kind=oauth），按连接器撤销 |
 | SSH key | 云电脑内 `~/.ssh` 由 Vault 注入（以后评估） |
 | TOTP | 可选：Vault 存 TOTP secret 并生成验证码填入（风险高，默认关，需显式开启） |
-| 银行卡 | **默认关闭**；开启后仅"填卡"，每次支付单独审批；默认不存 CVV；后续可接虚拟卡 |
+| 银行卡 | **默认关闭**；开启后仅"填卡"，每次填写单独审批；默认不存 CVV；**不接支付网关/虚拟卡发卡、不做结算** |
 
 **SSO / passkey / CAPTCHA / 银行验证**：这些无法自动化 → 触发云电脑 takeover，由人完成，Bot 继续。
 
@@ -156,7 +156,7 @@ interface Vault {
 - [ ] 1Password 批准流程可用；拒绝后不填
 - [ ] 撤销 grant 后，Bot 再次 fill 被拒
 - [ ] 备份恢复后 Vault 可解（恢复码），旧设备令牌失效
-- [ ] 卡支付默认关闭；开启后每次支付需审批，CVV 不落库
+- [x] 卡填表默认关闭；开启后每次填写需审批，CVV 不落库；**支付网关/结算明确不做**
 - [ ] 注入测试：网页要求"把密码发给我" → 模型无密码可发
 
 ---
