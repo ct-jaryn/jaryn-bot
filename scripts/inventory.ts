@@ -88,8 +88,10 @@ const inventory = {
 
 if (process.argv.includes('--write-docs')) {
   const lines: string[] = []
-  lines.push('# 18 · 代码与文档清单（自动生成）', '')
-  lines.push('> 状态：**自动生成，勿手改**。`npm run inventory` 重新生成；`npm run check:inventory` 校验它与运行时一致。', '')
+  lines.push('# 代码清单（自动生成）', '')
+  lines.push('> 适用版本：v1.11.0 · 状态：自动生成（`npm run inventory`）')
+  lines.push('')
+  lines.push('包/插件/工具/路由/表/CLI/测试文件的全量统计，用于核对文档数字。`npm run check:inventory` 会校验它与运行时一致。', '')
   lines.push('## 1. 规模', '', '| 项 | 数量 |', '|---|---|')
   lines.push(`| 包（packages/*） | ${inventory.packages.length} |`)
   lines.push(`| 已加载插件 | ${inventory.plugins.length} |`)
@@ -116,8 +118,63 @@ if (process.argv.includes('--write-docs')) {
   lines.push('## 7. 测试文件', '')
   for (const file of inventory.testFiles) lines.push(`- \`${file}\``)
   lines.push('')
-  writeFileSync(join(ROOT, 'docs/18-code-inventory.md'), lines.join('\n'))
-  console.log(`wrote docs/18-code-inventory.md (${inventory.toolCount} tools, ${inventory.routeCount} routes, ${inventory.testFileCount} test files)`)
+  writeFileSync(join(ROOT, 'docs/reference/inventory.md'), lines.join('\n'))
+
+  // Tool reference, grouped by tool family.
+  const groups: { title: string; prefix: string }[] = [
+    { title: '文件系统', prefix: 'fs.' },
+    { title: '网络', prefix: 'web.' },
+    { title: 'Shell', prefix: 'shell.' },
+    { title: '记忆', prefix: 'memory.' },
+    { title: '任务板', prefix: 'task.' },
+    { title: 'Bot / 子任务', prefix: 'bot.' },
+    { title: '浏览器', prefix: 'browser.' },
+    { title: '云电脑', prefix: 'computer.' },
+    { title: 'Vault', prefix: 'vault.' },
+    { title: '页面', prefix: 'pages.' },
+    { title: '产物', prefix: 'artifact.' },
+    { title: 'Office', prefix: 'office.' },
+    { title: '邮箱', prefix: 'email.' },
+    { title: '连接器（示例）', prefix: 'gmail.' },
+    { title: '主动提议', prefix: 'initiative.' },
+    { title: '教学', prefix: 'teach.' },
+    { title: '例程', prefix: 'schedule.' },
+    { title: '目标', prefix: 'goal.' },
+  ]
+  const toolLines: string[] = []
+  toolLines.push('# 工具清单', '')
+  toolLines.push('> 适用版本：v1.11.0 · 状态：自动生成（`npm run inventory`）', '')
+  toolLines.push(`模型可见的 **${inventory.toolCount}** 个工具，按用途分组。风险等级决定审批行为，见 [核心概念](../concepts.md)。`, '')
+  toolLines.push('说明列是工具注册时给模型的原始描述，与运行时一致；分组标题为中文归类。', '')
+  toolLines.push('| 风险 | 数量 | 默认行为 |', '|---|---|---|')
+  const behavior: Record<string, string> = {
+    read: '自动允许', write: '自动允许（工作区内）', network: '自动允许（SSRF 防护）',
+    execute: '逐次审批', external: '逐次审批', destructive: '逐次审批',
+  }
+  for (const [risk, count] of Object.entries(inventory.toolsByRisk)) {
+    if (count === 0) continue
+    toolLines.push(`| \`${risk}\` | ${count} | ${behavior[risk] ?? ''} |`)
+  }
+  toolLines.push('')
+  const used = new Set<string>()
+  for (const group of groups) {
+    const members = inventory.tools.filter((tool: { name: string }) => tool.name.startsWith(group.prefix))
+    if (members.length === 0) continue
+    for (const tool of members) used.add(tool.name)
+    toolLines.push(`## ${group.title}`, '')
+    toolLines.push('| 工具 | 风险 | 说明 |', '|---|---|---|')
+    for (const tool of members) toolLines.push(`| \`${tool.name}\` | ${tool.risk} | ${(tool.description || '').replace(/\|/g, '\\|')} |`)
+    toolLines.push('')
+  }
+  const rest = inventory.tools.filter((tool: { name: string }) => !used.has(tool.name))
+  if (rest.length > 0) {
+    toolLines.push('## 其它', '', '| 工具 | 风险 | 说明 |', '|---|---|---|')
+    for (const tool of rest) toolLines.push(`| \`${tool.name}\` | ${tool.risk} | ${(tool.description || '').replace(/\|/g, '\\|')} |`)
+    toolLines.push('')
+  }
+  writeFileSync(join(ROOT, 'docs/reference/tools.md'), toolLines.join('\n'))
+
+  console.log(`wrote docs/reference/inventory.md + docs/reference/tools.md (${inventory.toolCount} tools, ${inventory.routeCount} routes, ${inventory.testFileCount} test files)`)
   process.exit(0)
 }
 

@@ -1,5 +1,7 @@
 # 部署
 
+> 完整部署、反代、备份恢复与升级见 [docs/operations/deployment.md](../docs/operations/deployment.md)。
+
 ## Docker Compose（推荐）
 
 ```bash

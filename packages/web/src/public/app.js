@@ -1,4 +1,17 @@
-const state = { sessionId: 'web', botId: 'default', source: null, sessions: [], panel: 'memory' }
+const state = { sessionId: 'web', botId: 'default', source: null, sessions: [], panel: 'memory', token: '' }
+
+// Token may come from ?token= (bookmark), localStorage, or the desktop shell.
+function readToken() {
+  const fromUrl = new URLSearchParams(location.search).get('token')
+  if (fromUrl) { localStorage.setItem('jary_token', fromUrl); return fromUrl }
+  return localStorage.getItem('jary_token') || ''
+}
+state.token = readToken()
+if (window.jarynDesktop?.getConfig) {
+  window.jarynDesktop.getConfig().then((cfg) => { if (cfg?.apiToken) state.token = cfg.apiToken }).catch(() => {})
+}
+const authHeaders = () => (state.token ? { authorization: `Bearer ${state.token}` } : {})
+const withToken = (path) => (state.token ? `${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(state.token)}` : path)
 
 const $ = (id) => document.getElementById(id)
 const messages = $('messages')
@@ -21,7 +34,11 @@ function setStatus(status) {
 }
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, { headers: { 'content-type': 'application/json' }, ...opts })
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'content-type': 'application/json', ...authHeaders(), ...(opts.headers ?? {}) },
+  })
+  if (res.status === 401) throw new Error('未授权：请在 URL 加 ?token=<JARY_API_TOKEN> 后重新打开')
   if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
   return res.json()
 }
@@ -97,7 +114,7 @@ function renderEvent(e) {
 
 function connect() {
   state.source?.close()
-  state.source = new EventSource(`/api/stream?sessionId=${encodeURIComponent(state.sessionId)}`)
+  state.source = new EventSource(withToken(`/api/stream?sessionId=${encodeURIComponent(state.sessionId)}`))
   state.source.onmessage = (ev) => {
     const event = JSON.parse(ev.data)
     if (event.type === 'hello') return
@@ -324,7 +341,7 @@ $('screen-toggle').onclick = () => {
   if (screenPanel.hidden) { screenSource?.close(); screenSource = null; screenImg.src = ''; return }
   if (!screenSource) {
     // MJPEG renders natively in <img> and is lower latency than SSE + data URLs.
-    screenImg.src = `/api/computer/mjpeg?botId=${encodeURIComponent(state.sessionId)}&quality=55&t=${Date.now()}`
+    screenImg.src = withToken(`/api/computer/mjpeg?botId=${encodeURIComponent(state.sessionId)}&quality=55&t=${Date.now()}`)
     screenSource = { close() { screenImg.src = '' } }
   }
 }
@@ -332,19 +349,19 @@ screenImg.onclick = (ev) => {
   const rect = screenImg.getBoundingClientRect()
   const x = Math.round(((ev.clientX - rect.left) / rect.width) * 1280)
   const y = Math.round(((ev.clientY - rect.top) / rect.height) * 900)
-  fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'click', x, y } }) })
+  fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'click', x, y } }) })
 }
 $('takeover-btn').onclick = async () => {
   takeover = !takeover
-  await fetch('/api/computer/takeover', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ botId: state.sessionId, enabled: takeover }) })
+  await fetch('/api/computer/takeover', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify({ botId: state.sessionId, enabled: takeover }) })
   $('takeover-btn').textContent = takeover ? '交还' : '接管'
 }
 $('screen-send').onclick = async () => {
   const text = $('screen-text').value
   if (!text) return
   $('screen-text').value = ''
-  await fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'type', text } }) })
-  await fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'key', key: 'Enter' } }) })
+  await fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'type', text } }) })
+  await fetch('/api/computer/input', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify({ botId: state.sessionId, event: { type: 'key', key: 'Enter' } }) })
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})

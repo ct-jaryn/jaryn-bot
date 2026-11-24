@@ -107,8 +107,8 @@ test('chat then session replay works', () => {
   assert.match(chat.stdout, /echo: hello/)
   const list = spawnSync(process.execPath, [CLI, 'session', 'list', '--home', home], { cwd, encoding: 'utf8' })
   assert.equal(list.status, 0, list.stderr)
-  assert.match(list.stdout, /cli\tdefault\tidle/)
-  const replay = spawnSync(process.execPath, [CLI, 'session', 'replay', 'cli', '--home', home], { cwd, encoding: 'utf8' })
+  assert.match(list.stdout, /cli:default\tdefault\tidle/)
+  const replay = spawnSync(process.execPath, [CLI, 'session', 'replay', 'cli:default', '--home', home], { cwd, encoding: 'utf8' })
   assert.equal(replay.status, 0, replay.stderr)
   assert.match(replay.stdout, /input\.owner/)
   assert.match(replay.stdout, /turn\.ended/)
@@ -136,7 +136,7 @@ test('backup and restore roundtrip', () => {
   const restore = spawnSync(process.execPath, [CLI, 'restore', '--home', home2, '--from', out, '--yes'], { encoding: 'utf8' })
   assert.equal(restore.status, 0, restore.stderr)
   const list = spawnSync(process.execPath, [CLI, 'session', 'list', '--home', home2], { cwd, encoding: 'utf8' })
-  assert.match(list.stdout, /cli\tdefault/)
+  assert.match(list.stdout, /cli:default/)
 })
 
 test('doctor exits 0', () => {

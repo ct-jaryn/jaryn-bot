@@ -1,6 +1,6 @@
 # Contributing
 
-感谢关注 jaryn-bot。项目处于设计/早期开发阶段，欢迎 issue 与 PR。
+感谢关注 jaryn-bot。欢迎 issue 与 PR；动手前建议先读 [核心概念](docs/concepts.md) 与 [插件指南](docs/guides/plugins.md)。
 
 ## 先讨论
 
@@ -10,9 +10,18 @@
 ## 提交 PR
 
 1. Fork 并基于 `main` 开分支；
-2. 提交信息用中文或英文均可，说清"为什么"；
-3. 包含测试（如涉及代码）与文档更新；
-4. 确保 `pnpm typecheck`、`pnpm test`、`pnpm lint` 通过（脚本落地后生效）。
+2. 提交信息说清"为什么"；
+3. 包含测试（涉及代码时）与文档更新；
+4. 本地验证：
+
+```bash
+npm test          # 178 tests
+npm run check     # 文档/部署/清单/评测结构校验
+npm run smoke     # CLI 端到端
+npm run inventory # 改了工具或路由后刷新自动文档
+```
+
+5. 文档约定：每份文档头部标注 `> 适用版本：`，交叉链接用相对路径；新增能力请同步 [能力审计](docs/design/audit.md)。
 
 ## 原创与合规（重要）
 

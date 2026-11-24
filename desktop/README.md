@@ -1,5 +1,7 @@
 # jaryn 桌面客户端
 
+> 桌面/Android/PWA 与 `/ws/client` 协议见 [docs/guides/clients.md](../docs/guides/clients.md)。
+
 把自托管的 Web UI 包成原生窗口（Electron），支持 macOS / Windows / Linux。
 
 ## 功能

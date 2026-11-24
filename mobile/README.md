@@ -1,5 +1,7 @@
 # jaryn 移动客户端（Android）
 
+> 与桌面端、推送、协议的关系见 [docs/guides/clients.md](../docs/guides/clients.md)。
+
 瘦客户端：WebView 包一层，指向你的 `jary serve`。iOS 需要 macOS 构建与签名，未提供。
 
 ## 功能

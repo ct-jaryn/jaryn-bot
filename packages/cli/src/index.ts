@@ -36,7 +36,7 @@ import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { notificationsPlugin } from '@jaryn/notifications'
 import { maintenancePlugin } from '@jaryn/maintenance'
 
-const VERSION = '1.10.0'
+const VERSION = '1.11.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -556,7 +556,12 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
       profile.patches = profile.patches ?? []
       profile.patches.push({ id: `plugin-${installedName.replace(/[^a-z0-9-]+/gi, '-')}`, name: installedName, config: {} })
       writeFileSync(profileFile, JSON.stringify(profile, null, 2))
+      const registryNames = new Set(allPlugins().map((row) => row.name))
       console.log(`installed ${installedName} into ${profileDir}`)
+      if (!registryNames.has(installedName)) {
+        console.log('note: this package is not in the static plugin registry, so the loader will report it as MISSING;')
+        console.log('      for third-party tools prefer @jaryn/plugin-host (see docs/guides/plugins.md).')
+      }
       if (!flags.trust) console.log('note: third-party plugin runs in-process; review it and pass --trust to silence this warning')
       return 0
     }
@@ -752,8 +757,15 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     }
     const { ctx } = await createRuntime(flags)
     const agent = ctx.get<{ runTurn: typeof runTurn }>('agent')!
+    const botId = typeof flags.bot === 'string' ? flags.bot : 'default'
+    const store = ctx.get<any>('store')
+    const bots = ctx.get<any>('bots')
+    const sessionId = `cli:${botId}`
+    if (store && !store.getSession(sessionId)) {
+      store.createSession(sessionId, botId, bots?.workspaceFor?.(botId, process.cwd()) ?? process.cwd())
+    }
     const result = await agent.runTurn({
-      sessionId: 'cli',
+      sessionId,
       text,
       onDelta: (d) => {
         if (d.type === 'text') process.stdout.write(d.text)

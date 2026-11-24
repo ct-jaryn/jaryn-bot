@@ -1,5 +1,7 @@
 # Security Policy
 
+> 威胁模型、鉴权与审批设计见 [docs/operations/security.md](docs/operations/security.md)；明确不做的安全边界见 [docs/design/decisions.md](docs/design/decisions.md)。
+
 ## 报告漏洞
 
 请**不要**在公开 issue 中披露安全问题。使用 GitHub 的私密漏洞报告（Security → Advisories → Report a vulnerability），或在仓库主页找到作者联系方式私信。

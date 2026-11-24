@@ -923,11 +923,8 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
   } catch { /* vault/connectors optional */ }
 
   const wsClient = new WsClientServer(ctx, {
-    authorize: (req, url) => {
-      if (!apiToken) return true
-      const header = String(req.headers.authorization ?? '')
-      return header === `Bearer ${apiToken}` || url.searchParams.get('token') === apiToken
-    },
+    // Same rules as HTTP: JARY_API_TOKEN bearer, ?token=, or a paired device token.
+    authorize: (req, url) => authorized(req, url),
   })
   wsClient.attach(server)
   ctx.provide('wsClient', wsClient)

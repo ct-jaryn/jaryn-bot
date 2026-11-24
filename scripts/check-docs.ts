@@ -2,27 +2,51 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const files: string[] = [join(ROOT, 'README.md')]
-for (const name of readdirSync(join(ROOT, 'docs'))) {
-  if (name.endsWith('.md')) files.push(join(ROOT, 'docs', name))
-}
-for (const name of ['CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md', 'NOTICE.md', 'COMMERCIAL.md']) {
-  const p = join(ROOT, name)
-  if (existsSync(p)) files.push(p)
+const problems: string[] = []
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    const path = join(dir, entry)
+    if (statSync(path).isDirectory()) walk(path, out)
+    else if (path.endsWith('.md')) out.push(path)
+  }
+  return out
 }
 
-const problems: string[] = []
+const docsFiles = walk(join(ROOT, 'docs'))
+const rootDocs = ['README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md', 'NOTICE.md', 'COMMERCIAL.md']
+  .map((name) => join(ROOT, name))
+  .filter((path) => existsSync(path))
+const subReadmes = ['deploy/README.md', 'desktop/README.md', 'mobile/README.md']
+  .map((name) => join(ROOT, name))
+  .filter((path) => existsSync(path))
+const files = [...rootDocs, ...docsFiles, ...subReadmes]
 
 for (const file of files) {
   const rel = file.slice(ROOT.length + 1)
   const text = readFileSync(file, 'utf8')
+  const lines = text.split('\n')
+
+  if (text.trim().length === 0) { problems.push(`${rel}: empty file`); continue }
+
+  // every docs page has a status header, and exactly one H1
+  if (rel.startsWith('docs/') && rel !== 'docs/README.md') {
+    if (!/^# \S/m.test(text)) problems.push(`${rel}: missing H1`)
+    if (!lines.slice(0, 6).some((line) => line.startsWith('> 适用版本：'))) problems.push(`${rel}: missing "> 适用版本：" header`)
+    let h1 = 0
+    let inFence = false
+    for (const line of lines) {
+      if (line.startsWith('```')) { inFence = !inFence; continue }
+      if (!inFence && /^# /.test(line)) h1++
+    }
+    if (h1 !== 1) problems.push(`${rel}: expected exactly one H1, found ${h1}`)
+  }
 
   // balanced code fences
   const fences = (text.match(/^```/gm) ?? []).length
   if (fences % 2 !== 0) problems.push(`${rel}: unbalanced code fences (${fences})`)
 
   // table column consistency
-  const lines = text.split('\n')
   let block: number[] = []
   let start = 0
   const flush = () => {
@@ -50,17 +74,29 @@ for (const file of files) {
   }
 }
 
-// top-level layout checks
-for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'package.json', 'deploy/Dockerfile', 'deploy/docker-compose.yml', 'docs/README.md', 'desktop/package.json', 'desktop/main.cjs', '.github/workflows/desktop.yml']) {
+// layout / structure rules
+for (const required of [
+  'README.md', 'LICENSE', 'CHANGELOG.md', 'package.json',
+  'deploy/Dockerfile', 'deploy/docker-compose.yml',
+  'docs/README.md', 'docs/getting-started.md', 'docs/concepts.md',
+  'docs/reference/inventory.md', 'docs/reference/tools.md',
+  'desktop/package.json', 'desktop/main.cjs', '.github/workflows/desktop.yml',
+]) {
   if (!existsSync(join(ROOT, required))) problems.push(`missing required file: ${required}`)
 }
-if (statSync(join(ROOT, 'docs')).isDirectory() && readdirSync(join(ROOT, 'docs')).filter((f) => f.endsWith('.md')).length < 15) {
-  problems.push('docs/ has fewer markdown files than expected')
+
+// no legacy numbered docs or per-version release notes at the top level
+for (const name of readdirSync(join(ROOT, 'docs'))) {
+  if (/^\d{2}-/.test(name)) problems.push(`legacy numbered doc still present: docs/${name}`)
 }
+for (const name of readdirSync(ROOT)) {
+  if (/^RELEASE-v.*\.md$/.test(name)) problems.push(`per-version release note should live in CHANGELOG/GitHub Releases: ${name}`)
+}
+if (docsFiles.length < 20) problems.push(`docs/ has too few markdown files (${docsFiles.length})`)
 
 if (problems.length > 0) {
   console.error(`docs check failed (${problems.length}):`)
   for (const p of problems) console.error(' - ' + p)
   process.exit(1)
 }
-console.log(`docs check ok (${files.length} files)`)
+console.log(`docs check ok (${files.length} files, ${docsFiles.length} under docs/)`)

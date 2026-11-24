@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Keeps docs/18-code-inventory.md honest: compares the recorded counts with a fresh
+ * Keeps docs/reference/inventory.md honest: compares the recorded counts with a fresh
  * runtime inventory. Run via `npm run check` so stale numbers can't land.
  */
 import { execFileSync } from 'node:child_process'
@@ -8,7 +8,8 @@ import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const DOC = join(ROOT, 'docs/18-code-inventory.md')
+const DOC = join(ROOT, 'docs/reference/inventory.md')
+const TOOLS_DOC = join(ROOT, 'docs/reference/tools.md')
 
 const raw = execFileSync(process.execPath, [join(ROOT, 'scripts/inventory.ts'), '--json'], { encoding: 'utf8', timeout: 120_000 })
 const inventory = JSON.parse(raw)
@@ -26,14 +27,13 @@ const expected: Record<string, number> = {
 const problems: string[] = []
 for (const [label, value] of Object.entries(expected)) {
   const match = doc.match(new RegExp(`\\| ${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\| (\\d+) \\|`))
-  if (!match) { problems.push(`docs/18 missing row: ${label}`); continue }
-  if (Number(match[1]) !== value) problems.push(`docs/18 ${label}: doc=${match[1]} actual=${value}`)
+  if (!match) { problems.push(`inventory.md missing row: ${label}`); continue }
+  if (Number(match[1]) !== value) problems.push(`inventory.md ${label}: doc=${match[1]} actual=${value}`)
 }
-if (!doc.includes(`${inventory.toolCount} 个`)) {
-  // tool table row count sanity: every tool must appear in the doc
-  const missing = inventory.tools.filter((tool: { name: string }) => !doc.includes(`\`${tool.name}\``))
-  for (const tool of missing) problems.push(`docs/18 missing tool: ${tool.name}`)
-}
+const toolsDoc = readFileSync(TOOLS_DOC, 'utf8')
+const missingTools = inventory.tools.filter((tool: { name: string }) => !toolsDoc.includes(`\`${tool.name}\``))
+for (const tool of missingTools) problems.push(`tools.md missing tool: ${tool.name}`)
+if (!toolsDoc.includes(`**${inventory.toolCount}**`)) problems.push(`tools.md tool count: expected ${inventory.toolCount}`)
 
 if (problems.length > 0) {
   console.error('inventory check failed (run `npm run inventory`):')
