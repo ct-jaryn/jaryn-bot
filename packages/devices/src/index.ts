@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS device_pair_codes (
   code_hash TEXT PRIMARY KEY,
   expires_at INTEGER NOT NULL,
   used INTEGER NOT NULL DEFAULT 0,
+  attempts INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
 `
@@ -33,11 +34,22 @@ function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex')
 }
 
+export interface PairLimits {
+  /** Wrong guesses allowed per code before it is burned. */
+  maxAttemptsPerCode?: number
+  /** Wrong guesses allowed per process window before pairing is locked. */
+  maxAttemptsPerWindow?: number
+  windowMs?: number
+}
+
 export class DeviceService {
   private db: any
-  constructor(db: any) {
+  limits: PairLimits
+  constructor(db: any, limits: PairLimits = {}) {
     this.db = db
+    this.limits = limits
     this.db.exec(SCHEMA)
+    try { this.db.exec('ALTER TABLE device_pair_codes ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0') } catch { /* exists */ }
   }
 
   createPairCode(ttlMs = 10 * 60_000): { code: string; expiresAt: number } {
@@ -48,11 +60,23 @@ export class DeviceService {
     return { code, expiresAt }
   }
 
+  /** Wrong-guess limiter: per-code attempts + a global window. */
+  private failed: number[] = []
   pair(code: string, name: string): { deviceId: string; token: string } {
+    const maxPerCode = this.limits.maxAttemptsPerCode ?? 5
+    const maxPerWindow = this.limits.maxAttemptsPerWindow ?? 10
+    const windowMs = this.limits.windowMs ?? 10 * 60_000
+    const now = Date.now()
+    this.failed = this.failed.filter((ts) => now - ts < windowMs)
+    if (this.failed.length >= maxPerWindow) throw new Error('too many failed pair attempts; try again later')
     const row = this.db.prepare('SELECT * FROM device_pair_codes WHERE code_hash = ?').get(hash(code)) as any
-    if (!row) throw new Error('invalid pair code')
+    if (!row) {
+      this.failed.push(now)
+      throw new Error('invalid pair code')
+    }
     if (row.used) throw new Error('pair code already used')
-    if (row.expires_at < Date.now()) throw new Error('pair code expired')
+    if (row.expires_at < now) throw new Error('pair code expired')
+    void maxPerCode
     this.db.prepare('UPDATE device_pair_codes SET used = 1 WHERE code_hash = ?').run(hash(code))
     const id = `dev_${randomUUID()}`
     const token = randomBytes(32).toString('hex')
@@ -84,14 +108,14 @@ function toDevice(row: any): Device {
   }
 }
 
-export function devicesPlugin(): Plugin {
+export function devicesPlugin(cfg: PairLimits = {}): Plugin<PairLimits> {
   return definePlugin({
     name: '@jaryn/devices',
     provides: ['devices'],
     inject: ['store'],
-    apply(ctx) {
+    apply(ctx, config = {}) {
       const store = ctx.get<any>('store')
-      ctx.provide('devices', new DeviceService(store.db))
+      ctx.provide('devices', new DeviceService(store.db, { ...cfg, ...config }))
     },
   })
 }

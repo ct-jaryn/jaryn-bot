@@ -20,8 +20,17 @@ CREATE TABLE IF NOT EXISTS pages (
   html TEXT NOT NULL,
   data_json TEXT,
   share_token TEXT,
+  share_expires_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS page_versions (
+  page_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  html TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (page_id, version)
 );
 `
 
@@ -30,6 +39,32 @@ export class PagesService {
   constructor(db: any) {
     this.db = db
     this.db.exec(SCHEMA)
+    try { this.db.exec('ALTER TABLE pages ADD COLUMN share_expires_at INTEGER') } catch { /* exists */ }
+  }
+
+  /** Snapshot the current content before an update; keeps the last 20 versions. */
+  private snapshot(id: string, page: Page): void {
+    const last = this.db.prepare('SELECT MAX(version) AS v FROM page_versions WHERE page_id = ?').get(id) as any
+    const version = Number(last?.v ?? 0) + 1
+    this.db.prepare('INSERT INTO page_versions(page_id, version, title, html, created_at) VALUES (?, ?, ?, ?, ?)')
+      .run(id, version, page.title, page.html, Date.now())
+    const extra = this.db.prepare('SELECT version FROM page_versions WHERE page_id = ? ORDER BY version DESC LIMIT -1 OFFSET 20').all(id) as any[]
+    for (const row of extra) this.db.prepare('DELETE FROM page_versions WHERE page_id = ? AND version = ?').run(id, row.version)
+  }
+
+  versions(id: string): { version: number; title: string; createdAt: number }[] {
+    return (this.db.prepare('SELECT version, title, created_at FROM page_versions WHERE page_id = ? ORDER BY version DESC').all(id) as any[])
+      .map((row) => ({ version: row.version, title: row.title, createdAt: row.created_at }))
+  }
+
+  rollback(id: string, version: number): Page {
+    const row = this.db.prepare('SELECT * FROM page_versions WHERE page_id = ? AND version = ?').get(id, version) as any
+    if (!row) throw new Error(`page version not found: ${id}@${version}`)
+    const page = this.get(id)
+    if (!page) throw new Error(`page not found: ${id}`)
+    this.snapshot(id, page)
+    this.db.prepare('UPDATE pages SET title = ?, html = ?, updated_at = ? WHERE id = ?').run(row.title, row.html, Date.now(), id)
+    return this.get(id)!
   }
 
   create(input: { title: string; html?: string; data?: unknown; template?: 'table' | 'report' }): Page {
@@ -46,6 +81,7 @@ export class PagesService {
   update(id: string, patch: { title?: string; html?: string; data?: unknown }): Page {
     const page = this.get(id)
     if (!page) throw new Error(`page not found: ${id}`)
+    this.snapshot(id, page)
     this.db.prepare('UPDATE pages SET title = ?, html = ?, data_json = ?, updated_at = ? WHERE id = ?')
       .run(patch.title ?? page.title, patch.html ?? page.html,
         patch.data !== undefined ? JSON.stringify(patch.data) : page.data ? JSON.stringify(page.data) : null,
@@ -62,21 +98,24 @@ export class PagesService {
     return (this.db.prepare('SELECT * FROM pages ORDER BY updated_at DESC').all() as any[]).map(toPage)
   }
 
-  share(id: string, enabled = true): { token?: string } {
+  share(id: string, enabled = true, ttlMs?: number): { token?: string; expiresAt?: number } {
     const page = this.get(id)
     if (!page) throw new Error(`page not found: ${id}`)
     if (!enabled) {
-      this.db.prepare('UPDATE pages SET share_token = NULL WHERE id = ?').run(id)
+      this.db.prepare('UPDATE pages SET share_token = NULL, share_expires_at = NULL WHERE id = ?').run(id)
       return {}
     }
     const token = page.shareToken ?? randomBytes(16).toString('hex')
-    this.db.prepare('UPDATE pages SET share_token = ? WHERE id = ?').run(token, id)
-    return { token }
+    const expiresAt = ttlMs && ttlMs > 0 ? Date.now() + ttlMs : null
+    this.db.prepare('UPDATE pages SET share_token = ?, share_expires_at = ? WHERE id = ?').run(token, expiresAt, id)
+    return { token, expiresAt: expiresAt ?? undefined }
   }
 
   byToken(token: string): Page | undefined {
     const row = this.db.prepare('SELECT * FROM pages WHERE share_token = ?').get(token) as any
-    return row ? toPage(row) : undefined
+    if (!row) return undefined
+    if (row.share_expires_at && row.share_expires_at < Date.now()) return undefined
+    return toPage(row)
   }
 
   exportHtml(id: string): string {
@@ -154,14 +193,28 @@ export function pageToolsPlugin(): Plugin {
           async execute() { return pages.list() },
         },
         {
+          name: 'pages.versions', description: 'List saved versions of a page.', risk: 'read',
+          schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+          async execute(args) { return { versions: pages.versions(String(args.id)) } },
+        },
+        {
+          name: 'pages.rollback', description: 'Restore a page to a previous version.', risk: 'write',
+          schema: { type: 'object', properties: { id: { type: 'string' }, version: { type: 'number' } }, required: ['id', 'version'] },
+          async execute(args) { return { page: pages.rollback(String(args.id), Number(args.version)) } },
+        },
+        {
           name: 'pages.export', description: 'Export a page as a self-contained HTML document.', risk: 'read',
           schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
           async execute(args) { return { html: pages.exportHtml(String(args.id)) } },
         },
         {
           name: 'pages.share', description: 'Create or revoke a read-only share token for a page.', risk: 'external',
-          schema: { type: 'object', properties: { id: { type: 'string' }, enabled: { type: 'boolean' } }, required: ['id'] },
-          async execute(args) { return pages.share(String(args.id), args.enabled !== false) },
+          schema: {
+            type: 'object',
+            properties: { id: { type: 'string' }, enabled: { type: 'boolean' }, ttlHours: { type: 'number' } },
+            required: ['id'],
+          },
+          async execute(args) { return pages.share(String(args.id), args.enabled !== false, args.ttlHours ? Number(args.ttlHours) * 3600_000 : undefined) },
         },
       ]
       for (const tool of list) ctx.effect(() => tools.register(tool))

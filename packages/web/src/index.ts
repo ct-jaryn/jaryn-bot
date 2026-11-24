@@ -7,6 +7,7 @@ import { newApprovalId } from '@jaryn/agent-core'
 import { renderPageDocument } from '@jaryn/pages'
 import { TunnelServer } from '@jaryn/tunnel'
 import { exchangeOAuthCode, refreshOAuthToken } from '@jaryn/connectors'
+import { WsClientServer } from './ws-client.ts'
 import type { ApprovalDecision, ApprovalRequest, ApprovalService } from '@jaryn/agent-core'
 
 export interface WebOptions {
@@ -330,7 +331,22 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
       const id = path.split('/')[3]
       const body = await readBody(req).catch(() => ({}))
-      return sendJson(res, 200, pages.share(id, body.enabled !== false))
+      return sendJson(res, 200, pages.share(id, body.enabled !== false, body.ttlHours ? Number(body.ttlHours) * 3600_000 : undefined))
+    }
+    if (req.method === 'GET' && /^\/api\/pages\/[^/]+\/versions$/.test(path)) {
+      const pages = ctx.get<any>('pages')
+      if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
+      return sendJson(res, 200, { versions: pages.versions(path.split('/')[3]!) })
+    }
+    if (req.method === 'POST' && /^\/api\/pages\/[^/]+\/rollback$/.test(path)) {
+      const pages = ctx.get<any>('pages')
+      if (!pages) return sendJson(res, 404, { error: 'pages not mounted' })
+      const body = await readBody(req)
+      try {
+        return sendJson(res, 200, { page: pages.rollback(path.split('/')[3]!, Number(body.version)) })
+      } catch (err) {
+        return sendJson(res, 400, { error: (err as Error).message })
+      }
     }
     if (req.method === 'GET' && /^\/api\/pages\/[^/]+\/export$/.test(path)) {
       const pages = ctx.get<any>('pages')
@@ -887,6 +903,16 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     }
   } catch { /* vault/connectors optional */ }
 
+  const wsClient = new WsClientServer(ctx, {
+    authorize: (req, url) => {
+      if (!apiToken) return true
+      const header = String(req.headers.authorization ?? '')
+      return header === `Bearer ${apiToken}` || url.searchParams.get('token') === apiToken
+    },
+  })
+  wsClient.attach(server)
+  ctx.provide('wsClient', wsClient)
+
   tunnel.attach(server)
   await new Promise<void>((resolve) => server.listen(port, host, resolve))
   const address = server.address()
@@ -909,8 +935,13 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
         q.resolve('cancelled')
       }
       pendingQuestions.clear()
-      await new Promise<void>((resolve) => server.close(() => resolve()))
+      wsClient.close()
+      // Upgraded sockets (WS) are not tracked by server.close(); force them down first.
       ;(server as any).closeAllConnections?.()
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve())
+        ;(server as any).closeAllConnections?.()
+      })
     },
   }
 }

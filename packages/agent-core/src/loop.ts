@@ -16,6 +16,24 @@ import type { MemoryService, Pricing } from './types.ts'
 import { newApprovalId } from './approvals.ts'
 import type { ApprovalService } from './approvals.ts'
 
+/** Keep big tool output out of the context: spill to the artifact store and return a pointer. */
+function spillIfHuge(ctx: Context, toolName: string, content: string): string {
+  const SPILL = 32 * 1024
+  if (content.length <= SPILL) return content
+  try {
+    const artifacts = ctx.get<any>('artifacts')
+    if (!artifacts?.save) return content.slice(0, SPILL) + `\n...[truncated ${content.length - SPILL} chars]`
+    const saved = artifacts.save({
+      name: `${toolName.replace(/[^a-z0-9_.-]+/gi, '-')}-${Date.now()}.txt`,
+      content: Buffer.from(content, 'utf8'),
+      mime: 'text/plain; charset=utf-8',
+    })
+    return content.slice(0, SPILL) + `\n...[output truncated at ${SPILL} chars; full ${content.length} chars saved as artifact ${saved?.id ?? saved?.name ?? '(unknown)'}]`
+  } catch {
+    return content.slice(0, SPILL) + `\n...[truncated ${content.length - SPILL} chars]`
+  }
+}
+
 const DEFAULT_SYSTEM = 'You are jaryn, a self-hosted personal AI teammate. Be concise and useful.'
 const DEFAULT_BUDGET: BudgetLimits = { maxSteps: 8, maxToolCalls: 20, maxWallMs: 120_000 }
 
@@ -150,6 +168,12 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
           const tool = tools.get(call.name)
           if (!tool) throw new Error(`unknown tool: ${call.name}`)
           if (approvals) {
+            const background = (input.provenance ?? 'owner') !== 'owner'
+            // Background turns (jobs, goals, workers) never wait on a human: only an explicit
+            // allow rule can pre-approve; everything else fails closed immediately.
+            const preApproved = background
+              ? (ctx.get<any>('approvalRules') as any)?.rules?.evaluate?.({ tool: call.name, risk: tool.risk, args: call.args })?.effect === 'allow'
+              : false
             const req = {
               id: newApprovalId(),
               sessionId: input.sessionId,
@@ -157,6 +181,15 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
               toolName: call.name,
               risk: tool.risk,
               args: call.args,
+            }
+            if (background && !preApproved) {
+              append('approval.requested', { ...req, background: true })
+              append('approval.resolved', { id: req.id, decision: 'denied', reason: 'background' })
+              store.recordApproval?.({
+                id: req.id, sessionId: input.sessionId, turnId, tool: req.toolName, risk: req.risk,
+                args: req.args, status: 'denied', resolver: 'background-policy', requestedAt: Date.now(),
+              })
+              throw new Error('not-approved (background turns cannot ask a human; add an allow rule)')
             }
             append('approval.requested', req)
             store.recordApproval?.({
@@ -177,6 +210,7 @@ export async function runTurn(ctx: Context, input: TurnInput): Promise<TurnResul
             cwd: session.cwd,
           })
           content = typeof output === 'string' ? output : JSON.stringify(output)
+          content = spillIfHuge(ctx, call.name, content)
           if (/^(mcp|web|bot)\./.test(call.name)) {
             content = `<untrusted>\n${content}\n</untrusted>`
           }

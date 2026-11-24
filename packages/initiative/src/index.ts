@@ -157,9 +157,92 @@ export class InitiativeService {
         })
         if (r.created) created.push(r.created)
       }
+      created.push(...this.scanGoalStalls(store))
     }
+    created.push(...this.scanCalendar())
+    created.push(...this.scanConnectorHealth())
+    created.push(...this.scanUnreadEmail())
     return created
   }
+
+  /** Goals stuck in active with no journal progress for a week. */
+  private scanGoalStalls(store: any): Proposal[] {
+    const out: Proposal[] = []
+    try {
+      const rows = store.prepare(
+        "SELECT id, objective, rounds, updated_at FROM goals WHERE status = 'active' AND updated_at < ? LIMIT 2",
+      ).all(Date.now() - 7 * 86_400_000) as any[]
+      for (const row of rows) {
+        const r = this.ingest({
+          kind: 'goal-stall',
+          title: `目标「${String(row.objective).slice(0, 30)}」停滞了`,
+          reason: `已进行 ${row.rounds} 轮，7 天无更新`,
+          impact: 0.7, urgency: 0.6, confidence: 0.85,
+          evidence: { goalId: row.id, rounds: row.rounds },
+        })
+        if (r.created) out.push(r.created)
+      }
+    } catch { /* goals table optional */ }
+    return out
+  }
+
+  /** Calendar items starting within the next 45 minutes. */
+  scanCalendar(now = new Date()): Proposal[] {
+    const out: Proposal[] = []
+    for (const event of this.calendarEvents) {
+      const start = new Date(event.startsAt).getTime()
+      const delta = start - now.getTime()
+      if (Number.isNaN(start) || delta < 0 || delta > 45 * 60_000) continue
+      const r = this.ingest({
+        kind: 'calendar-soon',
+        title: `「${event.title}」${Math.round(delta / 60_000)} 分钟后开始`,
+        reason: '日历事件临近，建议准备材料',
+        impact: 0.7, urgency: 0.9, confidence: 0.95,
+        evidence: { event: event.title, startsAt: event.startsAt },
+      })
+      if (r.created) out.push(r.created)
+    }
+    return out
+  }
+
+  /** Connectors whose last call failed recently. */
+  scanConnectorHealth(): Proposal[] {
+    const out: Proposal[] = []
+    for (const failure of this.connectorFailures) {
+      if (Date.now() - failure.at > 86_400_000) continue
+      const r = this.ingest({
+        kind: 'connector-failure',
+        title: `连接器 ${failure.id} 调用失败`,
+        reason: failure.message.slice(0, 120),
+        impact: 0.7, urgency: 0.6, confidence: 0.9,
+        evidence: { connector: failure.id, message: failure.message },
+      })
+      if (r.created) out.push(r.created)
+    }
+    return out
+  }
+
+  /** Unread mail older than a day. */
+  scanUnreadEmail(): Proposal[] {
+    const out: Proposal[] = []
+    for (const mail of this.unreadMail) {
+      if (Date.now() - mail.receivedAt < 86_400_000) continue
+      const r = this.ingest({
+        kind: 'email-unread',
+        title: `未读邮件：${mail.subject.slice(0, 40)}`,
+        reason: `来自 ${mail.from}，已放置超过 1 天`,
+        impact: 0.5, urgency: 0.5, confidence: 0.8,
+        evidence: { uid: mail.uid, from: mail.from },
+      })
+      if (r.created) out.push(r.created)
+    }
+    return out
+  }
+
+  /** Feeders fill these from connectors/email/calendar plugins. */
+  calendarEvents: { title: string; startsAt: string }[] = []
+  connectorFailures: { id: string; message: string; at: number }[] = []
+  unreadMail: { uid: string; from: string; subject: string; receivedAt: number }[] = []
 
   storeDb?: any
 
@@ -292,13 +375,26 @@ export function initiativeToolsPlugin(): Plugin {
           async execute() { return initiative.scan() },
         },
         {
-          name: 'initiative.accept', description: 'Accept a proposal and create a task for the bot to execute.', risk: 'write',
-          schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+          name: 'initiative.accept',
+          description: 'Accept a proposal, create the task and run it now (pass run=false to only create it).',
+          risk: 'execute',
+          schema: { type: 'object', properties: { id: { type: 'string' }, run: { type: 'boolean' } }, required: ['id'] },
           async execute(args) {
             const proposal = initiative.accept(String(args.id))
             const tasks = ctx.get<any>('tasks')
             const task = tasks ? tasks.create({ sessionId: `initiative:${proposal.id}`, title: proposal.title, body: proposal.reason }) : undefined
-            return { proposal, task }
+            const shouldRun = args.run !== false
+            if (!shouldRun) return { proposal, task, executed: false }
+            const agent = ctx.get<any>('agent')
+            if (!agent?.runTurn) return { proposal, task, executed: false, note: 'agent not mounted' }
+            // Background provenance: tools needing a human will fail closed instead of hanging.
+            const result = await agent.runTurn({
+              sessionId: `initiative:${proposal.id}`,
+              text: `主动提议已获批准，请执行：${proposal.title}\n\n背景：${proposal.reason}\n\n完成后简要汇报结果。`,
+              provenance: 'system',
+            })
+            tasks?.update?.(task?.id, { status: result.finishReason === 'completed' ? 'done' : 'blocked' })
+            return { proposal, task, executed: true, finishReason: result.finishReason, summary: String(result.text ?? '').slice(0, 500) }
           },
         },
         {

@@ -6,6 +6,9 @@ import { randomUUID } from 'node:crypto'
 import { handleUpgrade } from './ws.ts'
 import type { WsConnection } from './ws.ts'
 
+export { handleUpgrade } from './ws.ts'
+export type { WsConnection } from './ws.ts'
+
 interface PendingHttp {
   resolve: (v: { status: number; headers: Record<string, string>; body: string }) => void
   reject: (e: Error) => void
@@ -22,7 +25,12 @@ export class TunnelServer {
   attach(server: Server): void {
     server.on('upgrade', (req, socket) => {
       const url = new URL(req.url ?? '/', 'http://localhost')
-      if (url.pathname !== '/tunnel') { socket.destroy(); return }
+      // Other subsystems (e.g. /ws/client JSON-RPC) own their own upgrade paths.
+      if (url.pathname !== '/tunnel') {
+        if (url.pathname === '/ws/client') return
+        socket.destroy()
+        return
+      }
       const conn = handleUpgrade(req, socket as Socket)
       this.connections.add(conn)
       conn.onMessage((data) => this.onMessage(data))

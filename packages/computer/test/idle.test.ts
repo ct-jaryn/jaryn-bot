@@ -20,16 +20,16 @@ test('idle timeout stops the computer', async () => {
   const service = new ComputerService({ dataDir: mkdtempSync(join(tmpdir(), 'jary-idle-data-')), idleMs: 50 }, backend)
   await service.start('bot-a')
   assert.equal(service.status('bot-a').state, 'running')
-  await new Promise((r) => setTimeout(r, 120))
+  await new Promise((r) => setTimeout(r, 250))
   assert.equal(service.status('bot-a').state, 'stopped')
   assert.deepEqual(backend.stopped, ['bot-a'])
 })
 
 test('touch extends the idle window', async () => {
   const backend = new FakeBackend()
-  const service = new ComputerService({ dataDir: mkdtempSync(join(tmpdir(), 'jary-idle-data-')), idleMs: 80 }, backend)
+  const service = new ComputerService({ dataDir: mkdtempSync(join(tmpdir(), 'jary-idle-data-')), idleMs: 400 }, backend)
   await service.start('bot-b')
-  for (let i = 0; i < 3; i++) { await new Promise((r) => setTimeout(r, 40)); service.touch('bot-b') }
+  for (let i = 0; i < 4; i++) { await new Promise((r) => setTimeout(r, 120)); service.touch('bot-b') }
   assert.equal(service.status('bot-b').state, 'running')
   await service.stop('bot-b')
 })

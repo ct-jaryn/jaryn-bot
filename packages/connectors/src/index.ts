@@ -75,7 +75,19 @@ export class ConnectorService {
     return out
   }
 
+  /** Called whenever a connector call fails (wired to Initiative signals). */
+  onFailure?: (serverId: string, message: string) => void
+
   private async call(server: ConnectorServerConfig, tool: ConnectorToolConfig, args: Record<string, unknown>): Promise<unknown> {
+    try {
+      return await this.callUnsafe(server, tool, args)
+    } catch (err) {
+      this.onFailure?.(server.id, (err as Error).message)
+      throw err
+    }
+  }
+
+  private async callUnsafe(server: ConnectorServerConfig, tool: ConnectorToolConfig, args: Record<string, unknown>): Promise<unknown> {
     let path = tool.path.replace(/:([a-zA-Z_][\w]*)/g, (_m, key: string) => encodeURIComponent(String(args[key] ?? '')))
     const method = tool.method ?? 'GET'
     const rest = { ...args }

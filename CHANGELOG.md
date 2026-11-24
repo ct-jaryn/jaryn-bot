@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.9.0 — 邮件 TLS / 后台审批 / WS 协议 / 主动信号
+
+### Added / Fixed
+
+- **SMTP 全面重写**：隐式 TLS(465)、STARTTLS（auto/require）、AUTH PLAIN + AUTH LOGIN、多行应答解析、附件、HTML 正文、RFC2047 主题
+- **后台任务审批 0 容忍**：jobs/goals/workers 的 ask 风险工具立即拒绝（`background-policy`），不会被 30 分钟超时拖住；可用 allow 规则预批
+- **设备配对限次**：窗口内失败次数上限（默认 10/10min），防暴力猜码
+- **工具输出落盘**：>32KB 自动存 artifact 并返回指针
+- **`/ws/client` JSON-RPC**：ping/session.list/create/subscribe/turn.send/turn.cancel/approval.respond/usage.total + 事件推送，支持 token 鉴权
+- **Initiative 信号扩到 6 类**：任务失败、任务停滞、目标停滞、日历临近（45min）、连接器失效、未读邮件；接受提议后立即执行任务
+- **云电脑上限与边界**：单次 4h、每日 8h、域名 egress 白名单、`computer.restart`、`computer.usage`
+- **Pages**：版本历史（20 版）+ 回滚、分享链接过期时间与撤销
+- 162 个测试
+
+
 ## v1.8.0 — 补齐功能审计缺口
 
 ### Fixed / Added

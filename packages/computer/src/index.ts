@@ -33,6 +33,12 @@ export interface ComputerConfig {
   headless?: boolean
   idleMs?: number
   network?: 'none' | 'bridge'
+  /** Max single session length (default 4h). */
+  maxSessionMs?: number
+  /** Max total runtime per day per bot (default 8h). */
+  maxDailyMs?: number
+  /** Domain allowlist for browser.goto; empty = allow all public hosts. */
+  allowedDomains?: string[]
 }
 
 const DEFAULT_CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -157,6 +163,41 @@ export class ComputerService {
   private clients = new Map<string, CdpClient>()
   private takeovers = new Set<string>()
   private recordings = new Map<string, { startedAt: number; steps: string[] }>()
+  private usage = new Map<string, { day: string; ms: number; sessionStartedAt?: number }>()
+  readonly limits: { maxSessionMs: number; maxDailyMs: number; allowedDomains: string[] }
+
+  /** Enforce per-session and per-day runtime caps; throws when exceeded. */
+  enforceLimits(botId: string): void {
+    const record = this.usage.get(botId)
+    if (!record) return
+    if (record.sessionStartedAt && Date.now() - record.sessionStartedAt > this.limits.maxSessionMs) {
+      throw new Error(`computer session exceeded ${Math.round(this.limits.maxSessionMs / 3600_000)}h limit; restart to continue`)
+    }
+    if (record.ms > this.limits.maxDailyMs) {
+      throw new Error(`computer daily budget exhausted (${Math.round(this.limits.maxDailyMs / 3600_000)}h)`)
+    }
+  }
+
+  /** Reject navigations outside the configured domain allowlist. */
+  assertAllowedUrl(rawUrl: string): void {
+    const allow = this.limits.allowedDomains
+    if (allow.length === 0) return
+    let host: string
+    try { host = new URL(rawUrl).hostname } catch { throw new Error(`invalid URL: ${rawUrl}`) }
+    const ok = allow.some((pattern) => pattern === host || (pattern.startsWith('*.') && host.endsWith(pattern.slice(1))) || pattern === '*')
+    if (!ok) throw new Error(`domain not allowed: ${host}`)
+  }
+
+  restart(botId: string): Promise<ComputerInstance> {
+    return this.start(botId, { force: true })
+  }
+
+  usageFor(botId: string): { day: string; ms: number; sessionMs: number } {
+    const record = this.usage.get(botId)
+    const day = new Date().toISOString().slice(0, 10)
+    if (!record || record.day !== day) return { day, ms: 0, sessionMs: 0 }
+    return { day: record.day, ms: record.ms, sessionMs: record.sessionStartedAt ? Date.now() - record.sessionStartedAt : 0 }
+  }
   private idleTimers = new Map<string, NodeJS.Timeout>()
   private backend: ComputerBackend
   readonly dataDir: string
@@ -165,6 +206,11 @@ export class ComputerService {
     this.dataDir = resolve(cfg.dataDir ?? join(process.env.JARY_HOME ?? join(process.cwd(), 'data'), 'computers'))
     this._idleMs = cfg.idleMs
     this.backend = backend ?? (cfg.backend === 'docker' ? new DockerComputerBackend(cfg) : new LocalChromeBackend(cfg))
+    this.limits = {
+      maxSessionMs: cfg.maxSessionMs ?? 4 * 3600_000,
+      maxDailyMs: cfg.maxDailyMs ?? 8 * 3600_000,
+      allowedDomains: cfg.allowedDomains ?? [],
+    }
   }
 
   status(botId: string): { state: ComputerState; baseUrl?: string; startedAt?: number; takeover: boolean } {
@@ -247,8 +293,17 @@ export class ComputerService {
     ;(this.backend as any).cfg = { ...((this.backend as any).cfg ?? {}), proxyUrl: url }
   }
 
-  async start(botId: string): Promise<ComputerInstance> {
-    if (this.instances.has(botId)) return this.instances.get(botId)!
+  async start(botId: string, opts: { force?: boolean } = {}): Promise<ComputerInstance> {
+    if (this.instances.has(botId) && !opts.force) {
+      this.enforceLimits(botId)
+      return this.instances.get(botId)!
+    }
+    if (this.instances.has(botId)) await this.stop(botId)
+    const day = new Date().toISOString().slice(0, 10)
+    const existing = this.usage.get(botId)
+    const record = existing && existing.day === day ? existing : { day, ms: 0 }
+    record.sessionStartedAt = Date.now()
+    this.usage.set(botId, record)
     const inst = await this.backend.start(botId)
     this.instances.set(botId, inst)
     this.scheduleIdleStop(botId)
@@ -281,6 +336,11 @@ export class ComputerService {
   private _idleMs?: number
 
   async stop(botId: string): Promise<void> {
+    const record = this.usage.get(botId)
+    if (record?.sessionStartedAt) {
+      record.ms += Date.now() - record.sessionStartedAt
+      record.sessionStartedAt = undefined
+    }
     const timer = this.idleTimers.get(botId)
     if (timer) clearTimeout(timer)
     this.idleTimers.delete(botId)
@@ -379,6 +439,23 @@ export function computerToolsPlugin(): Plugin {
           async execute(args) { await computer.restore(botOf(args), String(args.path)); return { ok: true } },
         },
         {
+          name: 'computer.restart', description: 'Restart the bot computer (fresh browser profile session).', risk: 'execute',
+          schema: { type: 'object', properties: { botId: { type: 'string' } } },
+          async execute(args) {
+            computer.assertAgentControl(botOf(args))
+            const inst = await computer.restart(botOf(args))
+            return { restarted: true, baseUrl: inst.baseUrl, startedAt: inst.startedAt }
+          },
+        },
+        {
+          name: 'computer.usage', description: 'Show runtime usage and limits for the bot computer.', risk: 'read',
+          schema: { type: 'object', properties: { botId: { type: 'string' } } },
+          async execute(args) {
+            const botId = botOf(args)
+            return { ...computer.usageFor(botId), limits: computer.limits }
+          },
+        },
+        {
           name: 'computer.exec',
           description: 'Run a shell command inside the bot computer container (Docker backend only).',
           risk: 'execute',
@@ -394,7 +471,7 @@ export function computerToolsPlugin(): Plugin {
         {
           name: 'browser.goto', description: 'Open a URL in the bot computer browser.', risk: 'network',
           schema: { type: 'object', properties: { botId: { type: 'string' }, url: { type: 'string' } }, required: ['url'] },
-          async execute(args) { computer.assertAgentControl(botOf(args)); const client = await computer.client(botOf(args)); computer.touch(botOf(args)); computer.record(botOf(args), `goto ${String(args.url)}`); await client.navigate(String(args.url)); return { url: String(args.url), title: await client.evaluate<string>('document.title') } },
+          async execute(args) { computer.assertAgentControl(botOf(args)); computer.assertAllowedUrl(String(args.url)); computer.enforceLimits(botOf(args)); const client = await computer.client(botOf(args)); computer.touch(botOf(args)); computer.record(botOf(args), `goto ${String(args.url)}`); await client.navigate(String(args.url)); return { url: String(args.url), title: await client.evaluate<string>('document.title') } },
         },
         {
           name: 'browser.extract', description: 'Extract visible text from the current page.', risk: 'read',
