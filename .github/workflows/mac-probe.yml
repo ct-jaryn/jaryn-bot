@@ -1,0 +1,13 @@
+name: mac-runner-probe
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel, macos-15, macos-14, macos-13]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    steps:
+      - run: echo "runner=$RUNNER_OS arch=$(uname -m)" && sw_vers
