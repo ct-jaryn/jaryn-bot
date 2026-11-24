@@ -1,7 +1,7 @@
 # 自动打包与发布
 
 > 适用版本：v1.12.0 · 状态：现行
-> 一条流水线产出全部客户端安装包；公开仓库使用 GitHub 托管标准 runner，不产生 Actions 分钟费用。
+> 一条流水线产出全部客户端安装包；公开仓库使用 GitHub 托管标准 runner，不产生 Actions 分钟费用。本节记录的是 v1.12.0 实测结果。
 
 ## 1. 触发方式
 
@@ -27,7 +27,24 @@
 - tag 构建：取 tag 去掉 `v`（`v1.12.0` → `1.12.0`），构建前写入 `desktop/package.json` 与 Android `versionName`；
 - 手动/定时：`<package.json 版本>-main.<短 SHA>`。
 
-## 3. Runner 与免费额度
+## 3. 实测（v1.12.0）
+
+tag `v1.12.0` 触发的一次完整流水线（run 45338605824）：
+
+| Job | 耗时 |
+|---|---|
+| verify（178 测试 + 全部校验） | 34s |
+| android（APK 3.1 MB） | 65s |
+| desktop linux（AppImage 103 MB + deb 71.4 MB） | 119s |
+| desktop macos-15（dmg x64 98.1 MB + arm64 93.7 MB） | 82s |
+| desktop windows（exe 77.8 MB） | 90s |
+| publish（校验和 + Release） | 32s |
+| **总计** | **约 3 分 13 秒** |
+
+Release 资产：6 个安装包 + `SHA256SUMS.txt`，`sha256sum -c` 校验通过（已用 APK 实测）。
+手动触发（run 45339277534）走快照分支：产出 artifacts `jaryn-1.12.0-main.30b01cf`（含三平台包 + APK），**未创建 Release**。
+
+## 4. Runner 与免费额度
 
 公开仓库的 GitHub 托管标准 runner **免费且不计分钟**。本流水线使用：
 
@@ -39,13 +56,13 @@
 
 > 若仓库改为私有，Actions 分钟会计费（macOS 有倍率）。私有化时建议只保留 `ubuntu-latest` 打包 Linux/Android，桌面 Windows/macOS 用本地构建或自托管 runner。
 
-## 4. 缓存与耗时
+## 5. 缓存与耗时
 
 - 缓存 `~/.cache/electron`、`~/.cache/electron-builder`（Windows/macOS 对应目录），key 由 `desktop/package.json` 哈希决定。
 - 典型耗时：校验约 30s；Linux/Windows 桌面各 2–3 分钟；macOS 2–4 分钟；Android 1–2 分钟；发布 <1 分钟。
 - `concurrency` 按 ref 串行，避免同 tag 重复发布。
 
-## 5. 签名与公证（未做）
+## 6. 签名与公证（未做）
 
 产物未签名，正式分发需自备证书，在仓库 Secrets 配置后由 electron-builder 自动使用：
 
@@ -57,7 +74,7 @@
 
 当前 workflow 显式设置 `CSC_IDENTITY_AUTO_DISCOVERY=false`，保证无证书时也能出包。
 
-## 6. 本地复现
+## 7. 本地复现
 
 ```bash
 cd desktop && npm install && npm test
@@ -66,7 +83,7 @@ npx electron-builder --linux --publish never   # 或 --win / --mac
 cd ../mobile/android && gradle assembleDebug
 ```
 
-## 7. 排错
+## 8. 排错
 
 | 症状 | 原因 / 处理 |
 |---|---|
