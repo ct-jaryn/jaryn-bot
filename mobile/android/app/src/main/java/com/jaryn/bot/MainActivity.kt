@@ -8,6 +8,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
@@ -18,6 +19,12 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private val prefs by lazy { getSharedPreferences("jaryn", Context.MODE_PRIVATE) }
+
+    private fun serverUrlWithToken(): String {
+        val base = prefs.getString("serverUrl", null) ?: return ""
+        val token = prefs.getString("apiToken", "").orEmpty()
+        return if (token.isNotEmpty()) "$base/?token=${java.net.URLEncoder.encode(token, "UTF-8")}" else base
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = WebViewClient()
         setContentView(webView)
         val url = prefs.getString("serverUrl", null)
-        if (url == null) showSetup() else webView.loadUrl(url)
+        if (url == null) showSetup() else webView.loadUrl(serverUrlWithToken())
     }
 
     private fun normalize(input: String): String? {
@@ -47,10 +54,17 @@ class MainActivity : AppCompatActivity() {
             inputType = InputType.TYPE_TEXT_VARIATION_URI
             setText(prefs.getString("serverUrl", "http://127.0.0.1:8787"))
         }
+        val tokenInput = EditText(this).apply {
+            hint = "服务端 API Token（未设置可留空）"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setText(prefs.getString("apiToken", ""))
+        }
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 32, 48, 0)
             addView(input)
+            addView(TextView(context).apply { text = "可选：JARY_API_TOKEN"; setPadding(0, 24, 0, 0) })
+            addView(tokenInput)
         }
         AlertDialog.Builder(this)
             .setTitle("连接 jaryn 服务器")
@@ -60,8 +74,11 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("连接") { _, _ ->
                 val url = normalize(input.text.toString())
                 if (url == null) { showSetup() } else {
-                    prefs.edit().putString("serverUrl", url).apply()
-                    webView.loadUrl(url)
+                    prefs.edit()
+                        .putString("serverUrl", url)
+                        .putString("apiToken", tokenInput.text.toString().trim())
+                        .apply()
+                    webView.loadUrl(serverUrlWithToken())
                 }
             }
             .setNeutralButton("更改") { _, _ -> showSetup() }

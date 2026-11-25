@@ -1,4 +1,5 @@
 import { createServer } from 'node:http'
+import { randomBytes } from 'node:crypto'
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
@@ -6,7 +7,7 @@ import type { Context } from '@jaryn/kernel'
 import { newApprovalId } from '@jaryn/agent-core'
 import { renderPageDocument } from '@jaryn/pages'
 import { TunnelServer } from '@jaryn/tunnel'
-import { exchangeOAuthCode, refreshOAuthToken } from '@jaryn/connectors'
+import { buildAuthorizeUrl, exchangeOAuthCode, refreshOAuthToken } from '@jaryn/connectors'
 import { WsClientServer } from './ws-client.ts'
 import type { ApprovalDecision, ApprovalRequest, ApprovalService } from '@jaryn/agent-core'
 
@@ -31,6 +32,26 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
   const port = opts.port ?? 8787
   const approvalTimeout = opts.approvalTimeoutMs ?? 30 * 60_000
   const apiToken = opts.apiToken ?? process.env.JARY_API_TOKEN
+  if (!apiToken && host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {
+    console.warn(`[jaryn] WARNING: serving on ${host} without JARY_API_TOKEN; anyone who can reach this port has owner access`)
+  }
+
+  // Short-lived tickets let browsers put a credential in a stream URL (EventSource/img
+  // cannot send headers) without leaking the long-lived API token into proxy logs/history.
+  const streamTickets = new Map<string, number>()
+  const STREAM_PATHS = new Set(['/api/stream', '/api/computer/screen', '/api/computer/mjpeg'])
+  const issueStreamTicket = (): { ticket: string; expiresAt: number } => {
+    const now = Date.now()
+    for (const [ticket, expiresAt] of streamTickets) if (expiresAt <= now) streamTickets.delete(ticket)
+    const ticket = randomBytes(24).toString('hex')
+    const expiresAt = now + 10 * 60_000
+    streamTickets.set(ticket, expiresAt)
+    return { ticket, expiresAt }
+  }
+  const validStreamTicket = (ticket: string): boolean => (streamTickets.get(ticket) ?? 0) > Date.now()
+
+  // OAuth `state` values created by /api/oauth/authorize/:id (single process, 10 min TTL).
+  const oauthStates = new Map<string, number>()
 
   const authorized = (req: IncomingMessage, url: URL): boolean => {
     if (!apiToken) return true
@@ -139,9 +160,18 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? `${host}:${port}`}`)
     const path = url.pathname
 
+    res.setHeader('x-content-type-options', 'nosniff')
+    res.setHeader('referrer-policy', 'no-referrer')
+    res.setHeader('x-frame-options', 'DENY')
+    res.setHeader(
+      'content-security-policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+    )
+
     const publicPaths = new Set(['/healthz', '/', '/index.html', '/app.js', '/style.css', '/manifest.json', '/sw.js', '/icon.svg'])
     const publicApi =
-      path === '/api/devices/pair-code' ||
+      // Pairing a device is public by design (the device only knows the one-time code);
+      // *creating* a code requires owner authentication.
       path === '/api/devices/pair' ||
       // OAuth providers redirect the browser here without our bearer token; the
       // handler validates `state` instead.
@@ -151,7 +181,9 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     const emailSecretAuth = path === '/api/email/inbound' && !!emailSecret &&
       String(req.headers['x-jary-email-secret'] ?? '') === emailSecret
     const needsAuth = (path.startsWith('/api/') && !publicApi && !emailSecretAuth) || path === '/metrics'
-    if (needsAuth && !authorized(req, url)) return sendJson(res, 401, { error: 'unauthorized' })
+    const ticket = url.searchParams.get('ticket') ?? ''
+    const ticketOk = !!ticket && STREAM_PATHS.has(path) && validStreamTicket(ticket)
+    if (needsAuth && !ticketOk && !authorized(req, url)) return sendJson(res, 401, { error: 'unauthorized' })
     void publicPaths
 
     if (req.method === 'GET' && (path === '/' || path === '/index.html')) return sendFile(res, 'index.html', 'text/html')
@@ -257,6 +289,9 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       if (!scheduler) return sendJson(res, 404, { error: 'scheduler not mounted' })
       const body = await readBody(req)
       if (!body.mission || !body.trigger) return sendJson(res, 400, { error: 'mission and trigger required' })
+      if (body.trigger?.kind === 'webhook' && !body.trigger?.secret) {
+        return sendJson(res, 400, { error: 'webhook triggers require a secret (unsigned webhooks are refused)' })
+      }
       return sendJson(res, 201, { job: scheduler.add(body) })
     }
     if (req.method === 'POST' && /^\/api\/jobs\/[^/]+\/(run|enable|disable)$/.test(path)) {
@@ -286,6 +321,16 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       } catch (err) {
         return sendJson(res, 400, { error: (err as Error).message })
       }
+    }
+    if (req.method === 'POST' && path === '/api/devices/revoke-all') {
+      const devices = ctx.get<any>('devices')
+      if (!devices) return sendJson(res, 404, { error: 'devices not mounted' })
+      return sendJson(res, 200, { revoked: devices.revokeAll() })
+    }
+    if (req.method === 'POST' && /^\/api\/devices\/[^/]+\/revoke$/.test(path)) {
+      const devices = ctx.get<any>('devices')
+      if (!devices) return sendJson(res, 404, { error: 'devices not mounted' })
+      return sendJson(res, 200, { revoked: devices.revoke(path.split('/')[3]!) })
     }
     if (req.method === 'GET' && path === '/api/devices') {
       const devices = ctx.get<any>('devices')
@@ -762,13 +807,42 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       const cancelled = agent?.cancel?.(sessionId) ?? false
       return sendJson(res, 200, { cancelled })
     }
+    if (req.method === 'GET' && path.startsWith('/api/oauth/authorize/')) {
+      const connectorId = path.slice('/api/oauth/authorize/'.length)
+      const env = (name: string) => process.env[`JARY_OAUTH_${name}_${connectorId.toUpperCase()}`]
+      const authorizeUrl = env('AUTHORIZE_URL')
+      const clientId = env('CLIENT_ID')
+      const redirectUri = env('REDIRECT_URI') ?? `${url.origin}/api/oauth/callback/${connectorId}`
+      if (!authorizeUrl || !clientId) {
+        return sendJson(res, 500, {
+          error: `oauth not configured for ${connectorId}`,
+          needed: [`JARY_OAUTH_AUTHORIZE_URL_${connectorId.toUpperCase()}`, `JARY_OAUTH_CLIENT_ID_${connectorId.toUpperCase()}`],
+        })
+      }
+      const state = randomBytes(18).toString('hex')
+      oauthStates.set(state, Date.now() + 10 * 60_000)
+      const scopes = (env('SCOPES') ?? '').split(/[,\s]+/).filter(Boolean)
+      const authorize = buildAuthorizeUrl({
+        id: connectorId, name: connectorId, baseUrl: '', tools: [],
+        auth: { type: 'oauth2', authorizeUrl, clientId, redirectUri, scopes },
+      } as any, state)
+      return sendJson(res, 200, { url: authorize, state, expiresInMs: 10 * 60_000 })
+    }
     if (req.method === 'GET' && path.startsWith('/api/oauth/callback/')) {
       const connectorId = path.slice('/api/oauth/callback/'.length)
       const code = url.searchParams.get('code') ?? ''
       const state = url.searchParams.get('state') ?? ''
       if (!code) return sendJson(res, 400, { error: 'missing code' })
-      const expectedState = process.env[`JARY_OAUTH_STATE_${connectorId.toUpperCase()}`]
-      if (expectedState && expectedState !== state) return sendJson(res, 400, { error: 'state mismatch' })
+      // CSRF protection is mandatory: either a state created by
+      // /api/oauth/authorize/:id (10 min TTL) or a configured static state must match.
+      const envState = process.env[`JARY_OAUTH_STATE_${connectorId.toUpperCase()}`]
+      const issued = oauthStates.get(state)
+      const issuedOk = !!issued && issued > Date.now()
+      if (issuedOk) oauthStates.delete(state)
+      if (!state) return sendJson(res, 400, { error: 'missing oauth state' })
+      if (!issuedOk && !(envState && envState === state)) {
+        return sendJson(res, 400, { error: 'invalid or expired oauth state; start from /api/oauth/authorize/:id' })
+      }
       const tokenUrl = process.env[`JARY_OAUTH_TOKEN_URL_${connectorId.toUpperCase()}`]
       const clientId = process.env[`JARY_OAUTH_CLIENT_ID_${connectorId.toUpperCase()}`]
       const clientSecret = process.env[`JARY_OAUTH_CLIENT_SECRET_${connectorId.toUpperCase()}`]
@@ -829,6 +903,9 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
       } catch (err) {
         return sendJson(res, 502, { error: (err as Error).message })
       }
+    }
+    if (req.method === 'POST' && path === '/api/stream-ticket') {
+      return sendJson(res, 201, issueStreamTicket())
     }
     if (req.method === 'GET' && path === '/api/usage') {
       const store = ctx.get<any>('store')
@@ -929,7 +1006,9 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
   wsClient.attach(server)
   ctx.provide('wsClient', wsClient)
 
-  tunnel.attach(server)
+  // The egress tunnel lets a client's network carry server traffic; it must not be open
+  // to anonymous upgraders, otherwise anyone can register as the egress.
+  tunnel.attach(server, { authorize: (req, url) => authorized(req as any, url) })
   await new Promise<void>((resolve) => server.listen(port, host, resolve))
   const address = server.address()
   const actualPort = typeof address === 'object' && address ? address.port : port

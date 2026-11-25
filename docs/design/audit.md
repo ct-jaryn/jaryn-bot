@@ -35,11 +35,11 @@
 | Vault 与凭据 | ✅ | AES-256-GCM write-only、盲填、Secure Form、审计、轮换、grant/revoke、1Password、Bitwarden、TOTP（secrets 读取）、卡信息填表（默认关 + 逐次审批 + 值不回传） | 真实支付网关/结算 ⛔ |
 | 连接器 | ✅ | 通用 HTTP、Bearer/API Key、OAuth 授权/回调/刷新 | 官方 Gmail/Calendar 应用需部署者自注册（OAuth 链路已实现） |
 | 邮件 | ✅ | SMTP（465 隐式 TLS / STARTTLS / AUTH PLAIN+LOGIN / 附件 / HTML）、IMAP 轮询、HTML→文本、附件→artifact、发件人 allowlist、入站 webhook | — |
-| Web 工作台与 API | ✅ | 63 条路由、SSE 流、`/ws/client` 双向 JSON-RPC（session/turn/approval/usage）、审批卡/问题卡、看屏接管、侧边面板 | — |
+| Web 工作台与 API | ✅ | 63+ 路由、SSE、`/ws/client` JSON-RPC、审批/问题卡、看屏接管、侧边面板；鉴权：owner 令牌 / 设备令牌 / 10 分钟 stream ticket，配对码生成需鉴权，OAuth 强制 state，统一安全响应头 | 设备令牌无角色细分；无内建请求限速 |
 | 客户端 | ✅ | PWA、Electron 桌面、Android WebView、设备配对（失败限次）/令牌/吊销 | 原生 iOS ⛔（需 macOS + Xcode + 签名） |
 | CLI | ✅ | 23 个命令：init/chat/serve/config/doctor/tools/plugin/bot/session/memory/job/goal/computer/vault/tunnel/device/usage/audit/backup/restore/stop-all/version/help | 命令集中在 `packages/cli`，未插件化 |
 | 运维与部署 | 🟡 | doctor、backup/restore、stop-all、`/healthz`、`/metrics`、Dockerfile + compose、反代 TLS 文档 | Docker 镜像未在真机构建/运行实测 |
-| 测试与自动校验 | ✅ | 64 个测试文件 / 178 个用例（真实 Chrome、假 IMAP/SMTP/TLS/MCP 服务、office 包结构、CLI 冒烟）、check-docs / check-deploy / check-inventory / evals --dry | 真实模型评测需 API key |
+| 测试与自动校验 | ✅ | 65 个测试文件 / 184 个用例（真实 Chrome、假 IMAP/SMTP/TLS/MCP 服务、office 包结构、CLI 冒烟）、check-docs / check-deploy / check-inventory / evals --dry | 真实模型评测需 API key |
 | 真实模型端到端评测 | 🟡 | 10 任务评测脚本与结构校验就绪（`node evals/run.ts --dry`） | 需 `DEEPSEEK_API_KEY` 才能跑真实分 |
 | 客户端打包 | ✅ | 单一 `release.yml`：Windows `.exe`、Linux `.AppImage`/`.deb`、macOS `.dmg`（x64+arm64）、Android `.apk`；tag 自动发布 + `SHA256SUMS.txt` | 未做代码签名/公证（需证书） |
 
@@ -55,7 +55,7 @@
 | CLI 命令 | 23 |
 | 组合 patch（`packages/bundles/*`） | 7 |
 | TypeScript 源码 | 约 9.8k 行（`packages/*/src`） |
-| 测试 | 64 个文件 / 178 个用例 |
+| 测试 | 64 个文件 / 184 个用例 |
 | 前端静态资源 | 约 490 行（`packages/web/src/public`） |
 
 ## 待外部条件（不是缺陷）

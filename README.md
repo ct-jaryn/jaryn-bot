@@ -63,7 +63,7 @@ docker compose -f deploy/docker-compose.yml up -d --build
 | **连接器 / 邮箱** | 通用 HTTP + OAuth（授权/回调/刷新）、Gmail/Calendar 示例、SMTP（TLS/STARTTLS/附件）、IMAP 收信 |
 | **产物** | artifact 库、Pages（版本/回滚/分享 TTL）、docx/xlsx/pptx（纯 TS 生成，无外部依赖） |
 | **客户端** | Web/PWA、Electron（Windows/Linux 安装包）、Android APK；设备配对与令牌吊销；`/ws/client` JSON-RPC |
-| **工程** | 插件内核（组合 + patch + 权限声明 + 进程外宿主）、178 个测试、CI 打包、文档/部署/清单自动校验 |
+| **工程** | 插件内核（组合 + patch + 权限声明 + 进程外宿主）、184 个测试、CI 打包、文档/部署/清单自动校验 |
 
 ## 架构
 
@@ -99,7 +99,7 @@ docker compose -f deploy/docker-compose.yml up -d --build
 ## 开发
 
 ```bash
-npm test          # 178 tests（串行；含真实 Chrome、TLS、WS）
+npm test          # 184 tests（串行；含真实 Chrome、TLS、WS）
 npm run check     # docs + deploy + desktop + inventory + evals 结构校验
 npm run smoke     # CLI 端到端冒烟
 npm run inventory # 重新生成 docs/reference/inventory.md 与 docs/reference/tools.md
@@ -131,6 +131,6 @@ npm run eval      # 真实模型评测（需 DEEPSEEK_API_KEY）
 
 **jaryn-bot** is a self-hosted personal AI teammate runtime. It runs on your own server with its own workspace and cloud computer: files, terminal, browser, email, Office documents, web pages, scheduled and proactive work — with human approval for risky actions, an append-only event log for replay/audit, and credentials that never enter the model context.
 
-Single owner, Web-first, 4C4G-friendly, no external database, no runtime npm dependencies: Node 24 executes TypeScript directly. 178 tests; CI packages Windows/Linux/macOS desktop installers and an Android APK, with SHA256 checksums, on every version tag.
+Single owner, Web-first, 4C4G-friendly, no external database, no runtime npm dependencies: Node 24 executes TypeScript directly. 184 tests; CI packages Windows/Linux/macOS desktop installers and an Android APK, with SHA256 checksums, on every version tag.
 
 Docs start at [docs/README.md](docs/README.md). License: AGPL-3.0 with a commercial dual license ([COMMERCIAL.md](COMMERCIAL.md)). An original implementation inspired by Grok Bot — no affiliation.

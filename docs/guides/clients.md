@@ -43,7 +43,7 @@ jary serve --home ./data-home --port 8787 --host 0.0.0.0
 
 ## 设备配对与令牌
 
-配对用于给「非浏览器」或脚本客户端发放长期令牌。配对码由管理员在服务端生成：
+配对用于给「非浏览器」或脚本客户端发放长期令牌。**配对码生成需要 owner 鉴权**（CLI 直接生成，或带 token 调 `POST /api/devices/pair-code`）；配对本身公开，因为设备只持有一次性码：
 
 ```bash
 jary device pair-code                 # {"code":"123456","expiresAt":...}
@@ -65,13 +65,13 @@ curl -sX POST http://127.0.0.1:8787/api/devices/pair \
 |---|---|
 | 码格式 | 6 位数字，10 分钟有效，使用一次即作废 |
 | 失败限次 | 全局限流：默认 10 次失败 / 10 分钟窗口，超限锁定；`maxAttemptsPerCode`（默认 5）已声明但当前未逐码计数 |
-| 令牌 | 32 字节随机 hex；服务端只存 SHA-256，明文只在配对响应出现一次 |
+| 令牌 | 32 字节随机 hex；服务端只存 SHA-256，明文只在配对响应出现一次；`/tunnel` 握手也接受它 |
 | 角色 | 固定 `owner`；服务端没有 member/多人角色 |
 | 吊销 | `revoked_at` 置位后 `verify` 立即失败；没有「轮换」命令，轮换=吊销后重新配对 |
-| HTTP 用法 | `Authorization: Bearer <token>` 或 `?token=<token>`；`/api/devices/pair(-code)`、OAuth 回调、`/healthz` 与静态资源无需鉴权 |
-| 管理接口 | `GET /api/devices`、`POST /api/devices/:id/revoke`；配对接口为 `POST /api/devices/pair-code`、`POST /api/devices/pair` |
+| HTTP 用法 | `Authorization: Bearer <token>`；`/api/devices/pair`、OAuth 回调、`/healthz` 与静态资源无需鉴权（`pair-code` 需要令牌） |
+| 管理接口 | `GET /api/devices`、`POST /api/devices/:id/revoke`、`POST /api/devices/revoke-all`；配对接口为 `POST /api/devices/pair-code`（token）、`POST /api/devices/pair`（公开） |
 
-限制：配对码与配对接口是公开路由；失败计数保存在进程内存，重启清零；公网部署建议在反代层限制配对端点来源。
+限制：设备令牌等价 owner，没有角色/只读细分；失败计数保存在进程内存，重启清零；配对端点（`/api/devices/pair`）建议在反代限速。
 
 ## `/ws/client` 协议
 
@@ -122,7 +122,7 @@ ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: "ping" }))
 ← {"event":"turn.end","data":{"finishReason":"stop","text":"..."}}
 ```
 
-鉴权：与 HTTP 共用同一套规则——`Authorization: Bearer <JARY_API_TOKEN>`、`?token=<token>`，或配对得到的设备令牌；否则握手返回 401。未设置 `JARY_API_TOKEN` 时不校验（仅本机/内网使用时如此）。
+鉴权：与 HTTP 共用同一套规则——`Authorization: Bearer <JARY_API_TOKEN>`、`?token=<token>`，或配对得到的设备令牌；否则握手返回 401。未设置 `JARY_API_TOKEN` 时不校验（仅本机/内网使用时如此）。浏览器 EventSource 用 `POST /api/stream-ticket` 换的短期 ticket，不把长期令牌放进 URL。
 
 ## 客户端构建与产物
 
@@ -144,14 +144,15 @@ ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: "ping" }))
 
 **让服务端访问内网**：在能访问内网的机器上跑 `jary tunnel --url ws://<server>/tunnel`，服务端云电脑的浏览器会经该机器出站（`GET /api/tunnel` 可看连接状态）。它只是 HTTP 代理隧道，不是执行端 Node，不提供 fs/shell 工具。
 
-**桌面壳的安全设置**：Electron 使用 `contextIsolation`、关闭 `nodeIntegration`、开 `sandbox`；配置写入 userData 下 `config.json`（0600）；导航被限制在当前服务端域，外链交给系统浏览器打开。
+**桌面壳的安全设置**：Electron 使用 `contextIsolation`、关闭 `nodeIntegration`、开 `sandbox`；配置写入 userData 下 `config.json`（0600），其中可包含 API Token，页面通过 preload 读取后只用于请求头/流 ticket；导航被限制在当前服务端域，外链交给系统浏览器打开。
 
 ## 限制与边界
 
 - 没有 `/ws/node` 与远程执行端；`/tunnel` 只是出站 HTTP 代理。原生 iOS 不做。
 - `/ws/client` 是 v1 最小实现：`session.subscribe` 只回历史快照，没有 seq、回放与断线补发；`turn.send` 的流事件只发给发起连接，不广播给其它连接，多端同步需自行轮询历史。
 - 设备令牌与 API 令牌在 HTTP 与 `/ws/client` 上都能用；令牌不区分 owner/Bot，拿到即代表 owner。
-- 桌面端「API Token」保存在 userData 的 `config.json`（0600），页面启动时通过 preload 读取并用于 API/SSE/看屏请求；改了 token 需重新保存配置。
+- 桌面端「API Token」保存在 userData 的 `config.json`（0600），页面启动时通过 preload 读取并用于 API/stream ticket；改了 token 需重新保存配置。
+- Android 端设置对话框里可填 API Token，首次加载会以 `?token=` 打开一次并立即被页面转存，之后正常使用 ticket 与请求头。
 - 安装包未做发行签名，APK 为 debug 构建：Windows SmartScreen、macOS Gatekeeper 会拦截，分发给他人需自行签名/公证；macOS 安装包需在可用 runner 的账号上手动跑工作流。
 - Android 仅 debug 构建、允许明文 HTTP、未上架；iOS 无客户端。
 - 无推送：没有 APNs/FCM，通知只在 Web UI 通知中心；PWA 也没有后台同步。客户端离线不影响服务端任务，但会丢失实时视图。

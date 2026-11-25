@@ -92,7 +92,7 @@ docker compose -f deploy/docker-compose.yml up -d --build
 ## 7. 验证
 
 ```bash
-npm test        # 178 tests（串行；真实 Chrome、TLS、WS、SQLite）
+npm test        # 184 tests（串行；真实 Chrome、TLS、WS、SQLite）
 npm run check   # docs + deploy + desktop + inventory + eval 结构校验
 npm run smoke   # CLI 端到端冒烟
 node scripts/inventory.ts   # 打印运行时工具/路由/表统计

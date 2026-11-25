@@ -1,7 +1,7 @@
 # 测试
 
 > 适用版本：v1.11.0 · 状态：现行
-> 测试即验收：178 个测试、64 个测试文件，Node 原生 `node:test` 直接跑 TypeScript；发布前还需结构校验、CLI 冒烟与评测。
+> 测试即验收：184 个测试、65 个测试文件，Node 原生 `node:test` 直接跑 TypeScript；发布前还需结构校验、CLI 冒烟与评测。
 
 ## 1. 测试分层
 
@@ -110,7 +110,7 @@ CI 不跑真实模型评测；需要 `DEEPSEEK_API_KEY` 的评测与 Docker/Chro
 
 | 门槛 | 命令/动作 | 通过标准 |
 |---|---|---|
-| 测试 | `npm test` | 178 个测试 0 失败；必要时带 `CHROME_PATH` 跑真实 Chrome |
+| 测试 | `npm test` | 184 个测试 0 失败；必要时带 `CHROME_PATH` 跑真实 Chrome |
 | 结构 | `npm run check` | 五项全 ok，退出码 0 |
 | 冒烟 | `npm run smoke` | `smoke ok`，无失败项 |
 | 评测 | `npm run eval` | 无 key 时结构通过；有 key 时 ≥7/10 |

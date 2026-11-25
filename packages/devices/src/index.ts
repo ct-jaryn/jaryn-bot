@@ -99,6 +99,11 @@ export class DeviceService {
   revoke(id: string): boolean {
     return this.db.prepare('UPDATE devices SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL').run(Date.now(), id).changes > 0
   }
+
+  /** Revoke every paired device (e.g. after a token leak or when rotating the server). */
+  revokeAll(): number {
+    return this.db.prepare('UPDATE devices SET revoked_at = ? WHERE revoked_at IS NULL').run(Date.now()).changes
+  }
 }
 
 function toDevice(row: any): Device {

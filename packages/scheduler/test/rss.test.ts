@@ -51,3 +51,28 @@ test('rss job dispatches once per new item', async () => {
     assert.equal(scheduler.runs(job.id).length, 2)
   } finally { await ctx.dispose(); server.close() }
 })
+
+test('unsigned webhook jobs are refused', async () => {
+  const ctx = new Context({ scope: 'root' })
+  const store = new Store(':memory:')
+  ctx.provide('store', store)
+  const tools = new Map<string, Tool>()
+  ctx.provide('tools', {
+    register: (t: Tool) => { tools.set(t.name, t); return () => tools.delete(t.name) },
+    list: () => [...tools.values()],
+    get: (n: string) => tools.get(n),
+    execute: async () => undefined,
+  } as any)
+  ctx.provide('llm', new FakeProvider([]))
+  try {
+    await ctx.mount(agentPlugin())
+    await ctx.mount(schedulerPlugin())
+    const scheduler = ctx.get<JobScheduler>('scheduler')!
+    const job = scheduler.add({ trigger: { kind: 'webhook', path: '/deploy' }, mission: 'deploy' })
+    await assert.rejects(() => scheduler.triggerWebhook(job.id, '{}', undefined), /no secret/)
+    const signed = scheduler.add({ trigger: { kind: 'webhook', path: '/ok', secret: 'shh' }, mission: 'ok' })
+    await assert.rejects(() => scheduler.triggerWebhook(signed.id, '{}', 'wrong'), /invalid webhook signature/)
+  } finally {
+    await ctx.dispose()
+  }
+})

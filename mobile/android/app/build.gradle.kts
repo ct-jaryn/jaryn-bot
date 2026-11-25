@@ -11,8 +11,8 @@ android {
         applicationId = "com.jaryn.bot"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "1.12.1"
+        versionCode = 9
+        versionName = "1.13.0"
     }
 
     buildTypes {

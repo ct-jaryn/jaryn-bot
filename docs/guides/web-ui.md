@@ -138,7 +138,7 @@ GET /api/computer/mjpeg?botId=<bot>&quality=55
 
 ## 限制与边界
 
-- 鉴权：设置 `JARY_API_TOKEN` 后，用 `http://host:8787/?token=<token>` 打开一次，页面会记住令牌（localStorage）并在后续请求与 SSE/看屏流中带上；401 时页面提示重新带 `?token=` 打开。桌面壳从自己的配置里注入令牌，无需手动带参数。
+- 鉴权：设置 `JARY_API_TOKEN` 后，用 `https://host:8787/?token=<token>` 打开一次；页面把令牌存入 localStorage 并从地址栏移除，后续 API 请求带 Bearer，SSE/看屏先用 `POST /api/stream-ticket` 换 10 分钟 ticket 再连接。401 时页面提示重新带 `?token=` 打开。桌面壳从自己的配置里注入令牌，无需手动带参数。
 - 单实例：SSE 订阅者与待审批/待回答都保存在进程内存，多副本部署不会互通，重启会丢审批与问题。
 - 无实时工具步骤：工具调用与结果要重新加载会话才出现；断线重连不补发错过的增量，以 `/api/events` 的历史为准。
 - 归档无「取消归档」按钮；Fork 无界面入口；文件上传只有 `POST /api/files`，产物面板无预览/下载入口。

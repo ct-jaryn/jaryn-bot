@@ -35,6 +35,14 @@ for (const name of registry) {
   if (!existsSync(join(ROOT, 'packages', dir, 'package.json'))) problems.push(`registry references missing package: ${name}`)
 }
 
+if (!existsSync(join(ROOT, 'deploy/Caddyfile'))) problems.push('missing deploy/Caddyfile (TLS reverse proxy example)')
+else {
+  const caddy = readFileSync(join(ROOT, 'deploy/Caddyfile'), 'utf8')
+  for (const need of ['reverse_proxy', 'Strict-Transport-Security', 'flush_interval']) {
+    if (!caddy.includes(need)) problems.push(`Caddyfile missing: ${need}`)
+  }
+}
+
 const computerDockerfile = readFileSync(join(ROOT, 'deploy/computer/Dockerfile'), 'utf8')
 for (const need of ['chromium', 'Xvfb', 'websockify', '--remote-debugging-port']) {
   if (!computerDockerfile.includes(need)) problems.push(`computer image missing: ${need}`)

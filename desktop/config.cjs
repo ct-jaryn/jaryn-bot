@@ -33,7 +33,9 @@ function loadConfig(userDataDir) {
     const data = JSON.parse(fs.readFileSync(configPath(userDataDir), 'utf8'))
     const url = normalizeServerUrl(data.serverUrl)
     if (!url) return { serverUrl: DEFAULT_URL, configured: false }
-    return { serverUrl: url, configured: Boolean(data.configured) }
+    const config = { serverUrl: url, configured: Boolean(data.configured) }
+    if (data.apiToken) config.apiToken = String(data.apiToken)
+    return config
   } catch {
     return { serverUrl: DEFAULT_URL, configured: false }
   }

@@ -11,10 +11,10 @@
 | 包（packages/*） | 31 |
 | 已加载插件 | 41 |
 | 模型可见工具 | 74 |
-| HTTP 路由（含静态与 webhook） | 63 |
+| HTTP 路由（含静态与 webhook） | 66 |
 | SQLite 表 | 28 |
 | CLI 命令 | 23 |
-| 测试文件 | 64 |
+| 测试文件 | 65 |
 
 ## 2. 工具（按风险）
 
@@ -127,6 +127,7 @@
 | GET | `/api/jobs` |
 | GET | `/api/memory` |
 | GET | `/api/notifications` |
+| GET | `/api/oauth/authorize/*` |
 | GET | `/api/oauth/callback/*` |
 | GET | `/api/pages` |
 | GET | `/api/questions` |
@@ -155,6 +156,7 @@
 | POST | `/api/computer/takeover` |
 | POST | `/api/devices/pair` |
 | POST | `/api/devices/pair-code` |
+| POST | `/api/devices/revoke-all` |
 | POST | `/api/email/inbound` |
 | POST | `/api/files` |
 | POST | `/api/initiative/scan` |
@@ -168,6 +170,7 @@
 | POST | `/api/rules` |
 | POST | `/api/sessions` |
 | POST | `/api/sessions/*` |
+| POST | `/api/stream-ticket` |
 | POST | `/api/teach` |
 | POST | `/api/vault` |
 | POST | `/api/vault/secure-form` |
@@ -240,6 +243,7 @@
 - `packages/vault/test/grants.test.ts`
 - `packages/vault/test/vault.test.ts`
 - `packages/web/test/auth.test.ts`
+- `packages/web/test/authz.test.ts`
 - `packages/web/test/command.test.ts`
 - `packages/web/test/commands.test.ts`
 - `packages/web/test/mjpeg.test.ts`

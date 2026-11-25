@@ -1,0 +1,42 @@
+# Caddy 反向代理示例（自动 HTTPS）
+#
+#   1. 把 bot.example.com 改成你的域名，DNS 指向这台服务器；
+#   2. 保证 80/443 可达；
+#   3. docker run -d --name caddy -p 80:80 -p 443:443 \
+#        -v $PWD/deploy/Caddyfile:/etc/caddy/Caddyfile \
+#        -v caddy_data:/data -v caddy_config:/config caddy:2
+#
+# jary 只监听 127.0.0.1:8787（docker compose 默认），由 Caddy 终止 TLS。
+
+bot.example.com {
+	encode zstd gzip
+
+	# 安全响应头（应用本身也会发，这里兜底）
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	# 反代；保留真实 IP 与协议
+	reverse_proxy 127.0.0.1:8787 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		flush_interval -1
+	}
+
+	# 不要记录带 token 的 URL（首次浏览器引导用；正常使用走短期 ticket）
+	log {
+		output file /var/log/caddy/jaryn.log
+		format console
+	}
+
+	# 配对端点建议在边缘限速（Caddy 原生不限速；用 Cloudflare/fail2ban 或插件）
+	@pair path /api/devices/pair
+	handle @pair {
+		reverse_proxy 127.0.0.1:8787
+	}
+}

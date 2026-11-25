@@ -36,7 +36,7 @@ import { pluginHostPlugin } from '@jaryn/plugin-host'
 import { notificationsPlugin } from '@jaryn/notifications'
 import { maintenancePlugin } from '@jaryn/maintenance'
 
-const VERSION = '1.12.1'
+const VERSION = '1.13.0'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_PATCH = resolve(HERE, '../../bundles/base/patch.json')
 
@@ -397,10 +397,12 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
 
   if (cmd === 'tunnel') {
     const url = String(flags.url ?? '')
-    if (!url) { console.error('usage: jary tunnel --url ws://<server>/tunnel'); return 2 }
-    const client = new TunnelClient(url)
+    if (!url) { console.error('usage: jary tunnel --url ws://<server>/tunnel [--token <JARY_API_TOKEN>]'); return 2 }
+    const token = typeof flags.token === 'string' ? flags.token : (process.env.JARY_API_TOKEN ?? '')
+    const target = token ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : url
+    const client = new TunnelClient(target)
     await client.connect()
-    console.log(`tunnel connected: ${url}`)
+    console.log(`tunnel connected: ${url}${token ? ' (with token)' : ''}`)
     await new Promise<void>((resolve) => {
       const stop = () => { client.close(); resolve() }
       process.once('SIGINT', stop)
@@ -691,7 +693,10 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         let trigger: any
         if (typeof flags.cron === 'string') trigger = { kind: 'cron', expr: flags.cron, tz: String(flags.tz ?? 'UTC') }
         else if (typeof flags.every === 'string') trigger = { kind: 'every', seconds: Number(flags.every) }
-        else if (typeof flags.webhook === 'string') trigger = { kind: 'webhook', path: flags.webhook, secret: flags.secret }
+        else if (typeof flags.webhook === 'string') {
+          if (!flags.secret) { console.error('--webhook requires --secret <hmac-secret> (unsigned webhooks are refused)'); return 2 }
+          trigger = { kind: 'webhook', path: flags.webhook, secret: flags.secret }
+        }
         else { console.error('need --cron, --every or --webhook'); return 2 }
         const job = scheduler.add({
           botId: String(flags.bot ?? 'default'),
@@ -792,7 +797,7 @@ commands:
   plugin list|doctor|permissions|add|remove|enable|disable|index
   computer status|start|stop|snapshot [--bot id]
   vault add|list|remove|rotate|events
-  tunnel --url ws://<server>/tunnel   client-side egress tunnel
+  tunnel --url ws://<server>/tunnel [--token]  client-side egress tunnel (token via flag or JARY_API_TOKEN)
   device pair-code|list|revoke        multi-device pairing
   goal set|list|run|pause|clear       persistent multi-round goals
   tools [--json]                      list registered tools with risk

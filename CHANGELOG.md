@@ -1,8 +1,27 @@
 # 更新记录
 
-> 适用版本：v1.12.1 · 状态：现行
+> 适用版本：v1.13.0 · 状态：现行
 
 按版本倒序。每一条只写"用户可见的变化"；设计取舍见 [决策与边界](docs/design/decisions.md)，能力现状见 [能力审计](docs/design/audit.md)。
+
+## v1.13.0 — 服务端与客户端鉴权审计
+
+安全修复（按严重度）：
+
+- **严重：设备配对鉴权绕过**。`POST /api/devices/pair-code` 原为公开路由，任何可达者都能生成配对码并换取 **owner 级设备令牌**，绕过 `JARY_API_TOKEN`。现在生成配对码必须已鉴权；配对本身仍公开（设备只持有一次性码）。
+- **高：`/tunnel` WebSocket 未鉴权**。任何人都能注册为出网隧道客户端。现在 upgrade 需 API/设备令牌（`?token=`，因为 WebSocket 客户端无法带自定义头），匿名返回 401；`jary tunnel` 支持 `--token` 或 `JARY_API_TOKEN`。
+- **中：OAuth 回调 state 可选**。未配置 `JARY_OAUTH_STATE_*` 时旧代码不校验 state（CSRF/账号串联）。现在必须匹配一次性 state（由新增 `GET /api/oauth/authorize/:id` 签发，10 分钟）或显式配置的静态 state，否则 400。
+- **中：未签名的 webhook 例程可被任何请求触发**。现在 webhook job 必须配置 secret（CLI/HTTP 创建时就拒绝），触发时强制 HMAC 校验。
+- **中：设备令牌缺少吊销全部入口**。新增 `POST /api/devices/revoke-all`。
+
+其他：
+
+- 浏览器流式端点改用 **10 分钟 stream ticket**（`POST /api/stream-ticket`），长期 API 令牌不再出现在 SSE/看屏 URL 中；`?token=` 保留兼容。首次用 `?token=` 打开 Web UI 后立即从地址栏移除。
+- 统一安全响应头：CSP（self、禁内联脚本、禁 frame 嵌入）、`X-Content-Type-Options`、`X-Frame-Options`、`Referrer-Policy`。
+- 非 loopback 绑定且未设 `JARY_API_TOKEN` 时启动打印警告。
+- Android 客户端支持填写 API Token（首开以 `?token=` 引导，随后正常使用）；桌面端修复 token 未从配置传给页面。
+- 新增 `deploy/Caddyfile`（TLS、HSTS、SSE/WS 反代）；部署/安全/API/客户端文档同步鉴权模型。
+- 测试 178 → 184（鉴权绕过回归、stream ticket 作用域、OAuth state、tunnel 鉴权、webhook secret、设备吊销）。
 
 ## v1.12.1 — macOS 客户端 ad-hoc 签名
 

@@ -26,35 +26,56 @@
 
 ## 2. 鉴权与网络暴露
 
-`jary serve` 默认只绑 `127.0.0.1:8787`。公网部署必须由反代终结 TLS，并二选一：
+`jary serve` 默认只绑 `127.0.0.1:8787`；若绑定到非 loopback 且没有设置 `JARY_API_TOKEN`，启动时会打印明确警告。公网部署必须由反代终结 TLS，并**设置 `JARY_API_TOKEN`**：
 
-- **设置 `JARY_API_TOKEN`**：`/api/*` 与 `/metrics` 要求 `Authorization: Bearer <token>`，也接受 `?token=<token>`。令牌比较为字符串相等，未做时序安全比较；不要通过 URL 传递，查询串会进入反代与浏览器历史。
-- **不设令牌**：代码直接放行所有到达进程的请求（`authorized` 在 `apiToken` 为空时返回 true）。此时安全完全依赖 loopback 绑定与反代自身的认证。
+- **设置令牌**：`/api/*`、`/metrics`、`/ws/client`、`/tunnel` 要求 `Authorization: Bearer <token>`；也接受 `?token=<token>`（浏览器/WS 无法带 header 时）与已配对设备令牌。
+- **不设令牌**：进程内直接放行所有请求，此时安全完全依赖 loopback 绑定与反代自身认证。仅限本机/可信内网。
 
-公开与受保护路径（`packages/web/src/index.ts`）：
+### 2.1 公开路径与受保护路径
 
 | 路径 | 鉴权 | 说明 |
 |---|---|---|
-| `/`、`/app.js`、`/style.css` 等 | 无 | Web UI 静态资源 |
-| `/healthz` | 无 | 返回 store/agent/memory/scheduler 挂载状态 |
-| `/api/*` | API 令牌或设备令牌 | 其他接口默认受保护 |
-| `/api/devices/pair-code`、`/api/devices/pair` | 无 | 设备配对，见下 |
-| `/api/oauth/callback/*` | 无 | 由 `state` 校验（仅在配置了对应环境变量时） |
-| `/api/email/inbound` | 共享密钥或 API 令牌 | `x-jary-email-secret` 等于 `JARY_EMAIL_SECRET` 时放行，否则按普通 API 鉴权 |
-| `/metrics` | API 令牌 | Prometheus 文本 |
-| `/pages/<id>`、`/p/<token>`、`/secure/<token>` | 无 | 页面、分享链接、一次性表单，链接本身就是凭据 |
+| `/`、`/app.js`、`/style.css` 等静态资源 | 无 | 页面本身不含数据；API 仍需令牌 |
+| `/healthz` | 无 | 只返回组件挂载状态 |
+| `/api/*` | 令牌（Bearer / `?token=` / 设备令牌） | 默认受保护 |
+| `POST /api/devices/pair` | 无 | 设备用一次性配对码换令牌；配对码本身需 owner 鉴权生成 |
+| `GET /api/oauth/callback/*` | 无（强制 `state`） | 浏览器从 OAuth 提供方重定向回来，无法带 Bearer；用一次性 state 防 CSRF |
+| `POST /api/email/inbound` | `x-jary-email-secret` 或令牌 | 共享密钥必须等于 `JARY_EMAIL_SECRET` |
+| `/metrics` | 令牌 | Prometheus 文本 |
+| `WS /tunnel` | 令牌 | 出网隧道；未鉴权的 upgrade 返回 401 |
+| `/pages/<id>`、`/p/<token>`、`/secure/<token>` | 无 | 页面/分享链接/一次性表单，链接本身就是凭据 |
 
-设备配对：`pair-code` 生成 6 位数字、10 分钟有效的一次性码；`pair` 换发 32 字节随机设备令牌（库中只存 SHA-256）。配对失败有窗口限次（默认 10 次/10 分钟），设备令牌可被 `jary device revoke` 吊销，并可用于 HTTP `/api/*` 与 `/ws/client`。注意两点：
+### 2.2 令牌模型
 
-1. 两个配对端点都是公开路径。若服务可被公网访问，任何可达者都能先申领配对码再换取 owner 令牌；必须在反代限制来源地址，或不要公网暴露配对路径。
-2. `/ws/client` 与 HTTP 使用同一套校验：`JARY_API_TOKEN`、`?token=` 或已配对设备令牌均可，接入方式见 [客户端指南](../guides/clients.md)。
+| 令牌 | 生成 | 存储 | 作用域 | 吊销 |
+|---|---|---|---|---|
+| Owner API 令牌 | 部署者设置 `JARY_API_TOKEN`（建议 `openssl rand -hex 32`） | 环境变量 | 全部 API、WS、审批 | 改环境变量并重启 |
+| 设备令牌 | 已鉴权客户端 `POST /api/devices/pair-code` 生成 6 位码（10 分钟、单次），设备 `POST /api/devices/pair` 换取 | 库里只存 SHA-256 | **等价 owner**（无角色细分） | `POST /api/devices/:id/revoke`、`POST /api/devices/revoke-all`、`jary device revoke` |
+| Stream ticket | 已鉴权 `POST /api/stream-ticket` | 进程内存，10 分钟 | 仅 `/api/stream`、`/api/computer/screen`、`/api/computer/mjpeg` | 到期自动失效 |
+
+要点：
+
+- **配对码生成必须已鉴权**（v1.13 修复）。此前 `/api/devices/pair-code` 是公开路径，任何可达者都能申领配对码并换取 owner 令牌，等于绕过 `JARY_API_TOKEN`。
+- 设备令牌没有权限细分，等同于 owner；给手机/脚本配对前先确认设备可信。默认失败限次为进程内 10 次/10 分钟，重启清零。
+- 浏览器不能用 header 发 EventSource/`<img>` 请求，所以 Web UI 先换 **stream ticket** 再连接；长期 API 令牌不会出现在流 URL 里。`?token=` 仍被接受（兼容），但反代日志会记录查询串，建议只在首次引导时使用。
+- 首次打开 Web UI 可用 `https://<域名>/?token=<token>`；页面把令牌存进 localStorage 后立即从地址栏移除。
+- 令牌比较当前是字符串相等，未做常数时间比较；触发条件是能反复测时延，实际风险低，反代限速可缓解。
+- 没有内建请求限速（配对失败限次除外）、没有账号体系与登录页；爆破/连接数/请求体限制应在反代完成。
+
+### 2.3 部署加固清单
+
+1. 只暴露 443；8787 保持 loopback（Compose 默认如此）。
+2. 反代终结 TLS 并加 HSTS；示例见 `deploy/Caddyfile`。
+3. 设置强随机 `JARY_API_TOKEN`；不要用 URL 传令牌做日常使用。
+4. 反代层限制 `POST /api/devices/pair` 频率与来源；不需要配对的部署可直接在 WAF/反代封掉该路径。
+5. 不把 `.env`、`data/`、`vault.key` 提交或放进镜像；`.env` 权限 600。
+6. 客户端连接公网服务时只用 `https://`；桌面/Android 的服务器地址填 https。
 
 其他边界：
 
-- 没有内建请求限速（配对失败限次除外），登录爆破防护、并发与连接数限制应在反代完成。
 - 请求体上限 1MB；`/api/files` 上传上限 20MB；反代需相应设置 `client_max_body_size`。
-- 浏览器 UI 可用 `?token=<JARY_API_TOKEN>` 打开，令牌会存入 localStorage 并附加到后续请求；查询串会进入反代日志，更稳妥的是反代注入 `Authorization` 或做独立认证。
 - Pages 分享与 Secure Form 只应发给可信对象；分享令牌可设过期时间，Secure Form 10 分钟过期且单次使用。
+- 安全响应头由应用统一发送：`Content-Security-Policy`（self、禁内联脚本、禁 frame 嵌入）、`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy: no-referrer`。
 
 ## 3. 审批与风险模型
 

@@ -9,7 +9,7 @@
 |---|---|
 | 监听 | `jary serve --host 127.0.0.1 --port 8787`；默认只绑 loopback |
 | Content-Type | JSON 接口为 `application/json`；页面/SSE/流式接口见各节 |
-| 路由规模 | `node scripts/inventory.ts` 统计 63 条路由注册点（动态段合并计数） |
+| 路由规模 | `node scripts/inventory.ts` 统计 66 条路由注册点（动态段合并计数） |
 | 请求体上限 | JSON 请求 1 MB；`POST /api/files` 单文件 20 MB |
 | 错误格式 | `{"error": "..."}`，HTTP 状态与语义一致 |
 
@@ -21,12 +21,13 @@
 |---|---|---|
 | `Authorization: Bearer <token>` | HTTP 与 `/ws/client` | 推荐；Web/桌面/Android 客户端使用 |
 | `?token=<token>` | HTTP 与 `/ws/client` | 供 EventSource、视频流等无法带 header 的场景 |
-| 设备令牌 | 仅 HTTP | `POST /api/devices/pair` 返回的 `token`，经 `devices.verify` 校验后放行 |
+| 设备令牌 | HTTP 与 `/ws/client` | `POST /api/devices/pair` 返回的 `token`，经 `devices.verify` 校验后放行；等价 owner |
 | `X-Jary-Email-Secret` | `POST /api/email/inbound` | 与环境变量 `JARY_EMAIL_SECRET` 相等时视为已鉴权，优先于 API token |
 | `X-Jary-Signature` | `POST /hooks/*` | 作业配置了 `trigger.secret` 时按 HMAC-SHA256(secret, raw body) 校验；`sha256=` 前缀可省略 |
 | OAuth `state` | `GET /api/oauth/callback/:id` | 由浏览器重定向到达，用 `JARY_OAUTH_STATE_<ID>` 校验；未配置该变量则不校验 |
 
-- 公开例外：`/healthz`、静态资源、`GET /pages/*`、`GET /p/*`、`GET|POST /secure/*`、`POST /api/devices/pair-code`、`POST /api/devices/pair`、`GET /api/oauth/callback/*`。
+- 公开例外：`/healthz`、静态资源、`GET /pages/*`、`GET /p/*`、`GET|POST /secure/*`、`POST /api/devices/pair`、`GET /api/oauth/callback/*`。`POST /api/devices/pair-code` **需要令牌**（生成配对码是 owner 动作）。
+- 流式端点（`/api/stream`、`/api/computer/screen`、`/api/computer/mjpeg`）可用 `POST /api/stream-ticket` 换来的 `?ticket=`，避免把长期令牌放进 URL。
 - `/ws/client` 与 HTTP 共用鉴权：`JARY_API_TOKEN`（Bearer 或 `?token=`）或设备令牌（`POST /api/devices/pair` 返回）。
 - `/hooks/*` 未配置 `trigger.secret` 时不校验签名（也不在 `/api/*` 下，不受 API token 保护）；公网使用务必设置 secret。
 - 鉴权失败返回 `401 {"error":"unauthorized"}`；`/healthz` 在依赖缺失时返回 `503`。
@@ -144,11 +145,12 @@
 | DELETE | `/api/vault/:id` | 删除凭据 | token |
 | POST | `/api/vault/:id/fill` | 向当前页面盲填；body `botId`、`origin` | token |
 | POST | `/api/vault/secure-form` | 创建一次性 Secure Form；body 需 `origin` 与 `purpose` | token |
-| GET | `/api/oauth/callback/:id` | OAuth 授权码回调；校验 `state` 后写入 Vault | state |
+| GET | `/api/oauth/authorize/:id` | 生成带随机 `state` 的授权 URL（10 分钟有效） | token |
+| GET | `/api/oauth/callback/:id` | OAuth 授权码回调；`state` 不匹配/缺失直接 400 | state |
 | POST | `/api/oauth/refresh/:id` | 刷新 access token | token |
 | POST | `/api/email/inbound` | 入站邮件 webhook，写入 `input.email` 事件 | 邮箱密钥或 token |
 
-OAuth 相关环境变量按连接器 id 大写拼接：`JARY_OAUTH_TOKEN_URL_<ID>`、`JARY_OAUTH_CLIENT_ID_<ID>`、`JARY_OAUTH_CLIENT_SECRET_<ID>`、`JARY_OAUTH_STATE_<ID>`；回调地址为 `<origin>/api/oauth/callback/<id>`。
+OAuth 环境变量按连接器 id 大写拼接：`JARY_OAUTH_AUTHORIZE_URL_<ID>`（授权页）、`JARY_OAUTH_TOKEN_URL_<ID>`、`JARY_OAUTH_CLIENT_ID_<ID>`、`JARY_OAUTH_CLIENT_SECRET_<ID>`、`JARY_OAUTH_SCOPES_<ID>`、`JARY_OAUTH_REDIRECT_URI_<ID>`（可选）。推荐用 `GET /api/oauth/authorize/<id>` 取 URL，回调会自动校验它签发的一次性 state；静态 `JARY_OAUTH_STATE_<ID>` 仍支持，但两者都没有时回调一律 400。
 
 ### 3.10 文件、通知、用量、审计与设备
 
@@ -161,10 +163,12 @@ OAuth 相关环境变量按连接器 id 大写拼接：`JARY_OAUTH_TOKEN_URL_<ID
 | POST | `/api/notifications/:id/read` | 标记单条已读 | token |
 | GET | `/api/usage` | token 与费用汇总；`?sessionId=` | token |
 | GET | `/api/audit` | 审计日志；`?limit=` 默认 50 | token |
-| POST | `/api/devices/pair-code` | 生成配对码（默认 10 分钟有效） | 公开 |
+| POST | `/api/devices/pair-code` | 生成配对码（默认 10 分钟有效） | token |
 | POST | `/api/devices/pair` | 配对换令牌；body `code`、`name` | 公开 |
 | GET | `/api/devices` | 设备列表 | token |
-| POST | `/api/devices/:id/revoke` | 吊销设备 | token |
+| POST | `/api/devices/:id/revoke` | 吊销单台设备 | token |
+| POST | `/api/devices/revoke-all` | 吊销全部设备（换 token/泄漏时） | token |
+| POST | `/api/stream-ticket` | 签发 10 分钟 stream ticket（仅流式端点可用） | token |
 
 ## 4. `/ws/client`（WebSocket，JSON-RPC 风格）
 

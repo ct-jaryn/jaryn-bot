@@ -45,7 +45,7 @@ Web UI 的「例程」「提议」「通知」页签提供列表、立即运行�
 |---|---|---|
 | `cron` | `expr`、`tz` | 5 字段；数字与 `* - / ,`；不支持 `@daily`、`MON` 等别名；缺省 UTC |
 | `every` | `seconds` | 最小 60 秒 |
-| `webhook` | `secret`（可选） | 端点固定为 `POST /hooks/<jobId>`，`path` 字段不参与路由 |
+| `webhook` | `secret`（**必填**） | 端点固定为 `POST /hooks/<jobId>`，`path` 字段不参与路由；没有 secret 的 webhook 一律拒绝 |
 | `rss` | `url`、`everySeconds` | 最小 60 秒，默认 600；只在最新条目变化时触发 |
 
 `cron` 的日与星期同时限定时取交集；同一 job 串行执行，触发时若上次仍在运行则跳过本次。
@@ -111,7 +111,7 @@ curl -s -X POST "http://127.0.0.1:8787/hooks/<jobId>" \
   --data "$BODY"
 ```
 
-服务端按 HMAC-SHA256 校验 `x-jary-signature`（可带 `sha256=` 前缀）。未配置 `secret` 时任何请求都会触发；请求会等待本次运行结束才返回 `202`，外部系统需要放宽超时。webhook job 没有 `nextRunAt`，不会被调度器轮询触发。
+服务端按 HMAC-SHA256 校验 `x-jary-signature`（可带 `sha256=` 前缀）。**没有 `secret` 的 webhook job 会被拒绝触发**（fail closed），CLI/HTTP 创建时也会报错；请求会等待本次运行结束才返回 `202`，外部系统需要放宽超时。webhook job 没有 `nextRunAt`，不会被调度器轮询触发。
 
 ### 用多轮目标推进长任务
 

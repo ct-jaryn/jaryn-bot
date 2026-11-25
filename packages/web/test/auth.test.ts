@@ -25,15 +25,25 @@ test('api requires the token', async () => {
   } finally { await server.close(); await ctx.dispose() }
 })
 
-test('oauth callback is reachable without a bearer token', async () => {
+test('oauth callback is reachable without a bearer token but requires state', async () => {
   const { ctx, server } = await setup()
+  process.env.JARY_OAUTH_STATE_GMAIL = 'expected-state'
   try {
-    // No connector configured: handler must run and report the config error (not 401).
-    const res = await fetch(`${server.url}/api/oauth/callback/gmail?code=abc&state=x`)
+    // Public route (no Bearer), but CSRF state is mandatory.
+    const noState = await fetch(`${server.url}/api/oauth/callback/gmail?code=abc`)
+    assert.notEqual(noState.status, 401)
+    assert.equal(noState.status, 400)
+
+    // With the configured state the handler runs and reports the missing connector config.
+    const res = await fetch(`${server.url}/api/oauth/callback/gmail?code=abc&state=expected-state`)
     assert.notEqual(res.status, 401)
     const body = await res.json()
     assert.match(body.error, /oauth not configured/)
-  } finally { await server.close(); await ctx.dispose() }
+  } finally {
+    delete process.env.JARY_OAUTH_STATE_GMAIL
+    await server.close()
+    await ctx.dispose()
+  }
 })
 
 test('email inbound accepts its own shared secret', async () => {

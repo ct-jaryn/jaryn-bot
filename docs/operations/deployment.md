@@ -51,7 +51,7 @@ docker compose -f deploy/docker-compose.yml exec jary \
 | `JARY_EMAIL_SECRET` | 否 | 入站邮件 `/api/email/inbound` 的共享密钥 |
 | `JARY_OAUTH_*_<ID>` | 用 OAuth 时 | token URL、client id/secret、state，示例见 `examples/connectors/oauth.md` |
 
-若设置了 `JARY_API_TOKEN`，用 `http://127.0.0.1:8787/?token=<token>` 打开 Web UI（令牌会存入 localStorage），或由反代注入 Authorization，见 §4。
+若设置了 `JARY_API_TOKEN`，用 `https://<域名>/?token=<token>` 打开 Web UI 一次（令牌存 localStorage 并立即从地址栏移除），之后流式连接改用短期 stream ticket，不再把长期令牌放进 URL。配对码生成也需要该令牌（CLI 或已鉴权请求），设备令牌等价 owner，见 [安全](security.md) §2。
 
 ## 3. 裸机 Node
 
@@ -66,7 +66,7 @@ node packages/cli/src/index.ts serve --home ./data-home --port 8787 \
   --patch packages/bundles/deepseek/patch.json
 ```
 
-- `serve` 默认 `--host 127.0.0.1`；`--host 0.0.0.0` 只用于可信内网，且仍应加 TLS。
+- `serve` 默认 `--host 127.0.0.1`；`--host 0.0.0.0` 只用于可信内网，且仍应加 TLS。非 loopback 且未设 `JARY_API_TOKEN` 时启动会打印警告。
 - 不传 `--home` 时 home 是 `~/.jary`；建议显式指定，便于备份与升级。
 - 可选 patch：`packages/bundles/docker-computer/`（容器云电脑）、`web-search/`（SearXNG）、`mcp/`、`email-imap/`、`docker/`（Docker 沙箱）。
 
@@ -74,11 +74,20 @@ node packages/cli/src/index.ts serve --home ./data-home --port 8787 \
 
 ## 4. 反向代理与 TLS
 
-Caddy（自动证书）：
+Caddy（自动证书；仓库内有完整示例 `deploy/Caddyfile`，含安全头与 SSE 配置）：
 
 ```caddyfile
 jary.example.com {
-  reverse_proxy 127.0.0.1:8787
+  encode zstd gzip
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "no-referrer"
+    X-Frame-Options "DENY"
+  }
+  reverse_proxy 127.0.0.1:8787 {
+    flush_interval -1        # SSE / 流式
+  }
 }
 ```
 
@@ -108,9 +117,9 @@ server {
 }
 ```
 
-- 必须保留 `Host`：OAuth 回调与换 token 的 `redirect_uri` 由请求 Host 拼出（`packages/web/src/index.ts`），改写 Host 会导致回调地址不一致。`/ws/client` 与 `/tunnel` 走 Upgrade，`/api/stream` 是 SSE，需要关闭响应缓冲。
-- 设置 `JARY_API_TOKEN` 后，浏览器用 `https://<域名>/?token=<token>` 打开 Web UI 即可：`app.js` 会把令牌存入 localStorage 并附加到 API、SSE 与截图请求。查询串会进入反代日志，可改为反代注入 `Authorization` 或反代自身认证。
-- `/api/devices/pair-code`、`/api/devices/pair` 按代码属于公开路径；公网部署时在反代限制其来源，否则任何可达者都能申领配对码并换取 owner 设备令牌。
+- 必须保留 `Host`：OAuth 回调与换 token 的 `redirect_uri` 由请求 Host 拼出（`packages/web/src/index.ts`），改写 Host 会导致回调地址不一致。`/ws/client` 与 `/tunnel` 走 Upgrade，`/api/stream` 是 SSE，需要关闭响应缓冲。`/tunnel` 需要鉴权：`jary tunnel --url ... --token <JARY_API_TOKEN>`（或设置同名环境变量），匿名 upgrade 返回 401。
+- 设置 `JARY_API_TOKEN` 后，浏览器用 `https://<域名>/?token=<token>` 打开 Web UI 一次即可（令牌存 localStorage，地址栏查询串会被清掉）；SSE/看屏走 `POST /api/stream-ticket` 换来的 10 分钟 ticket。反代日志仍可能记录首次引导的查询串，建议用完即清或由反代注入 Authorization。
+- `POST /api/devices/pair` 是公开路径（设备只持有一次性码），`POST /api/devices/pair-code` 需要 Bearer 鉴权；公网部署仍建议在反代限制 `/api/devices/pair` 的频率与来源。
 - 只暴露 443；8787 保持 loopback，不要把 `--host 0.0.0.0` 直接暴露到公网。客户端接入与设备配对见 [客户端指南](../guides/clients.md)。
 
 ## 5. 数据目录与备份恢复

@@ -128,13 +128,14 @@ export class JobScheduler {
   async triggerWebhook(id: string, body: string, signature?: string): Promise<JobRun> {
     const job = this.require(id)
     if (job.trigger.kind !== 'webhook') throw new Error('job is not a webhook trigger')
-    if (job.trigger.secret) {
-      const expected = createHmac('sha256', job.trigger.secret).update(body).digest('hex')
-      const given = (signature ?? '').replace(/^sha256=/, '')
-      const a = Buffer.from(expected)
-      const b = Buffer.from(given)
-      if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error('invalid webhook signature')
-    }
+    // Fail closed: a webhook without a secret has no authentication at all, so refuse it
+    // rather than letting anyone on the network trigger the job.
+    if (!job.trigger.secret) throw new Error('webhook job has no secret; refusing unauthenticated trigger')
+    const expected = createHmac('sha256', job.trigger.secret).update(body).digest('hex')
+    const given = (signature ?? '').replace(/^sha256=/, '')
+    const a = Buffer.from(expected)
+    const b = Buffer.from(given)
+    if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error('invalid webhook signature')
     return this.dispatch(job)
   }
 

@@ -22,7 +22,7 @@
 | `jary serve` | `--port`（默认 8787）、`--host`（默认 127.0.0.1） | `jary serve --home ./data-home --port 8787` | ✓ |
 | `jary memory` | `add`、`list`、`search`、`catalog`、`digest`、`forget`、`consolidate`、`stats`（catalog 别名）；`--ns`、`--kind`、`--limit`、`--pinned` | `jary memory add "周报用中文，结论先行" --kind rule --pinned --home ./data-home` | ✓ |
 | `jary bot` | `add`、`list`、`edit`、`remove`；`--name`、`--persona`、`--workspace`、`--purge` | `jary bot add researcher --name 研究员 --home ./data-home` | ✓ |
-| `jary job` | `add`、`list`、`run`、`enable`、`disable`、`remove`、`runs`；`--cron`、`--tz`、`--every`、`--webhook`、`--secret`、`--bot`、`--name`、`--max-rounds`、`--max-steps` | `jary job add --cron "0 8 * * *" --tz Asia/Shanghai --name morning "生成今日简报" --home ./data-home` | ✓ |
+| `jary job` | `add`、`list`、`run`、`enable`、`disable`、`remove`、`runs`；`--cron`、`--tz`、`--every`、`--webhook`（必须配 `--secret`）、`--secret`、`--bot`、`--name`、`--max-rounds`、`--max-steps` | `jary job add --cron "0 8 * * *" --tz Asia/Shanghai --name morning "生成今日简报" --home ./data-home` | ✓ |
 | `jary goal` | `set`、`list`、`run`、`pause`、`clear`；`--session`（默认 `cli`）、`--max-rounds`、`--id` | `jary goal set "把 v1.10 发布说明写完" --session cli --home ./data-home` | ✓ |
 | `jary tools` | `--json`；按风险打印已注册工具 | `jary tools --json --home ./data-home` | ✓ |
 | `jary vault` | `add`、`list`、`remove`、`rotate`、`events`；`--name`、`--origin`、`--username`、`--password`、`--kind` | `jary vault add --name GitHub --origin https://github.com --username me --password "..." --home ./data-home` | ✓ |
@@ -83,7 +83,7 @@ jary plugin doctor --home ./data-home                # 缺少依赖时退出 1
 - `jary chat` 使用会话 `cli:<bot>`（默认 `cli:default`）；`--bot` 决定会话的 botId 与工作区，重复对话会续用同一会话。
 - `jary memory` 的 `add` 需要文本参数，`--kind` 默认 `fact`，`--pinned` 提升参与每轮摘要的优先级；`forget` 按查询删除。
 - `jary job add` 的触发器优先级为 `--cron` > `--every` > `--webhook`；`--tz` 默认 `UTC`，`--every` 单位为秒（最小 60 秒）。
-- `--webhook <path>` 的值保存在 `trigger.path`；当前 HTTP 触发地址是 `/hooks/<job-id>`（按作业 id 查找，不使用 path）。
+- `--webhook <path>` 的值保存在 `trigger.path`；HTTP 触发地址是 `/hooks/<job-id>`（按作业 id 查找，不使用 path），且必须配置 `--secret` 做 HMAC 校验，否则创建与触发都会被拒绝。
 - `jary backup` 用 SQLite `VACUUM INTO` 导出数据库，并复制 `bots`、`artifacts`、`profiles`、`presets`（存在时），写 `manifest.json`；**不包含 `vault.key`**，需单独保管。
 - `jary restore` 覆盖当前数据库与上述目录，必须显式 `--yes`；恢复后需重启服务。
 - `jary stop-all` 只暂停调度并取消运行中的 turn，不关闭进程；恢复用 `jary job enable` 或停止后重新 `serve`。

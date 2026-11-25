@@ -14,6 +14,11 @@ interface PendingHttp {
   reject: (e: Error) => void
 }
 
+export interface TunnelAttachOptions {
+  /** Return false to reject the upgrade (HTTP 401) before any tunnel traffic is accepted. */
+  authorize?: (req: import('node:http').IncomingMessage, url: URL) => boolean
+}
+
 export class TunnelServer {
   private connections = new Set<WsConnection>()
   private pending = new Map<string, PendingHttp>()
@@ -22,12 +27,17 @@ export class TunnelServer {
   private port = 0
   onConnect?: (proxyUrl: string) => void
 
-  attach(server: Server): void {
+  attach(server: Server, opts: TunnelAttachOptions = {}): void {
     server.on('upgrade', (req, socket) => {
       const url = new URL(req.url ?? '/', 'http://localhost')
       // Other subsystems (e.g. /ws/client JSON-RPC) own their own upgrade paths.
       if (url.pathname !== '/tunnel') {
         if (url.pathname === '/ws/client') return
+        socket.destroy()
+        return
+      }
+      if (opts.authorize && !opts.authorize(req, url)) {
+        socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n')
         socket.destroy()
         return
       }

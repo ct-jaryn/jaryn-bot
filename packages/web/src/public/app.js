@@ -3,7 +3,12 @@ const state = { sessionId: 'web', botId: 'default', source: null, sessions: [], 
 // Token may come from ?token= (bookmark), localStorage, or the desktop shell.
 function readToken() {
   const fromUrl = new URLSearchParams(location.search).get('token')
-  if (fromUrl) { localStorage.setItem('jary_token', fromUrl); return fromUrl }
+  if (fromUrl) {
+    localStorage.setItem('jary_token', fromUrl)
+    // Don't leave the token in the address bar / browser history.
+    history.replaceState({}, '', location.pathname)
+    return fromUrl
+  }
   return localStorage.getItem('jary_token') || ''
 }
 state.token = readToken()
@@ -12,6 +17,22 @@ if (window.jarynDesktop?.getConfig) {
 }
 const authHeaders = () => (state.token ? { authorization: `Bearer ${state.token}` } : {})
 const withToken = (path) => (state.token ? `${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(state.token)}` : path)
+
+// Streams (EventSource/<img>) cannot send headers, so the UI uses a short-lived ticket
+// instead of putting the long-lived API token into URLs (proxy logs / history).
+async function refreshStreamTicket() {
+  if (!state.token) { state.ticket = ''; return '' }
+  try {
+    const { ticket } = await api('/api/stream-ticket', { method: 'POST' })
+    state.ticket = ticket
+  } catch { state.ticket = '' }
+  return state.ticket
+}
+const withStreamAuth = (path) => {
+  const sep = path.includes('?') ? '&' : '?'
+  if (state.ticket) return `${path}${sep}ticket=${encodeURIComponent(state.ticket)}`
+  return withToken(path)
+}
 
 const $ = (id) => document.getElementById(id)
 const messages = $('messages')
@@ -101,7 +122,7 @@ async function selectSession(id) {
   await loadSessions()
   const data = await api(`/api/events?sessionId=${encodeURIComponent(id)}`)
   for (const e of data.events) renderEvent(e)
-  connect()
+  await connect()
   if (!$('panels').hidden) refreshPanel()
 }
 
@@ -112,9 +133,10 @@ function renderEvent(e) {
   else if (e.type === 'tool.result') addMessage('tool', `${e.data?.ok ? '✓' : '✗'} ${e.data?.name}`)
 }
 
-function connect() {
+async function connect() {
   state.source?.close()
-  state.source = new EventSource(withToken(`/api/stream?sessionId=${encodeURIComponent(state.sessionId)}`))
+  await refreshStreamTicket()
+  state.source = new EventSource(withStreamAuth(`/api/stream?sessionId=${encodeURIComponent(state.sessionId)}`))
   state.source.onmessage = (ev) => {
     const event = JSON.parse(ev.data)
     if (event.type === 'hello') return
@@ -138,6 +160,16 @@ function connect() {
     if (event.type === 'approval.resolved') document.getElementById(`ap-${event.id}`)?.remove()
     if (event.type === 'question') showQuestion(event)
     if (event.type === 'question.resolved') document.getElementById(`q-${event.id}`)?.remove()
+  }
+  state.source.onerror = () => {
+    // Tickets expire after 10 minutes; refresh and reconnect instead of dying silently.
+    if (state.reconnectTimer) return
+    state.reconnectTimer = setTimeout(async () => {
+      state.reconnectTimer = null
+      if (!state.token) return
+      await refreshStreamTicket()
+      connect()
+    }, 3000)
   }
 }
 
@@ -341,7 +373,9 @@ $('screen-toggle').onclick = () => {
   if (screenPanel.hidden) { screenSource?.close(); screenSource = null; screenImg.src = ''; return }
   if (!screenSource) {
     // MJPEG renders natively in <img> and is lower latency than SSE + data URLs.
-    screenImg.src = withToken(`/api/computer/mjpeg?botId=${encodeURIComponent(state.sessionId)}&quality=55&t=${Date.now()}`)
+    refreshStreamTicket().then(() => {
+      screenImg.src = withStreamAuth(`/api/computer/mjpeg?botId=${encodeURIComponent(state.sessionId)}&quality=55&t=${Date.now()}`)
+    })
     screenSource = { close() { screenImg.src = '' } }
   }
 }
