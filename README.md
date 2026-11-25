@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0%20%2B%20commercial-blue)](LICENSE)
 [![Node](https://img.shields.io/badge/node-24-brightgreen)](https://nodejs.org)
 [![Tests](https://img.shields.io/badge/tests-178%20passing-brightgreen)](docs/operations/testing.md)
-[![Version](https://img.shields.io/badge/version-v1.12.0-informational)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.12.1-informational)](CHANGELOG.md)
 
 设计目标是一台 **4C4G** 云服务器、单 owner、Web 优先、默认云模型 API。不依赖外部数据库，不依赖第三方运行时包，`node` 直接跑 TypeScript。
 

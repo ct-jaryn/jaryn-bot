@@ -1,8 +1,13 @@
 # 更新记录
 
-> 适用版本：v1.12.0 · 状态：现行
+> 适用版本：v1.12.1 · 状态：现行
 
 按版本倒序。每一条只写"用户可见的变化"；设计取舍见 [决策与边界](docs/design/decisions.md)，能力现状见 [能力审计](docs/design/audit.md)。
+
+## v1.12.1 — macOS 客户端 ad-hoc 签名
+
+- macOS 包在无 Developer ID 时由 `after-pack` 钩子对整个 `.app` 做 ad-hoc 签名，修复 Gatekeeper 报"已损坏"，首次打开只需右键 →「打开」。
+- 发布说明/客户端文档补充 macOS 打开方式；签名/公证仍需证书。
 
 ## v1.12.0 — 自动打包流水线
 

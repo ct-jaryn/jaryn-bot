@@ -1,6 +1,6 @@
 # 自动打包与发布
 
-> 适用版本：v1.12.0 · 状态：现行
+> 适用版本：v1.12.1 · 状态：现行
 > 一条流水线产出全部客户端安装包；公开仓库使用 GitHub 托管标准 runner，不产生 Actions 分钟费用。本节记录的是 v1.12.0 实测结果。
 
 ## 1. 触发方式
@@ -73,6 +73,14 @@ Release 资产：6 个安装包 + `SHA256SUMS.txt`，`sha256sum -c` 校验通过
 | Android | `ANDROID_KEYSTORE_BASE64` 等（需在 workflow 中加签名步骤） | release 签名，可上架 |
 
 当前 workflow 显式设置 `CSC_IDENTITY_AUTO_DISCOVERY=false`，保证无证书时也能出包。
+
+macOS 无证书时的处理：`desktop/scripts/after-pack.cjs` 会在打包后对整个 `.app` 做 **ad-hoc 签名**（`codesign --force --deep --sign -`），把 Info.plist 与资源封进签名。这样用户看到的是标准的"未识别开发者"，而不是"应用已损坏"；首次打开需右键 →「打开」，或执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/jaryn.app
+```
+
+要彻底消除提示，仍需 Developer ID 证书 + notarization。
 
 ## 7. 本地复现
 
