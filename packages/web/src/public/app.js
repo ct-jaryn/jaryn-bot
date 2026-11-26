@@ -12,9 +12,14 @@ function readToken() {
   return localStorage.getItem('jary_token') || ''
 }
 state.token = readToken()
-if (window.jarynDesktop?.getConfig) {
-  window.jarynDesktop.getConfig().then((cfg) => { if (cfg?.apiToken) state.token = cfg.apiToken }).catch(() => {})
-}
+const desktopConfigReady = window.jarynDesktop?.getConfig
+  ? window.jarynDesktop.getConfig().then((cfg) => {
+      if (cfg?.apiToken) {
+        state.token = cfg.apiToken
+        localStorage.setItem('jary_token', cfg.apiToken)
+      }
+    }).catch(() => {})
+  : Promise.resolve()
 const authHeaders = () => (state.token ? { authorization: `Bearer ${state.token}` } : {})
 const withToken = (path) => (state.token ? `${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(state.token)}` : path)
 
@@ -400,4 +405,4 @@ $('screen-send').onclick = async () => {
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
 
-Promise.all([loadBots(), loadSessions()]).then(() => { void refreshNotifications(); setInterval(refreshNotifications, 15000); return selectSession(state.sessionId) }).catch((err) => addMessage('error', err.message))
+desktopConfigReady.then(() => Promise.all([loadBots(), loadSessions()])).then(() => { void refreshNotifications(); setInterval(refreshNotifications, 15000); return selectSession(state.sessionId) }).catch((err) => addMessage('error', err.message))
