@@ -13,7 +13,7 @@
 | 模型可见工具 | 74 |
 | HTTP 路由（含静态与 webhook） | 66 |
 | SQLite 表 | 28 |
-| CLI 命令 | 24 |
+| CLI 命令 | 22 |
 | 测试文件 | 65 |
 
 ## 2. 工具（按风险）
@@ -183,7 +183,7 @@
 
 ## 6. CLI 命令
 
-`audit`, `backup`, `bot`, `chat`, `computer`, `config`, `device`, `doctor`, `goal`, `init`, `job`, `memory`, `plugin`, `restore`, `return`, `serve`, `session`, `stop-all`, `tools`, `tunnel`, `usage`, `vault`, `version`, `void`
+`audit`, `backup`, `bot`, `chat`, `computer`, `config`, `device`, `doctor`, `goal`, `init`, `job`, `memory`, `plugin`, `restore`, `serve`, `session`, `stop-all`, `tools`, `tunnel`, `usage`, `vault`, `version`
 
 ## 7. 测试文件
 

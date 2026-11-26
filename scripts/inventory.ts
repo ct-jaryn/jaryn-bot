@@ -57,10 +57,10 @@ for (const file of walk(PKGS)) {
 }
 
 // CLI commands: the help table + command dispatch branches.
-const cliText = readFileSync(CLI, 'utf8')
+const cliText = readFileSync(CLI, 'utf8').replaceAll('\r\n', '\n')
 const commands = new Set<string>()
 for (const match of cliText.matchAll(/if \(cmd === '([a-z-]+)'\)/g)) commands.add(match[1]!)
-for (const match of cliText.matchAll(/^\s{2}([a-z-]+)(?: [a-z][a-z0-9|<>[\] ._-]*)?\s{2,}/gm)) commands.add(match[1]!)
+for (const match of cliText.matchAll(/^  ([a-z-]+)(?: [a-z][a-z0-9|<>[\] ._-]*)? {2,}/gm)) commands.add(match[1]!)
 
 // Tests.
 const testFiles: string[] = []
