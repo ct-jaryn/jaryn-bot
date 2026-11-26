@@ -30,17 +30,16 @@ node packages/cli/src/index.ts doctor       # 逐项检查：patch、插件、�
 
 ## 3. 选择模型
 
-默认组合使用 `echo` provider（离线、可跑通链路、不产生费用），适合先验证。
+默认未配置密钥时使用 `echo` provider（离线、可跑通链路、不产生费用），适合先验证环境。
 
-接真实模型：
+接真实模型（设置 `DEEPSEEK_API_KEY` 或 `OPENAI_API_KEY` 后启动会自动从 `echo` 切换到真实模型，无需手写 `--patch`）：
 
 ```bash
 export DEEPSEEK_API_KEY=sk-...
-node packages/cli/src/index.ts serve --home ./data-home \
-  --patch packages/bundles/deepseek/patch.json
+node packages/cli/src/index.ts serve --home ./data-home --port 8787
 ```
 
-其它兼容 OpenAI Chat Completions 的服务：在 patch 里改 `baseUrl` / `model`，不需要改代码。字段见 [配置](reference/configuration.md)。
+接入其它兼容 OpenAI Chat Completions 的服务（如 Qwen、vLLM、Ollama 等）：可直接设置 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL` 环境变量，或在自定义 patch 里覆盖 `baseUrl` / `model`。字段见 [配置](reference/configuration.md)。
 
 ## 4. 打开 Web 工作台
 

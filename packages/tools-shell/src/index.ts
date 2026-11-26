@@ -1,7 +1,16 @@
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { definePlugin } from '@jaryn/kernel'
 import type { Plugin } from '@jaryn/kernel'
 import type { Tool } from '@jaryn/agent-core'
+
+function resolveShellInvocation(command: string): { bin: string; args: string[] } {
+  if (process.platform !== 'win32') return { bin: 'sh', args: ['-c', command] }
+  for (const gitSh of ['C:\\Program Files\\Git\\bin\\sh.exe', 'C:\\Program Files\\Git\\usr\\bin\\sh.exe']) {
+    if (existsSync(gitSh)) return { bin: gitSh, args: ['-c', command] }
+  }
+  return { bin: 'powershell.exe', args: ['-NoProfile', '-NonInteractive', '-Command', command] }
+}
 
 export interface SandboxLike {
   exec(input: { command: string; cwd: string; timeoutMs?: number; signal?: AbortSignal }): Promise<{
@@ -37,7 +46,8 @@ export function shellTool(cfg: ShellConfig = {}, sandbox?: SandboxLike): Tool {
         return out.length > maxOutputBytes ? out.slice(0, maxOutputBytes) + '\n...[truncated]' : out
       }
       return await new Promise<string>((resolve, reject) => {
-        const child = spawn('sh', ['-c', command], { cwd: ctx.cwd, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] })
+        const { bin, args: shellArgs } = resolveShellInvocation(command)
+        const child = spawn(bin, shellArgs, { cwd: ctx.cwd, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] })
         let output = ''
         let bytes = 0
         const onData = (chunk: Buffer) => {

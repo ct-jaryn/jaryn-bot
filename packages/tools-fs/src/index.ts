@@ -11,6 +11,8 @@ const MAX_LIST = 200
 const MAX_GLOB = 200
 const MAX_GREP = 50
 
+const toPosix = (p: string): string => p.replaceAll('\\', '/')
+
 function safeRoot(cwd: string): string {
   return resolve(cwd)
 }
@@ -29,7 +31,7 @@ async function walk(root: string, dir: string, depth: number, out: string[], max
     if (IGNORE.has(entry.name)) continue
     const full = resolve(dir, entry.name)
     if (entry.isDirectory()) await walk(root, full, depth + 1, out, maxDepth)
-    else if (entry.isFile()) out.push(relative(root, full))
+    else if (entry.isFile()) out.push(toPosix(relative(root, full)))
   }
 }
 
@@ -79,7 +81,7 @@ export function fsTools(): Tool[] {
         if (content.length > MAX_READ) throw new Error(`content too large (${content.length} > ${MAX_READ})`)
         await mkdir(dirname(file), { recursive: true })
         await writeFile(file, content, 'utf8')
-        return { path: relative(root, file), bytes: Buffer.byteLength(content) }
+        return { path: toPosix(relative(root, file)), bytes: Buffer.byteLength(content) }
       },
     },
     {
@@ -107,7 +109,7 @@ export function fsTools(): Tool[] {
         if (count > 1 && !args.all) throw new Error(`old string appears ${count} times; pass all=true or make it unique`)
         const next = args.all ? text.split(oldText).join(String(args.new ?? '')) : text.replace(oldText, String(args.new ?? ''))
         await writeFile(file, next, 'utf8')
-        return { path: relative(root, file), replaced: args.all ? count : 1 }
+        return { path: toPosix(relative(root, file)), replaced: args.all ? count : 1 }
       },
     },
     {

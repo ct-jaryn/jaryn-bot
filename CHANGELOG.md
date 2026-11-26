@@ -4,6 +4,14 @@
 
 按版本倒序。每一条只写"用户可见的变化"；设计取舍见 [决策与边界](docs/design/decisions.md)，能力现状见 [能力审计](docs/design/audit.md)。
 
+## Unreleased — 开箱体验、视觉文档与多步评测优化
+
+- **模型零配置自动切换**：环境变量设置 `DEEPSEEK_API_KEY` 或 `OPENAI_API_KEY`（支持 `OPENAI_BASE_URL` / `OPENAI_MODEL` 兼容接口）时，`jary`（含 Docker Compose 默认启动）自动将默认离线 `echo` 切换至真实模型，无需再手传 `--patch`。
+- **全局 SSE 订阅与外置移动提醒桥接**：修复 `GET /api/stream` 通配订阅无法接收指定会话广播的问题；新增零依赖外置脚本 `examples/webhook-notifier/notify-bridge.ts`，在不破坏内核 Web 单入口边界的前提下，支持将待审批卡与主动通知实时推送至飞书、企业微信、钉钉、Slack、Discord 等 Webhook。
+- **评测集升级**：`evals/` 从 10 项单步冒烟升级为 **12 项多步拟真办公评测**（覆盖代码与安全审计、持久记忆、任务板、Markdown 简报及 `.xlsx`/`.docx` 原生产物交付）。
+- **Windows 原生兼容性修复**：`@jaryn/tools-fs` 统一输出 POSIX 相对路径（修复 Windows 下 `fs.glob`/`fs.grep`/`fs.write` 反斜杠匹配失败）；`@jaryn/tools-shell` 在 Windows 下自动探测 Git `sh.exe` 或回退 PowerShell（修复 `spawn sh ENOENT`）。
+- **文档与展示优化**：新增 `README.md` 首屏工作台矢量预览图，重排三类快速开始路径（Docker / 多端安装包 / 源码直跑），补充 `COMMERCIAL.md` 个人免费自托管说明与 OEM/内嵌引擎授权场景，同步 `inventory.md` 清单计数与测试徽章（184 → 188）。
+
 ## v1.13.0 — 服务端与客户端鉴权审计
 
 安全修复（按严重度）：

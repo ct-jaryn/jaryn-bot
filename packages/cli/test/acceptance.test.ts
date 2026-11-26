@@ -144,3 +144,20 @@ test('doctor exits 0', () => {
   const res = spawnSync(process.execPath, [CLI, 'doctor', '--home', home], { encoding: 'utf8' })
   assert.equal(res.status, 0, res.stdout + res.stderr)
 })
+
+test('DEEPSEEK_API_KEY or OPENAI_API_KEY auto-switches default echo llm to @jaryn/llm-deepseek', () => {
+  const home = mkdtempSync(join(tmpdir(), 'jary-'))
+  const resDs = spawnSync(process.execPath, [CLI, 'config', 'print', '--home', home], {
+    encoding: 'utf8',
+    env: { ...process.env, DEEPSEEK_API_KEY: 'sk-test-auto' },
+  })
+  assert.equal(resDs.status, 0, resDs.stderr)
+  assert.match(resDs.stdout, /llm: @jaryn\/llm-deepseek/)
+
+  const resOa = spawnSync(process.execPath, [CLI, 'config', 'print', '--home', home], {
+    encoding: 'utf8',
+    env: { ...process.env, DEEPSEEK_API_KEY: '', OPENAI_API_KEY: 'sk-openai-auto' },
+  })
+  assert.equal(resOa.status, 0, resOa.stderr)
+  assert.match(resOa.stdout, /llm: @jaryn\/llm-deepseek/)
+})

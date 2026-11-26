@@ -191,6 +191,11 @@ function rowsFor(flags: Record<string, string | boolean>): Row[] {
   const profile = loadProfile(homeDir(flags))
   let rows = composeProfile(profile)
   if (typeof flags.patch === 'string') rows = applyPatch(rows, readJson(resolve(flags.patch)))
+  const hasEnvModelKey = Boolean(process.env.DEEPSEEK_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim())
+  const llmRow = rows.find((row) => row.id === 'llm')
+  if (hasEnvModelKey && llmRow?.name === '@jaryn/testing/echo') {
+    rows = applyPatch(rows, [{ id: 'llm', name: '@jaryn/llm-deepseek', config: {} }])
+  }
   return rows
 }
 

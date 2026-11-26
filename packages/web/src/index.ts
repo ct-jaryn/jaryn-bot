@@ -71,7 +71,7 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
   const broadcast = (sessionId: string, event: unknown) => {
     const payload = `data: ${JSON.stringify(event)}\n\n`
     for (const client of clients) {
-      if (client.sessionId === sessionId || sessionId === '*') client.res.write(payload)
+      if (client.sessionId === '*' || client.sessionId === sessionId || sessionId === '*') client.res.write(payload)
     }
   }
 

@@ -34,3 +34,36 @@ test('retries on 5xx then fails', async () => {
   }, /HTTP 503/)
   assert.equal(calls, 2)
 })
+
+test('supports OPENAI_API_KEY and OPENAI_BASE_URL fallback', async () => {
+  const prev = {
+    dsKey: process.env.DEEPSEEK_API_KEY,
+    oaKey: process.env.OPENAI_API_KEY,
+    oaBase: process.env.OPENAI_BASE_URL,
+    oaModel: process.env.OPENAI_MODEL,
+  }
+  delete process.env.DEEPSEEK_API_KEY
+  process.env.OPENAI_API_KEY = 'oa-test-key'
+  process.env.OPENAI_BASE_URL = 'https://compat.example/v1'
+  process.env.OPENAI_MODEL = 'qwen-plus'
+  try {
+    let calledUrl = ''
+    let calledModel = ''
+    const fetchImpl = async (url: string, init: any) => {
+      calledUrl = String(url)
+      calledModel = JSON.parse(init.body).model
+      return sse([JSON.stringify({ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] })])
+    }
+    const p = new DeepSeekProvider({ fetchImpl: fetchImpl as any })
+    const deltas: any[] = []
+    for await (const d of p.stream({ messages: [{ role: 'user', content: 'ping' }], tools: [] }, new AbortController().signal)) deltas.push(d)
+    assert.equal(calledUrl, 'https://compat.example/v1/chat/completions')
+    assert.equal(calledModel, 'qwen-plus')
+    assert.ok(deltas.some((d) => d.type === 'text' && d.text === 'ok'))
+  } finally {
+    if (prev.dsKey === undefined) delete process.env.DEEPSEEK_API_KEY; else process.env.DEEPSEEK_API_KEY = prev.dsKey
+    if (prev.oaKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = prev.oaKey
+    if (prev.oaBase === undefined) delete process.env.OPENAI_BASE_URL; else process.env.OPENAI_BASE_URL = prev.oaBase
+    if (prev.oaModel === undefined) delete process.env.OPENAI_MODEL; else process.env.OPENAI_MODEL = prev.oaModel
+  }
+})

@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 620" width="1120" height="620" role="img" aria-label="jaryn-bot Web Workbench Preview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Window -->
+  <rect width="1120" height="620" rx="14" fill="url(#bg)" stroke="#1f2937" stroke-width="2"/>
+  <rect x="0" y="0" width="1120" height="40" rx="14" fill="#0f172a"/>
+  <rect x="0" y="26" width="1120" height="14" fill="#0f172a"/>
+  <circle cx="22" cy="20" r="6" fill="#ef4444"/>
+  <circle cx="42" cy="20" r="6" fill="#f59e0b"/>
+  <circle cx="62" cy="20" r="6" fill="#10b981"/>
+  <text x="560" y="25" text-anchor="middle" fill="#94a3b8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">jaryn-bot · http://127.0.0.1:8787 · single-owner self-hosted AI teammate</text>
+
+  <!-- Left Sidebar -->
+  <rect x="0" y="40" width="210" height="580" fill="#0d1324"/>
+  <line x1="210" y1="40" x2="210" y2="620" stroke="#1e293b"/>
+  <text x="20" y="74" fill="#f8fafc" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700">jaryn</text>
+  <rect x="78" y="58" width="64" height="20" rx="10" fill="#1e3a8a"/>
+  <text x="110" y="72" text-anchor="middle" fill="#93c5fd" font-family="ui-monospace, monospace" font-size="10">4C4G Ready</text>
+
+  <rect x="16" y="92" width="178" height="32" rx="6" fill="#2563eb"/>
+  <text x="105" y="113" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="600">+ 新会话</text>
+
+  <rect x="16" y="136" width="178" height="28" rx="6" fill="#111827" stroke="#334155"/>
+  <text x="28" y="154" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="12">Bot: ops-analyst (运营分析)</text>
+
+  <text x="20" y="190" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" font-weight="600">SESSIONS</text>
+  <rect x="14" y="200" width="182" height="34" rx="6" fill="#1e293b"/>
+  <text x="26" y="221" fill="#f1f5f9" font-family="system-ui, sans-serif" font-size="12" font-weight="600">周度供应商对账与发信</text>
+  <text x="26" y="254" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">GitHub 仓库巡检简报</text>
+  <text x="26" y="284" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">晨间 RSS 与邮件提议</text>
+
+  <text x="20" y="598" fill="#475569" font-family="ui-monospace, monospace" font-size="11">v1.13 · zero-dep · SQLite WAL</text>
+
+  <!-- Main Header -->
+  <line x1="210" y1="84" x2="1120" y2="84" stroke="#1e293b"/>
+  <text x="230" y="67" fill="#e2e8f0" font-family="ui-monospace, monospace" font-size="13">session: s_weekly_reconcile</text>
+  <rect x="442" y="52" width="66" height="22" rx="11" fill="#064e3b"/>
+  <text x="475" y="67" text-anchor="middle" fill="#34d399" font-family="ui-monospace, monospace" font-size="11">running</text>
+
+  <rect x="650" y="50" width="76" height="26" rx="6" fill="#1e293b"/>
+  <text x="688" y="67" text-anchor="middle" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="12">通知 2</text>
+  <rect x="734" y="50" width="76" height="26" rx="6" fill="#1d4ed8"/>
+  <text x="772" y="67" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="12">看屏 ON</text>
+  <rect x="818" y="50" width="66" height="26" rx="6" fill="#1e293b"/>
+  <text x="851" y="67" text-anchor="middle" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="12">面板</text>
+
+  <!-- Center Conversation & Cards -->
+  <line x1="805" y1="84" x2="805" y2="620" stroke="#1e293b"/>
+
+  <!-- User Message -->
+  <rect x="290" y="100" width="495" height="52" rx="10" fill="#1e3a8a"/>
+  <text x="308" y="122" fill="#eff6ff" font-family="system-ui, sans-serif" font-size="13">登录供应商后台拉取本周账单，对比本地预算表生成差异 xlsx，</text>
+  <text x="308" y="141" fill="#eff6ff" font-family="system-ui, sans-serif" font-size="13">并把汇总邮件发给财务负责人。</text>
+
+  <!-- Tool Traces (Vault Blind Fill + Office) -->
+  <rect x="230" y="166" width="555" height="90" rx="8" fill="#0f172a" stroke="#1e293b"/>
+  <text x="246" y="188" fill="#38bdf8" font-family="ui-monospace, monospace" font-size="12">✓ computer.navigate  {"url":"https://portal.vendor.example/billing"}</text>
+  <text x="246" y="210" fill="#34d399" font-family="ui-monospace, monospace" font-size="12">✓ vault.fill         {"itemId":"vlt_vendor_portal"}  ← AES-256-GCM 盲填，密码不进模型上下文</text>
+  <text x="246" y="232" fill="#a78bfa" font-family="ui-monospace, monospace" font-size="12">✓ office.xlsx        {"path":"artifacts/weekly-diff.xlsx","sheets":2}</text>
+  <text x="246" y="250" fill="#94a3b8" font-family="ui-monospace, monospace" font-size="11">→ email.send         {"to":"finance@company.example","attachment":"weekly-diff.xlsx"}</text>
+
+  <!-- Cloud Computer Live Screen Strip -->
+  <rect x="230" y="270" width="555" height="106" rx="8" fill="#111827" stroke="#334155"/>
+  <text x="246" y="292" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="12" font-weight="600">云电脑实时画面（CDP MJPEG · 支持随时人工接管点击）</text>
+  <rect x="698" y="278" width="74" height="22" rx="4" fill="#334155"/>
+  <text x="735" y="293" text-anchor="middle" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="11">人工接管</text>
+  <rect x="246" y="304" width="524" height="58" rx="5" fill="#0b1020" stroke="#1f2937"/>
+  <text x="262" y="327" fill="#60a5fa" font-family="ui-monospace, monospace" font-size="11">[Chromium 1280x800] https://portal.vendor.example/billing/export — 已导出 42 条对账记录</text>
+  <text x="262" y="348" fill="#64748b" font-family="ui-monospace, monospace" font-size="11">配额护栏：单次 ≤ 4h · 每日 ≤ 8h · 域名白名单已开启</text>
+
+  <!-- Approval Card -->
+  <rect x="230" y="390" width="555" height="148" rx="10" fill="#1c1917" stroke="#f59e0b" stroke-width="1.5"/>
+  <rect x="246" y="404" width="96" height="20" rx="4" fill="#78350f"/>
+  <text x="294" y="418" text-anchor="middle" fill="#fcd34d" font-family="ui-monospace, monospace" font-size="11" font-weight="700">RISK: external</text>
+  <text x="352" y="418" fill="#fef3c7" font-family="system-ui, sans-serif" font-size="13" font-weight="700">需要审批：email.send（外部副作用动作默认拦截）</text>
+  <rect x="246" y="432" width="523" height="54" rx="6" fill="#0c0a09"/>
+  <text x="258" y="452" fill="#d6d3d1" font-family="ui-monospace, monospace" font-size="11">{ "to": "finance@company.example", "subject": "本周供应商账单差异汇总 (+2 处异常)",</text>
+  <text x="258" y="472" fill="#d6d3d1" font-family="ui-monospace, monospace" font-size="11">  "attachments": ["artifacts/weekly-diff.xlsx"] }</text>
+
+  <rect x="246" y="498" width="96" height="28" rx="6" fill="#10b981"/>
+  <text x="294" y="516" text-anchor="middle" fill="#052e16" font-family="system-ui, sans-serif" font-size="12" font-weight="700">允许一次</text>
+  <rect x="352" y="498" width="110" height="28" rx="6" fill="#334155"/>
+  <text x="407" y="516" text-anchor="middle" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="12">本会话允许</text>
+  <rect x="472" y="498" width="80" height="28" rx="6" fill="#7f1d1d"/>
+  <text x="512" y="516" text-anchor="middle" fill="#fecaca" font-family="system-ui, sans-serif" font-size="12">拒绝</text>
+
+  <!-- Composer -->
+  <rect x="230" y="554" width="555" height="48" rx="8" fill="#0f172a" stroke="#334155"/>
+  <text x="246" y="582" fill="#64748b" font-family="system-ui, sans-serif" font-size="13">派活给 jaryn…（Enter 发送，支持 /memory /jobs /approvals）</text>
+
+  <!-- Right Side Panel: Append-Only Event Audit & Memory -->
+  <rect x="806" y="85" width="314" height="535" fill="#0d1324"/>
+  <text x="824" y="112" fill="#93c5fd" font-family="system-ui, sans-serif" font-size="12" font-weight="700">审计回放</text>
+  <text x="892" y="112" fill="#64748b" font-family="system-ui, sans-serif" font-size="12">记忆</text>
+  <text x="936" y="112" fill="#64748b" font-family="system-ui, sans-serif" font-size="12">产物</text>
+  <text x="980" y="112" fill="#64748b" font-family="system-ui, sans-serif" font-size="12">例程</text>
+  <text x="1024" y="112" fill="#64748b" font-family="system-ui, sans-serif" font-size="12">用量</text>
+  <line x1="824" y1="120" x2="876" y2="120" stroke="#3b82f6" stroke-width="2"/>
+
+  <text x="824" y="148" fill="#94a3b8" font-family="ui-monospace, monospace" font-size="11">APPEND-ONLY EVENT LOG (SQLite)</text>
+
+  <rect x="822" y="160" width="280" height="56" rx="6" fill="#111827" stroke="#1e293b"/>
+  <text x="834" y="180" fill="#cbd5e1" font-family="ui-monospace, monospace" font-size="11">#41  input.owner</text>
+  <text x="834" y="200" fill="#64748b" font-family="ui-monospace, monospace" font-size="10">provenance: owner · session forkable</text>
+
+  <rect x="822" y="226" width="280" height="62" rx="6" fill="#111827" stroke="#1e293b"/>
+  <text x="834" y="246" fill="#34d399" font-family="ui-monospace, monospace" font-size="11">#44  vault.used</text>
+  <text x="834" y="266" fill="#64748b" font-family="ui-monospace, monospace" font-size="10">origin matched · secret redacted</text>
+  <text x="834" y="280" fill="#64748b" font-family="ui-monospace, monospace" font-size="10">context leak: 0 bytes</text>
+
+  <rect x="822" y="298" width="280" height="58" rx="6" fill="#111827" stroke="#1e293b"/>
+  <text x="834" y="318" fill="#a78bfa" font-family="ui-monospace, monospace" font-size="11">#47  artifact.saved</text>
+  <text x="834" y="338" fill="#64748b" font-family="ui-monospace, monospace" font-size="10">weekly-diff.xlsx (18.4 KB)</text>
+
+  <rect x="822" y="366" width="280" height="58" rx="6" fill="#111827" stroke="#f59e0b"/>
+  <text x="834" y="386" fill="#fcd34d" font-family="ui-monospace, monospace" font-size="11">#48  approval.requested</text>
+  <text x="834" y="406" fill="#94a3b8" font-family="ui-monospace, monospace" font-size="10">awaiting owner · fail-closed 30m</text>
+
+  <rect x="822" y="442" width="280" height="84" rx="6" fill="#0f172a" stroke="#1e293b"/>
+  <text x="834" y="464" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="12" font-weight="600">预算护栏（Turn Budget）</text>
+  <text x="834" y="485" fill="#94a3b8" font-family="ui-monospace, monospace" font-size="11">Steps: 4 / 25    Tools: 4 / 40</text>
+  <text x="834" y="505" fill="#34d399" font-family="ui-monospace, monospace" font-size="11">Cost:  $0.0042 / $0.50 limit</text>
+
+  <rect x="822" y="540" width="280" height="60" rx="6" fill="url(#accent)" opacity="0.14"/>
+  <text x="834" y="564" fill="#93c5fd" font-family="system-ui, sans-serif" font-size="12" font-weight="600">多端同步接入</text>
+  <text x="834" y="584" fill="#cbd5e1" font-family="ui-monospace, monospace" font-size="11">Web PWA · Win/Mac/Linux · Android</text>
+</svg>

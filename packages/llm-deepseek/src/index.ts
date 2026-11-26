@@ -23,12 +23,13 @@ export class DeepSeekProvider implements Provider {
   private cfg: Required<Omit<DeepSeekConfig, 'fetchImpl' | 'maxTokens'>> & { maxTokens?: number; fetchImpl: typeof fetch }
 
   constructor(cfg: DeepSeekConfig = {}) {
-    const apiKey = cfg.apiKey ?? process.env.DEEPSEEK_API_KEY
-    if (!apiKey) throw new Error('DeepSeek API key missing: set DEEPSEEK_API_KEY or config.apiKey')
+    const hasDeepSeek = Boolean(cfg.apiKey || process.env.DEEPSEEK_API_KEY?.trim())
+    const apiKey = (cfg.apiKey ?? process.env.DEEPSEEK_API_KEY?.trim() ?? process.env.OPENAI_API_KEY?.trim() ?? '').trim()
+    if (!apiKey) throw new Error('API key missing: set DEEPSEEK_API_KEY, OPENAI_API_KEY, or config.apiKey')
     this.cfg = {
       apiKey,
-      baseUrl: cfg.baseUrl ?? process.env.DEEPSEEK_BASE_URL ?? 'https://api.deepseek.com/v1',
-      model: cfg.model ?? process.env.DEEPSEEK_MODEL ?? 'deepseek-chat',
+      baseUrl: cfg.baseUrl ?? process.env.DEEPSEEK_BASE_URL ?? (hasDeepSeek ? 'https://api.deepseek.com/v1' : (process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1')),
+      model: cfg.model ?? process.env.DEEPSEEK_MODEL ?? (hasDeepSeek ? 'deepseek-chat' : (process.env.OPENAI_MODEL ?? 'gpt-4o-mini')),
       maxTokens: cfg.maxTokens,
       fetchImpl: cfg.fetchImpl ?? fetch,
       retries: cfg.retries ?? 2,
