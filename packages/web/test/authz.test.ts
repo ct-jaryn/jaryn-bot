@@ -6,6 +6,7 @@ import { agentPlugin, toolRegistryPlugin } from '@jaryn/agent-core'
 import { FakeProvider } from '@jaryn/testing'
 import { Store } from '@jaryn/store-sqlite'
 import { devicesPlugin } from '@jaryn/devices'
+import { pagesPlugin } from '@jaryn/pages'
 import { startWebServer } from '../src/index.ts'
 
 async function setup() {
@@ -16,6 +17,7 @@ async function setup() {
   ctx.provide('llm', new FakeProvider([]))
   await ctx.mount(agentPlugin())
   await ctx.mount(devicesPlugin())
+  await ctx.mount(pagesPlugin())
   const server = await startWebServer(ctx, { port: 0, apiToken: 'owner-secret' })
   return { ctx, server }
 }
@@ -137,6 +139,41 @@ test('tunnel upgrade requires authentication', async () => {
   try {
     assert.equal(await tryUpgrade(''), 401)
     assert.equal(await tryUpgrade('?token=owner-secret'), 101)
+  } finally {
+    await server.close()
+    await ctx.dispose()
+  }
+})
+
+test('private /pages/:id requires auth while /p/:token share link stays public', async () => {
+  const { ctx, server } = await setup()
+  try {
+    const pages = ctx.get<any>('pages')
+    const page = pages.create({ title: 'Secret Brief', html: '<p>confidential</p>' })
+    const unauth = await fetch(`${server.url}/pages/${page.id}`)
+    assert.equal(unauth.status, 401)
+
+    const authed = await fetch(`${server.url}/pages/${page.id}`, { headers: auth })
+    assert.equal(authed.status, 200)
+
+    const { token } = pages.share(page.id)
+    const shared = await fetch(`${server.url}/p/${token}`)
+    assert.equal(shared.status, 200)
+  } finally {
+    await server.close()
+    await ctx.dispose()
+  }
+})
+
+test('repeated failed auth attempts trigger 429 rate limiting', async () => {
+  const { ctx, server } = await setup()
+  try {
+    let lastStatus = 0
+    for (let i = 0; i < 21; i++) {
+      const res = await fetch(`${server.url}/api/sessions`, { headers: { authorization: 'Bearer wrong-token' } })
+      lastStatus = res.status
+    }
+    assert.equal(lastStatus, 429)
   } finally {
     await server.close()
     await ctx.dispose()

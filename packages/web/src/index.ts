@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
@@ -49,6 +49,40 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     return { ticket, expiresAt }
   }
   const validStreamTicket = (ticket: string): boolean => (streamTickets.get(ticket) ?? 0) > Date.now()
+  const isTicketAllowedPath = (path: string): boolean => STREAM_PATHS.has(path) || path.startsWith('/pages/')
+
+  const safeEqual = (a: string, b: string): boolean => {
+    if (!a || !b) return false
+    const ha = createHash('sha256').update(a).digest()
+    const hb = createHash('sha256').update(b).digest()
+    return timingSafeEqual(ha, hb)
+  }
+
+  // Per-IP sliding-window guard against token / pairing brute-force on public deployments.
+  const authFailures = new Map<string, { count: number; resetAt: number }>()
+  const AUTH_FAIL_LIMIT = 20
+  const AUTH_WINDOW_MS = 60_000
+  const clientIp = (req: IncomingMessage): string => {
+    const remote = req.socket.remoteAddress ?? 'unknown'
+    if (remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1') {
+      const realIp = String(req.headers['x-real-ip'] ?? '').trim()
+      if (realIp) return realIp
+    }
+    return remote
+  }
+  const isRateLimited = (ip: string): boolean => {
+    const entry = authFailures.get(ip)
+    if (!entry) return false
+    if (entry.resetAt <= Date.now()) { authFailures.delete(ip); return false }
+    return entry.count >= AUTH_FAIL_LIMIT
+  }
+  const recordAuthAttempt = (ip: string): void => {
+    const now = Date.now()
+    for (const [k, v] of authFailures) if (v.resetAt <= now) authFailures.delete(k)
+    const entry = authFailures.get(ip)
+    if (!entry || entry.resetAt <= now) authFailures.set(ip, { count: 1, resetAt: now + AUTH_WINDOW_MS })
+    else entry.count++
+  }
 
   // OAuth `state` values created by /api/oauth/authorize/:id (single process, 10 min TTL).
   const oauthStates = new Map<string, number>()
@@ -59,7 +93,7 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     const bearer = header.startsWith('Bearer ') ? header.slice(7) : ''
     const queryToken = url.searchParams.get('token') ?? ''
     const provided = bearer || queryToken
-    if (provided === apiToken) return true
+    if (provided && safeEqual(provided, apiToken)) return true
     const devices = ctx.get<any>('devices')
     return !!(provided && devices?.verify?.(provided))
   }
@@ -179,11 +213,17 @@ export async function startWebServer(ctx: Context, opts: WebOptions = {}): Promi
     // Inbound mail may authenticate with its own shared secret instead of the API token.
     const emailSecret = process.env.JARY_EMAIL_SECRET
     const emailSecretAuth = path === '/api/email/inbound' && !!emailSecret &&
-      String(req.headers['x-jary-email-secret'] ?? '') === emailSecret
-    const needsAuth = (path.startsWith('/api/') && !publicApi && !emailSecretAuth) || path === '/metrics'
+      safeEqual(String(req.headers['x-jary-email-secret'] ?? ''), emailSecret)
+    const needsAuth = (path.startsWith('/api/') && !publicApi && !emailSecretAuth) || path === '/metrics' || path.startsWith('/pages/')
+    const ip = clientIp(req)
+    if (isRateLimited(ip)) return sendJson(res, 429, { error: 'too many failed authentication attempts; try again later' })
+    if (path === '/api/devices/pair') recordAuthAttempt(ip)
     const ticket = url.searchParams.get('ticket') ?? ''
-    const ticketOk = !!ticket && STREAM_PATHS.has(path) && validStreamTicket(ticket)
-    if (needsAuth && !ticketOk && !authorized(req, url)) return sendJson(res, 401, { error: 'unauthorized' })
+    const ticketOk = !!ticket && isTicketAllowedPath(path) && validStreamTicket(ticket)
+    if (needsAuth && !ticketOk && !authorized(req, url)) {
+      recordAuthAttempt(ip)
+      return sendJson(res, 401, { error: 'unauthorized' })
+    }
     void publicPaths
 
     if (req.method === 'GET' && (path === '/' || path === '/index.html')) return sendFile(res, 'index.html', 'text/html')

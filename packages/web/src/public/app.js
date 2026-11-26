@@ -318,7 +318,8 @@ async function refreshPanel() {
     }
     if (state.panel === 'pages') {
       const { pages } = await api('/api/pages')
-      body.innerHTML = (pages.length === 0 ? '<div class="muted">暂无页面</div>' : pages.map((p) => `<div class="row"><a href="/pages/${p.id}" target="_blank">${esc(p.title)}</a></div>`).join(''))
+      await refreshStreamTicket()
+      body.innerHTML = (pages.length === 0 ? '<div class="muted">暂无页面</div>' : pages.map((p) => `<div class="row"><a href="${esc(withStreamAuth(`/pages/${p.id}`))}" target="_blank">${esc(p.title)}</a></div>`).join(''))
       return
     }
     if (state.panel === 'artifacts') {
